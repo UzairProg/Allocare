@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
-import '../../features/home/presentation/home_shell_page.dart';
+import '../../features/home/presentation/main_navigation_screen.dart';
 import '../../services/auth_service.dart';
 import 'route_paths.dart';
 
@@ -32,7 +32,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.home,
-        builder: (context, state) => const HomeShellPage(),
+        builder: (context, state) => const MainNavigationScreen(),
       ),
     ],
     redirect: (context, state) {
