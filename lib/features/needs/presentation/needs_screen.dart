@@ -2,18 +2,97 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:convert';
+import 'dart:io';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/custom_card.dart';
 import '../../../models/app_user.dart';
 import '../../../models/need_model.dart';
+import '../../../models/document_attachment.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/user_profile_service.dart';
 import '../application/need_submission_service.dart';
 
 enum _LocationMode { current, search, map }
-enum _NeedCategory { medical, food, mental }
-enum _UrgencyLevel { critical, high, medium }
+enum _UrgencyLevel { critical, high, medium, low }
+
+const List<_NeedCategoryOption> _needCategoryOptions = [
+  _NeedCategoryOption(
+    key: 'medical',
+    title: 'Medical',
+    icon: Icons.medical_services_outlined,
+    color: Color(0xFFE16A79),
+    subcategories: ['Injuries', 'Chronic illness', 'Medicine/First Aid', 'Other Medical care'],
+  ),
+  _NeedCategoryOption(
+    key: 'food_nutrition',
+    title: 'Food & Nutrition',
+    icon: Icons.restaurant_menu_outlined,
+    color: Color(0xFFF0A55A),
+    subcategories: ['Hunger', 'Malnutrition', 'Infant formula', 'Other Food supply'],
+  ),
+  _NeedCategoryOption(
+    key: 'shelter_essentials',
+    title: 'Shelter & Essentials',
+    icon: Icons.night_shelter_outlined,
+    color: Color(0xFF8B8FD6),
+    subcategories: ['Eviction risk', 'Repair needed', 'Heating/Cooling', 'Other Shelter'],
+  ),
+  _NeedCategoryOption(
+    key: 'disaster_emergency',
+    title: 'Disaster & Emergency',
+    icon: Icons.warning_amber_rounded,
+    color: Color(0xFFE66A5F),
+    subcategories: ['Missing persons', 'Rescue needed', 'Natural disaster', 'Other Emergency'],
+  ),
+  _NeedCategoryOption(
+    key: 'mental_wellbeing',
+    title: 'Mental Health & Wellbeing',
+    icon: Icons.psychology_alt_outlined,
+    color: Color(0xFF6E90C5),
+    subcategories: ['Grief support', 'Panic attacks', 'Support network', 'Other Wellbeing'],
+  ),
+  _NeedCategoryOption(
+    key: 'education_child_support',
+    title: 'Education & Child Support',
+    icon: Icons.school_outlined,
+    color: Color(0xFF4D97A5),
+    subcategories: ['Tutoring', 'Youth programs', 'Child protection', 'Other Child help'],
+  ),
+  _NeedCategoryOption(
+    key: 'elderly_special_care',
+    title: 'Elderly & Special Care',
+    icon: Icons.accessibility_new_rounded,
+    color: Color(0xFF7E9B70),
+    subcategories: ['Isolated senior', 'Home visit', 'Caregiver respite', 'Other Elderly care'],
+  ),
+  _NeedCategoryOption(
+    key: 'livelihood_financial_support',
+    title: 'Livelihood & Financial Support',
+    icon: Icons.account_balance_wallet_outlined,
+    color: Color(0xFFB37F52),
+    subcategories: ['Small business', 'Debt relief', 'Grant assistance', 'Other Financial'],
+  ),
+  _NeedCategoryOption(
+    key: 'women_safety',
+    title: 'Women & Safety',
+    icon: Icons.shield_outlined,
+    color: Color(0xFFC75D87),
+    subcategories: ['Resource access', 'Legal aid', 'Escort service', 'Other Women safety'],
+  ),
+  _NeedCategoryOption(
+    key: 'others',
+    title: 'Others',
+    icon: Icons.category_outlined,
+    color: Color(0xFF7B8794),
+    subcategories: ['Other'],
+  ),
+];
 
 class NeedsScreen extends ConsumerStatefulWidget {
   const NeedsScreen({super.key});
@@ -30,16 +109,22 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   final _contactNameController = TextEditingController();
   final _contactPhoneController = TextEditingController();
   final _peopleAffectedController = TextEditingController(text: '24');
+  final _otherSubcategoryController = TextEditingController();
 
   _LocationMode _locationMode = _LocationMode.current;
   String _currentLocationLabel = 'Tap to fetch your live location';
   double? _currentLatitude;
   double? _currentLongitude;
-  _NeedCategory _category = _NeedCategory.medical;
+  String _categoryKey = 'medical';
+  String _selectedSubcategory = 'Injuries';
+  String? _expandedCategoryKey = 'medical';
   _UrgencyLevel _urgency = _UrgencyLevel.critical;
   int _peopleAffected = 24;
   int _step = 0;
   bool _isSubmitting = false;
+  final List<DocumentAttachment> _supportingDocs = [];
+  bool _isUploadingFile = false;
+  bool _isCurrentLocationFetched = false;
 
   @override
   void dispose() {
@@ -49,6 +134,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
     _contactNameController.dispose();
     _contactPhoneController.dispose();
     _peopleAffectedController.dispose();
+    _otherSubcategoryController.dispose();
     super.dispose();
   }
 
@@ -68,6 +154,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
 
     setState(() {
       _currentLocationLabel = 'Fetching live location...';
+      _isCurrentLocationFetched = false;
     });
 
     try {
@@ -78,6 +165,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
           _currentLocationLabel = 'Location services are disabled';
           _currentLatitude = null;
           _currentLongitude = null;
+          _isCurrentLocationFetched = false;
         });
         return;
       }
@@ -93,6 +181,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
           _currentLocationLabel = 'Location permission needed';
           _currentLatitude = null;
           _currentLongitude = null;
+          _isCurrentLocationFetched = false;
         });
         return;
       }
@@ -109,6 +198,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         _currentLatitude = position.latitude;
         _currentLongitude = position.longitude;
         _currentLocationLabel = 'Live location · ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+        _isCurrentLocationFetched = true;
       });
     } catch (error) {
       if (!mounted) return;
@@ -116,6 +206,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         _currentLocationLabel = 'Unable to fetch live location';
         _currentLatitude = null;
         _currentLongitude = null;
+        _isCurrentLocationFetched = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Location fetch failed: $error')),
@@ -185,7 +276,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
-              child: _ProgressBar(step: _step, totalSteps: 5),
+              child: _ProgressBar(step: _step, totalSteps: 6),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -194,26 +285,45 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                 AppConstants.screenHorizontalPadding,
                 12,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'STEP ${_step + 1} OF 5',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.6,
-                    ),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F7F2),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.8),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _stepTitle,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF1E2A2E),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'STEP ${_step + 1} OF 6',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      _stepTitle,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1E2A2E),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _stepContext,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -229,6 +339,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                         _LocationCard(
                           mode: _LocationMode.current,
                           selected: _locationMode == _LocationMode.current,
+                          success: _isCurrentLocationFetched,
                           title: 'Use Current Location',
                           subtitle: _currentLocationLabel,
                           icon: Icons.location_on_rounded,
@@ -257,6 +368,49 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                           trailing: Icons.chevron_right_rounded,
                           onTap: () => setState(() => _locationMode = _LocationMode.map),
                         ),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          child: _locationMode == _LocationMode.current && _isCurrentLocationFetched
+                              ? Padding(
+                                  key: const ValueKey('location-success-note'),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    AppConstants.screenHorizontalPadding,
+                                    10,
+                                    AppConstants.screenHorizontalPadding,
+                                    0,
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEAF9F2),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: const Color(0xFF1F9D55).withValues(alpha: 0.45),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.check_circle_rounded,
+                                          color: Color(0xFF1F9D55),
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Current location fetched successfully.',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: const Color(0xFF166A41),
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
                         if (_locationMode != _LocationMode.current) ...[
                           const SizedBox(height: 12),
                           Padding(
@@ -279,16 +433,41 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                         ],
                       ],
                       if (_step == 1) ...[
-                        _SectionLabel(title: 'What kind of need?'),
-                        _ChoiceGrid<_NeedCategory>(
-                          selected: _category,
-                          items: const [
-                            _ChoiceItem(value: _NeedCategory.medical, label: 'Medical', icon: Icons.medical_services_outlined),
-                            _ChoiceItem(value: _NeedCategory.food, label: 'Food', icon: Icons.restaurant_menu_outlined),
-                            _ChoiceItem(value: _NeedCategory.mental, label: 'Mental', icon: Icons.psychology_alt_outlined),
-                          ],
-                          onChanged: (value) => setState(() => _category = value),
-                          colorFor: _categoryColor,
+                        _SectionLabel(title: 'Choose Need Category'),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          child: Column(
+                            children: [
+                              for (final option in _needCategoryOptions) ...[
+                                _NeedCategoryCard(
+                                  option: option,
+                                  isSelected: _categoryKey == option.key,
+                                  isExpanded: _expandedCategoryKey == option.key,
+                                  selectedSubcategory: _categoryKey == option.key ? _selectedSubcategory : null,
+                                  onHeaderTap: () {
+                                    setState(() {
+                                      _expandedCategoryKey = _expandedCategoryKey == option.key ? null : option.key;
+                                      _categoryKey = option.key;
+                                      if (_categoryKey != 'others' && _otherSubcategoryController.text.isNotEmpty) {
+                                        _otherSubcategoryController.clear();
+                                      }
+                                      if (!option.subcategories.contains(_selectedSubcategory)) {
+                                        _selectedSubcategory = option.subcategories.first;
+                                      }
+                                    });
+                                  },
+                                  onSubcategoryTap: (subcategory) {
+                                    setState(() {
+                                      _categoryKey = option.key;
+                                      _selectedSubcategory = subcategory;
+                                    });
+                                  },
+                                  customOtherController: option.key == 'others' ? _otherSubcategoryController : null,
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+                            ],
+                          ),
                         ),
                       ],
                       if (_step == 2) ...[
@@ -299,13 +478,14 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                             _ChoiceItem(value: _UrgencyLevel.critical, label: 'Critical', icon: Icons.brightness_1_rounded),
                             _ChoiceItem(value: _UrgencyLevel.high, label: 'High', icon: Icons.brightness_1_rounded),
                             _ChoiceItem(value: _UrgencyLevel.medium, label: 'Medium', icon: Icons.brightness_1_rounded),
+                            _ChoiceItem(value: _UrgencyLevel.low, label: 'Low', icon: Icons.brightness_1_rounded),
                           ],
                           onChanged: (value) => setState(() => _urgency = value),
                           colorFor: _urgencyColor,
                         ),
                       ],
                       if (_step == 3) ...[
-                        _SectionLabel(title: 'People Affected'),
+                        _SectionLabel(title: 'Impact Details'),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
                           child: CustomCard(
@@ -358,6 +538,21 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                   onTap: () => _setPeopleAffected(_peopleAffected + 1),
                                 ),
                               ],
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppConstants.screenHorizontalPadding,
+                            8,
+                            AppConstants.screenHorizontalPadding,
+                            0,
+                          ),
+                          child: Text(
+                            'Approximate is okay. Add your best estimate of people impacted right now.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -418,6 +613,127 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                         ),
                       ],
                       if (_step == 4) ...[
+                        _SectionLabel(title: 'Supporting Evidence (Optional)'),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          child: Text(
+                            'Attach photos, documents, or reports to strengthen your report',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          child: Column(
+                            children: [
+                              _DocumentUploadCard(
+                                label: 'Take Photo',
+                                icon: Icons.camera_alt_rounded,
+                                onTap: _isUploadingFile ? null : () => _pickFileFromCamera(),
+                                isLoading: _isUploadingFile,
+                              ),
+                              const SizedBox(height: 10),
+                              _DocumentUploadCard(
+                                label: 'From Gallery',
+                                icon: Icons.image_rounded,
+                                onTap: _isUploadingFile ? null : () => _pickFileFromGallery(),
+                                isLoading: _isUploadingFile,
+                              ),
+                              const SizedBox(height: 10),
+                              _DocumentUploadCard(
+                                label: 'Upload File',
+                                icon: Icons.description_rounded,
+                                onTap: _isUploadingFile ? null : () => _pickFileFromBrowser(),
+                                isLoading: _isUploadingFile,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_supportingDocs.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Attached Files (${_supportingDocs.length})',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                for (final (index, doc) in _supportingDocs.indexed) ...[
+                                  InkWell(
+                                    borderRadius: BorderRadius.circular(18),
+                                    onTap: () => _previewAttachment(doc),
+                                    child: CustomCard(
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 44,
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(14),
+                                            ),
+                                            child: Icon(
+                                              doc.isImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded,
+                                              size: 24,
+                                              color: theme.colorScheme.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  doc.fileName,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: theme.textTheme.labelMedium?.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  doc.isImage ? 'Tap to view image' : 'Tap to open in app',
+                                                  style: theme.textTheme.labelSmall?.copyWith(
+                                                    color: theme.colorScheme.onSurfaceVariant,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  doc.fileSizeDisplay,
+                                                  style: theme.textTheme.labelSmall?.copyWith(
+                                                    color: theme.colorScheme.onSurfaceVariant,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          IconButton(
+                                            onPressed: () => setState(() => _supportingDocs.removeAt(index)),
+                                            icon: const Icon(Icons.close_rounded),
+                                            iconSize: 20,
+                                            constraints: const BoxConstraints(),
+                                            padding: EdgeInsets.zero,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  if (index < _supportingDocs.length - 1) const SizedBox(height: 8),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                      if (_step == 5) ...[
                         _SectionLabel(title: 'Review Report'),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
@@ -448,6 +764,76 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                             ),
                           ),
                         ),
+                        if (_supportingDocs.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                            child: Text(
+                              'Supporting Evidence (${_supportingDocs.length} file${_supportingDocs.length != 1 ? 's' : ''})',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  for (final (index, doc) in _supportingDocs.indexed) ...[
+                                    if (index > 0) const SizedBox(width: 8),
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(10),
+                                      onTap: () => _previewAttachment(doc),
+                                      child: Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(8),
+                                          color: theme.colorScheme.surfaceContainerHigh,
+                                        ),
+                                        child: doc.isImage
+                                            ? ClipRRect(
+                                                borderRadius: BorderRadius.circular(8),
+                                                child: Image.memory(
+                                                  base64Decode(doc.base64Data),
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              )
+                                            : Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.picture_as_pdf_rounded,
+                                                    size: 28,
+                                                    color: theme.colorScheme.primary,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                                    child: Text(
+                                                      'PDF',
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      textAlign: TextAlign.center,
+                                                      style: theme.textTheme.labelSmall?.copyWith(
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                                ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
@@ -474,11 +860,11 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                               ),
                             if (_step > 0) const SizedBox(width: 12),
                             Expanded(
-                              flex: _step == 4 ? 2 : 1,
+                              flex: _step == 5 ? 2 : 1,
                               child: FilledButton(
                                 onPressed: _isSubmitting
-                                    ? null
-                                    : _step == 4
+                                  ? null
+                                    : _step == 5
                                         ? () => _submitNeed(context, authService, submissionService, reporterName, reporterEmail)
                                         : () => _nextStep(context),
                                 child: _isSubmitting
@@ -487,7 +873,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                         width: 18,
                                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                       )
-                                    : Text(_step == 4 ? 'Submit Report →' : 'Continue'),
+                                    : Text(_step == 5 ? 'Submit Report ->' : 'Continue'),
                               ),
                             ),
                           ],
@@ -515,8 +901,27 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         return 'How urgent is it?';
       case 3:
         return 'How many people are affected?';
+      case 4:
+        return 'Supporting evidence';
       default:
         return 'Review the report';
+    }
+  }
+
+  String get _stepContext {
+    switch (_step) {
+      case 0:
+        return 'Pinpointing the exact area helps teams route aid faster and avoid duplicate dispatches.';
+      case 1:
+        return 'Select the closest category so analysis systems can group similar needs and prioritize correctly.';
+      case 2:
+        return 'Your urgency signal helps response teams balance immediate risks with available resources.';
+      case 3:
+        return 'A clear impact estimate helps planning models size support kits and volunteer allocation.';
+      case 4:
+        return 'Supporting files make reports more reliable and improve downstream AI structuring quality.';
+      default:
+        return 'Review once before submission to keep the final report complete, clean, and actionable.';
     }
   }
 
@@ -531,14 +936,24 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   }
 
   String get _categoryLabel {
-    switch (_category) {
-      case _NeedCategory.medical:
-        return 'Medical Support';
-      case _NeedCategory.food:
-        return 'Food Support';
-      case _NeedCategory.mental:
-        return 'Mental Support';
+    return '${_selectedCategory.title} • $_resolvedSubcategory';
+  }
+
+  _NeedCategoryOption get _selectedCategory {
+    return _needCategoryOptions.firstWhere(
+      (option) => option.key == _categoryKey,
+      orElse: () => _needCategoryOptions.first,
+    );
+  }
+
+  String get _resolvedSubcategory {
+    if (_categoryKey == 'others') {
+      final customValue = _otherSubcategoryController.text.trim();
+      if (customValue.isNotEmpty) {
+        return customValue;
+      }
     }
+    return _selectedSubcategory;
   }
 
   String get _urgencyLabel {
@@ -549,17 +964,8 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         return 'High';
       case _UrgencyLevel.medium:
         return 'Medium';
-    }
-  }
-
-  Color _categoryColor(_NeedCategory category) {
-    switch (category) {
-      case _NeedCategory.medical:
-        return const Color(0xFFE16A79);
-      case _NeedCategory.food:
-        return const Color(0xFFF0A55A);
-      case _NeedCategory.mental:
-        return const Color(0xFF6E90C5);
+      case _UrgencyLevel.low:
+        return 'Low';
     }
   }
 
@@ -571,6 +977,467 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         return const Color(0xFFF07842);
       case _UrgencyLevel.medium:
         return const Color(0xFFE0B64D);
+      case _UrgencyLevel.low:
+        return const Color(0xFF5DA66F);
+    }
+  }
+
+  Future<void> _pickFileFromCamera() async {
+    try {
+      setState(() => _isUploadingFile = true);
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 90,
+      );
+
+      if (picked != null && mounted) {
+        final bytes = await picked.readAsBytes();
+        if (!mounted) {
+          return;
+        }
+        if (!_canAttachFile(bytes.length)) {
+          return;
+        }
+
+        final fileName = picked.name.trim().isNotEmpty
+            ? picked.name
+            : 'camera_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final ext = _normalizedExtension(_extensionFromNameOrPath(fileName, picked.path));
+        final doc = DocumentAttachment(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          fileName: fileName,
+          fileType: ext != null ? _getMimeType(ext) : 'image/jpeg',
+          fileSizeBytes: bytes.length,
+          base64Data: base64Encode(bytes),
+          uploadedAt: DateTime.now(),
+          localPath: picked.path,
+        );
+
+        setState(() {
+          _supportingDocs.add(doc);
+        });
+        _showUploadSuccessToast();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error capturing photo: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingFile = false);
+    }
+  }
+
+  Future<void> _pickFileFromGallery() async {
+    try {
+      setState(() => _isUploadingFile = true);
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 90,
+      );
+
+      if (picked != null && mounted) {
+        final bytes = await picked.readAsBytes();
+        if (!mounted) {
+          return;
+        }
+        if (!_canAttachFile(bytes.length)) {
+          return;
+        }
+
+        final fileName = picked.name.trim().isNotEmpty
+            ? picked.name
+            : 'gallery_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final ext = _normalizedExtension(_extensionFromNameOrPath(fileName, picked.path));
+        final doc = DocumentAttachment(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          fileName: fileName,
+          fileType: ext != null ? _getMimeType(ext) : 'image/jpeg',
+          fileSizeBytes: bytes.length,
+          base64Data: base64Encode(bytes),
+          uploadedAt: DateTime.now(),
+          localPath: picked.path,
+        );
+
+        setState(() {
+          _supportingDocs.add(doc);
+        });
+        _showUploadSuccessToast();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error selecting from gallery: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingFile = false);
+    }
+  }
+
+  Future<void> _pickFileFromBrowser() async {
+    try {
+      setState(() => _isUploadingFile = true);
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif'],
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty && mounted) {
+        final file = result.files.first;
+        if (file.bytes != null) {
+          if (!_canAttachFile(file.size)) {
+            return;
+          }
+
+          final base64 = base64Encode(file.bytes!);
+          final ext = _normalizedExtension(file.extension);
+          final doc = DocumentAttachment(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            fileName: file.name,
+            fileType: ext != null ? _getMimeType(ext) : 'application/octet-stream',
+            fileSizeBytes: file.size,
+            base64Data: base64,
+            uploadedAt: DateTime.now(),
+            localPath: file.path,
+          );
+          setState(() {
+            _supportingDocs.add(doc);
+          });
+          _showUploadSuccessToast();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking file: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingFile = false);
+    }
+  }
+
+  String _getMimeType(String extension) {
+    final ext = extension.toLowerCase().replaceFirst('.', '');
+    switch (ext) {
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+      case 'docx':
+        return 'application/msword';
+      case 'txt':
+        return 'text/plain';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
+  String? _normalizedExtension(String? extension) {
+    final value = extension?.trim().toLowerCase().replaceFirst('.', '');
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
+
+  String? _extensionFromNameOrPath(String? name, String? path) {
+    final fromName = _extractExtension(name);
+    if (fromName != null) {
+      return fromName;
+    }
+    return _extractExtension(path);
+  }
+
+  String? _extractExtension(String? value) {
+    if (value == null) {
+      return null;
+    }
+    final normalized = value.replaceAll('\\', '/');
+    final fileName = normalized.split('/').last;
+    if (!fileName.contains('.')) {
+      return null;
+    }
+    final ext = fileName.split('.').last.trim();
+    return ext.isEmpty ? null : ext;
+  }
+
+  bool _canAttachFile(int newFileSize) {
+    if (_supportingDocs.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You can attach up to 5 files only.')),
+      );
+      return false;
+    }
+
+    final currentBytes = _supportingDocs.fold<int>(0, (sum, doc) => sum + doc.fileSizeBytes);
+    final nextBytes = currentBytes + newFileSize;
+    const maxTotalBytes = 50 * 1024 * 1024;
+
+    if (nextBytes > maxTotalBytes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Total attachment size must stay within 50 MB.')),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  void _showUploadSuccessToast() {
+    if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          duration: const Duration(milliseconds: 1700),
+          content: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F9D55),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1F9D55).withValues(alpha: 0.30),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  'File uploaded successfully',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+  }
+
+  void _showReportSubmittedToast() {
+    if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          duration: const Duration(milliseconds: 2200),
+          content: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF127A6E),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF7BE0C5).withValues(alpha: 0.55),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF127A6E).withValues(alpha: 0.34),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.20),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Icon(
+                    Icons.verified_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Report submitted successfully',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+  }
+
+  Future<void> _previewAttachment(DocumentAttachment attachment) async {
+    if (attachment.isImage) {
+      if (!mounted) return;
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          final imageBytes = base64Decode(attachment.base64Data);
+          return Dialog(
+            insetPadding: const EdgeInsets.all(16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: Container(
+                      color: Colors.black,
+                      child: InteractiveViewer(
+                        minScale: 0.8,
+                        maxScale: 4,
+                        child: Image.memory(
+                          imageBytes,
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: double.infinity,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                attachment.fileName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(dialogContext).textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                attachment.fileSizeDisplay,
+                                style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(dialogContext).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    if (attachment.isPdf) {
+      try {
+        final pdfPath = await _resolveLocalPreviewPath(attachment, extensionHint: 'pdf');
+        if (pdfPath == null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unable to prepare the PDF for opening.')),
+          );
+          return;
+        }
+
+        final result = await OpenFilex.open(pdfPath);
+        if (!mounted) return;
+        if (result.type != ResultType.done) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open PDF: ${result.message}')),
+          );
+        }
+      } on MissingPluginException {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF opener is not initialized yet. Fully stop and rerun the app once.'),
+          ),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open PDF: $error')),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preview is available for images and PDFs only.')),
+    );
+  }
+
+  Future<String?> _resolveLocalPreviewPath(
+    DocumentAttachment attachment, {
+    required String extensionHint,
+  }) async {
+    final existingPath = attachment.localPath;
+    if (existingPath != null && existingPath.trim().isNotEmpty) {
+      final file = File(existingPath);
+      if (await file.exists()) {
+        return existingPath;
+      }
+    }
+
+    try {
+      final directory = await getTemporaryDirectory();
+      final safeName = attachment.fileName.trim().isNotEmpty
+          ? attachment.fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')
+          : 'attachment_${attachment.id}.$extensionHint';
+      final fileName = safeName.toLowerCase().endsWith('.$extensionHint')
+          ? safeName
+          : '$safeName.$extensionHint';
+      final file = File('${directory.path}${Platform.pathSeparator}$fileName');
+      await file.writeAsBytes(base64Decode(attachment.base64Data), flush: true);
+      return file.path;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -630,7 +1497,8 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       final need = NeedModel(
         id: '',
         title: title,
-        category: _category.name,
+        category: _categoryKey,
+        subcategory: _resolvedSubcategory,
         urgency: _urgency.name,
         description: description,
         location: _resolvedLocation,
@@ -644,15 +1512,16 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         contactPhone: contactPhone.isEmpty ? null : contactPhone,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        supportingDocsMetadata: _supportingDocs.isNotEmpty
+          ? _supportingDocs.map((doc) => doc.toFirestoreMetadataMap()).toList()
+            : null,
       );
 
       await submissionService.submitNeed(need);
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Need report submitted successfully.')),
-      );
+      _showReportSubmittedToast();
 
       setState(() {
         _step = 0;
@@ -664,11 +1533,16 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         _currentLocationLabel = 'Tap to fetch your live location';
         _currentLatitude = null;
         _currentLongitude = null;
-        _category = _NeedCategory.medical;
+        _isCurrentLocationFetched = false;
+        _categoryKey = 'medical';
+        _selectedSubcategory = 'Injuries';
+        _expandedCategoryKey = 'medical';
+        _otherSubcategoryController.clear();
         _urgency = _UrgencyLevel.critical;
         _peopleAffected = 24;
         _peopleAffectedController.text = '24';
         _locationController.clear();
+        _supportingDocs.clear();
       });
     } catch (error) {
       if (!context.mounted) return;
@@ -743,6 +1617,7 @@ class _LocationCard extends StatelessWidget {
   const _LocationCard({
     required this.mode,
     required this.selected,
+    this.success = false,
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -752,6 +1627,7 @@ class _LocationCard extends StatelessWidget {
 
   final _LocationMode mode;
   final bool selected;
+  final bool success;
   final String title;
   final String subtitle;
   final IconData icon;
@@ -761,8 +1637,16 @@ class _LocationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderColor = selected ? theme.colorScheme.primary.withValues(alpha: 0.55) : theme.colorScheme.outlineVariant;
-    final background = selected ? const Color(0xFFF2F0DE) : Colors.white;
+    final borderColor = success
+      ? const Color(0xFF1F9D55).withValues(alpha: 0.70)
+      : selected
+        ? theme.colorScheme.primary.withValues(alpha: 0.55)
+        : theme.colorScheme.outlineVariant;
+    final background = success
+      ? const Color(0xFFEAF9F2)
+      : selected
+        ? const Color(0xFFF2F0DE)
+        : Colors.white;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
@@ -789,10 +1673,17 @@ class _LocationCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: selected ? const Color(0xFFE8DDC1) : const Color(0xFFF4F1E8),
+                  color: success
+                      ? const Color(0xFFDFF3E9)
+                      : selected
+                          ? const Color(0xFFE8DDC1)
+                          : const Color(0xFFF4F1E8),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
+                child: Icon(
+                  success ? Icons.gps_fixed_rounded : icon,
+                  color: success ? const Color(0xFF1F9D55) : (selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -815,7 +1706,12 @@ class _LocationCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (selected)
+              if (success)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF1F9D55),
+                )
+              else if (selected)
                 Icon(
                   Icons.check_rounded,
                   color: theme.colorScheme.primary,
@@ -828,6 +1724,199 @@ class _LocationCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NeedCategoryOption {
+  const _NeedCategoryOption({
+    required this.key,
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.subcategories,
+  });
+
+  final String key;
+  final String title;
+  final IconData icon;
+  final Color color;
+  final List<String> subcategories;
+}
+
+class _NeedCategoryCard extends StatelessWidget {
+  const _NeedCategoryCard({
+    required this.option,
+    required this.isSelected,
+    required this.isExpanded,
+    required this.selectedSubcategory,
+    required this.onHeaderTap,
+    required this.onSubcategoryTap,
+    this.customOtherController,
+  });
+
+  final _NeedCategoryOption option;
+  final bool isSelected;
+  final bool isExpanded;
+  final String? selectedSubcategory;
+  final VoidCallback onHeaderTap;
+  final ValueChanged<String> onSubcategoryTap;
+  final TextEditingController? customOtherController;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: isSelected ? option.color.withValues(alpha: 0.08) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isSelected ? option.color.withValues(alpha: 0.75) : theme.colorScheme.outlineVariant,
+          width: isSelected ? 1.4 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onHeaderTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: option.color.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Icon(option.icon, color: option.color),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          option.title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF2A3338),
+                          ),
+                        ),
+                        if (isSelected && selectedSubcategory != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            selectedSubcategory!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: option.color.withValues(alpha: 0.9),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final subcategory in option.subcategories)
+                        if (subcategory == 'Other')
+                          Tooltip(
+                            message: 'Can\'t find your specific need? Tell us more in the description.',
+                            child: ChoiceChip(
+                              avatar: Icon(
+                                Icons.lightbulb_outline_rounded,
+                                size: 16,
+                                color: selectedSubcategory == subcategory
+                                    ? option.color
+                                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              ),
+                              label: Text(
+                                subcategory,
+                                style: const TextStyle(fontStyle: FontStyle.italic),
+                              ),
+                              selected: selectedSubcategory == subcategory,
+                              showCheckmark: false,
+                              selectedColor: option.color.withValues(alpha: 0.15),
+                              backgroundColor: Colors.white,
+                              side: BorderSide(
+                                color: selectedSubcategory == subcategory
+                                    ? option.color.withValues(alpha: 0.8)
+                                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                width: selectedSubcategory == subcategory ? 1.5 : 1,
+                                strokeAlign: BorderSide.strokeAlignOutside,
+                              ),
+                              labelStyle: theme.textTheme.bodySmall?.copyWith(
+                                color: selectedSubcategory == subcategory ? option.color : theme.colorScheme.onSurfaceVariant,
+                                fontWeight: selectedSubcategory == subcategory ? FontWeight.w700 : FontWeight.w500,
+                              ),
+                              onSelected: (_) => onSubcategoryTap(subcategory),
+                            ),
+                          )
+                        else
+                          ChoiceChip(
+                            label: Text(subcategory),
+                            selected: selectedSubcategory == subcategory,
+                            showCheckmark: false,
+                            selectedColor: option.color.withValues(alpha: 0.2),
+                            backgroundColor: Colors.white,
+                            side: BorderSide(
+                              color: selectedSubcategory == subcategory ? option.color : theme.colorScheme.outlineVariant,
+                            ),
+                            labelStyle: theme.textTheme.bodySmall?.copyWith(
+                              color: selectedSubcategory == subcategory ? option.color : theme.colorScheme.onSurfaceVariant,
+                              fontWeight: selectedSubcategory == subcategory ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                            onSelected: (_) => onSubcategoryTap(subcategory),
+                          ),
+                    ],
+                  ),
+                  if (option.key == 'others' && selectedSubcategory == 'Other' && customOtherController != null) ...[
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: customOtherController,
+                      decoration: const InputDecoration(
+                        labelText: 'Specify other category',
+                        hintText: 'Type the specific need category',
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 190),
+          ),
+        ],
       ),
     );
   }
@@ -1010,7 +2099,72 @@ class _ReviewRow extends StatelessWidget {
             ),
           ),
         ),
+
       ],
     );
   }
 }
+
+class _DocumentUploadCard extends StatelessWidget {
+  const _DocumentUploadCard({
+    required this.label,
+    required this.icon,
+    this.onTap,
+    this.isLoading = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: isLoading ? null : onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(theme.colorScheme.primary),
+                ),
+              )
+            else
+              Icon(
+                icon,
+                color: theme.colorScheme.primary,
+                size: 24,
+              ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: isLoading ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

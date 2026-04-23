@@ -5,6 +5,7 @@ class NeedModel {
     required this.id,
     required this.title,
     required this.category,
+    this.subcategory,
     required this.urgency,
     required this.description,
     required this.location,
@@ -18,11 +19,13 @@ class NeedModel {
     this.contactPhone,
     this.createdAt,
     this.updatedAt,
+    this.supportingDocsMetadata,
   });
 
   final String id;
   final String title;
   final String category;
+  final String? subcategory;
   final String urgency;
   final String description;
   final String location;
@@ -36,12 +39,14 @@ class NeedModel {
   final String? contactPhone;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final List<Map<String, dynamic>>? supportingDocsMetadata;
 
   factory NeedModel.fromMap(String id, Map<String, dynamic> map) {
     return NeedModel(
       id: id,
       title: (map['title'] as String?) ?? 'Untitled need',
       category: (map['category'] as String?) ?? 'general',
+      subcategory: (map['subcategory'] as String?)?.trim(),
       urgency: (map['urgency'] as String?) ?? 'normal',
       description: (map['description'] as String?) ?? '',
       location: (map['location'] as String?) ?? 'Unknown',
@@ -55,6 +60,8 @@ class NeedModel {
       contactPhone: (map['contactPhone'] as String?)?.trim(),
       createdAt: _asDateTime(map['createdAt']),
       updatedAt: _asDateTime(map['updatedAt']),
+      supportingDocsMetadata: (map['supportingDocsMetadata'] as List<dynamic>?)
+          ?.cast<Map<String, dynamic>>(),
     );
   }
 
@@ -62,6 +69,7 @@ class NeedModel {
     return {
       'title': title,
       'category': category,
+      if (subcategory != null && subcategory!.trim().isNotEmpty) 'subcategory': subcategory,
       'urgency': urgency,
       'description': description,
       'location': location,
@@ -73,6 +81,8 @@ class NeedModel {
       if (longitude != null) 'longitude': longitude,
       if (contactName != null && contactName!.trim().isNotEmpty) 'contactName': contactName,
       if (contactPhone != null && contactPhone!.trim().isNotEmpty) 'contactPhone': contactPhone,
+      if (supportingDocsMetadata != null && supportingDocsMetadata!.isNotEmpty)
+        'supportingDocsMetadata': supportingDocsMetadata,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : Timestamp.now(),
       'updatedAt': Timestamp.now(),
     };

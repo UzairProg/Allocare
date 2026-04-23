@@ -28,6 +28,12 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Allocare needs your current location to attach accurate location details to the report.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Allocare needs camera access so NGOs can capture incident photos as supporting evidence.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allocare needs photo library access so NGOs can attach incident photos as supporting evidence.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Allocare may save captured photos for incident documentation when needed.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

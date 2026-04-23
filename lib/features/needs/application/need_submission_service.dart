@@ -28,6 +28,7 @@ extension on NeedModel {
     String? id,
     String? title,
     String? category,
+    String? subcategory,
     String? urgency,
     String? description,
     String? location,
@@ -41,11 +42,13 @@ extension on NeedModel {
     String? contactPhone,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<Map<String, dynamic>>? supportingDocsMetadata,
   }) {
     return NeedModel(
       id: id ?? this.id,
       title: title ?? this.title,
       category: category ?? this.category,
+      subcategory: subcategory ?? this.subcategory,
       urgency: urgency ?? this.urgency,
       description: description ?? this.description,
       location: location ?? this.location,
@@ -59,6 +62,7 @@ extension on NeedModel {
       contactPhone: contactPhone ?? this.contactPhone,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      supportingDocsMetadata: supportingDocsMetadata ?? this.supportingDocsMetadata,
     );
   }
 }
