@@ -1,81 +1,169 @@
 # Allocare
 
-Allocare is an intelligent resource allocation system designed to help NGOs make better decisions using fragmented and unstructured data.
+Allocare is a data-driven resource allocation system designed to help NGOs convert fragmented, unstructured data into actionable decisions and real-world impact.
+
+---
 
 ## 🚀 Problem
 
-NGOs collect valuable data through surveys, field reports, and community work. However, this data is often scattered across different sources, making it difficult to identify urgent needs and allocate resources effectively.
+NGOs and social organizations collect valuable data through:
+- paper surveys  
+- field reports  
+- spreadsheets  
+- on-ground observations  
 
-This leads to:
-- Poor visibility of real-world needs  
-- Inefficient resource distribution  
-- Over-served and under-served areas  
+However, this data is **scattered, inconsistent, and unstructured**, leading to:
+
+- poor visibility of real needs  
+- inefficient resource allocation  
+- delayed response to critical situations  
+- over-served and under-served regions  
+
+The core issue is **not lack of resources**, but **misallocation due to fragmented data**.
 
 ---
 
 ## 💡 Solution
 
-Allocare transforms fragmented NGO data into structured insights and actionable decisions.
+Allocare transforms fragmented NGO data into a structured, intelligent system that enables:
 
-It enables:
-- Unified view of community needs  
-- Priority-based allocation of resources  
-- Intelligent volunteer matching  
-- Pattern-based insights for future interventions  
+- unified visibility of needs  
+- priority-based resource allocation  
+- smart volunteer coordination  
+- insight-driven decision making  
+
+Instead of a simple listing platform, Allocare acts as a **decision and action system**.
 
 ---
 
-## 🔑 Core Features
+## 🧠 Core System Layers
 
-- **Data Aggregation & Structuring**  
-  Convert scattered NGO data into a standardized format  
+### 1. Data & Visibility Layer
+- Collects data from multiple sources (manual input, uploads)
+- Converts unstructured data into structured format
+- Displays needs on a unified map
 
-- **Unified Map View**  
-  - Medical cases → precise pins  
-  - Food needs → heatmap  
-  - Shelter → location markers  
+---
 
-- **Priority & Allocation Engine**  
-  Rank needs based on urgency, vulnerability, and impact  
+### 2. Priority & Allocation Layer
+- Classifies needs based on urgency and impact
+- Enables intelligent assignment of volunteers
+- Tracks status: pending → assigned → completed
 
-- **Insight Layer**  
-  Identify recurring patterns and recommend NGO drives  
-  (e.g., malnutrition zones, rising mental health concerns)
+---
+
+### 3. Insight Layer (Key Differentiator)
+- Identifies recurring patterns from historical data
+- Highlights critical trends (e.g., malnutrition zones)
+- Recommends targeted NGO interventions
+
+---
+
+## 🔑 Core Features (Current Progress)
+
+### ✅ Authentication
+- Email/password login & signup (Firebase Auth)
+- Role-based access:
+  - NGO
+  - Volunteer
+  - Admin (approval layer)
+
+---
+
+### 🧱 Application Shell
+- Bottom navigation structure:
+  - Home
+  - Needs
+  - Map (placeholder)
+  - Insights
+  - Profile
+- Feature-based scalable architecture
+
+---
+
+### 🧾 Needs Management (Planned UI Ready)
+- Add and manage needs
+- Categories:
+  - Medical
+  - Food & Nutrition
+  - Shelter
+  - Disaster
+  - Mental Health
+  - Education
+  - Elderly Care
+  - Livelihood
+  - Women Safety
+  - Others
+
+---
+
+### 📊 Insights System (Planned)
+- Area-based and city-level insights
+- Pattern detection from data
+- Actionable recommendations
+
+---
+
+### 🗺️ Map (In Progress)
+- Placeholder implemented
+- Planned:
+  - medical pins
+  - food heatmaps
+  - urgency visualization
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Flutter** – Cross-platform UI (Android, iOS, Web)  
-- **Firebase** – Authentication & Firestore database  
-- **Google Maps** – Visualization (pins + heatmaps)  
-- **Gemini** – NLP for classification (optional layer)
+- **Flutter** – Cross-platform frontend (Android, iOS, Web)
+- **Firebase Authentication** – User authentication
+- **Cloud Firestore (Standard, Regional - asia-south1)** – Database
+- **Google Maps (planned)** – Visualization
+- **Gemini (planned)** – NLP-based classification
 
 ---
 
-## 🧩 Architecture Overview
+## 🧩 Architecture
 
-Allocare is built around three core layers:
+- Feature-based modular structure
+- Clean separation of UI, models, and logic
+- Scalable and maintainable codebase
 
-1. **Data & Visibility Layer**  
-   Structured data + unified map  
+---
 
-2. **Priority & Allocation Layer**  
-   Decision engine for resource distribution  
+## 👥 User Roles
 
-3. **Insight Layer**  
-   Pattern detection + intervention recommendations  
+### NGO
+- submit and manage needs  
+- view insights and trends  
+- coordinate resources  
+
+### Volunteer
+- view assigned tasks  
+- execute on-ground actions  
+
+### Admin (system-level)
+- verify NGOs (no UI, controlled via backend)
+
+---
+
+## 🎯 Vision
+
+Allocare is designed to move beyond static dashboards and become a **real-time decision engine for social impact**, ensuring that:
+
+> The right help reaches the right place at the right time.
 
 ---
 
 ## 📌 Status
 
-🚧 Initial development phase  
-- Project setup complete  
-- Authentication module in progress  
+🚧 Active Development  
+- Auth completed  
+- App structure completed  
+- Core features under development  
 
 ---
 
 ## 🤝 Team
 
-Built as part of Google Solution Challenge.
+Built as part of the Google Solution Challenge.
