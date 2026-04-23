@@ -19,6 +19,7 @@ class NeedModel {
     this.contactPhone,
     this.createdAt,
     this.updatedAt,
+    this.supportingDocsMetadata,
   });
 
   final String id;
@@ -38,6 +39,7 @@ class NeedModel {
   final String? contactPhone;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final List<Map<String, dynamic>>? supportingDocsMetadata;
 
   factory NeedModel.fromMap(String id, Map<String, dynamic> map) {
     return NeedModel(
@@ -58,6 +60,8 @@ class NeedModel {
       contactPhone: (map['contactPhone'] as String?)?.trim(),
       createdAt: _asDateTime(map['createdAt']),
       updatedAt: _asDateTime(map['updatedAt']),
+      supportingDocsMetadata: (map['supportingDocsMetadata'] as List<dynamic>?)
+          ?.cast<Map<String, dynamic>>(),
     );
   }
 
@@ -77,6 +81,8 @@ class NeedModel {
       if (longitude != null) 'longitude': longitude,
       if (contactName != null && contactName!.trim().isNotEmpty) 'contactName': contactName,
       if (contactPhone != null && contactPhone!.trim().isNotEmpty) 'contactPhone': contactPhone,
+      if (supportingDocsMetadata != null && supportingDocsMetadata!.isNotEmpty)
+        'supportingDocsMetadata': supportingDocsMetadata,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : Timestamp.now(),
       'updatedAt': Timestamp.now(),
     };

@@ -42,6 +42,7 @@ extension on NeedModel {
     String? contactPhone,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<Map<String, dynamic>>? supportingDocsMetadata,
   }) {
     return NeedModel(
       id: id ?? this.id,
@@ -61,6 +62,7 @@ extension on NeedModel {
       contactPhone: contactPhone ?? this.contactPhone,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      supportingDocsMetadata: supportingDocsMetadata ?? this.supportingDocsMetadata,
     );
   }
 }
