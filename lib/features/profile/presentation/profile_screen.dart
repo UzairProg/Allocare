@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/custom_card.dart';
@@ -10,15 +11,114 @@ import '../../../services/auth_service.dart';
 import '../../../services/user_profile_service.dart';
 import 'manage_volunteer_page.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  static const MethodChannel _pnvChannel = MethodChannel('com.example.allocare_app/pnv');
+
+  bool _isVerifyingPhone = false;
+  String? _verifiedPhone;
+
+  void _showVerificationSuccessToast(String phone) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF0F7A47),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        content: Row(
+          children: [
+            const Icon(Icons.verified_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Identity confirmed via OTP-less Firebase PNV. $phone is now verified.',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _persistVerifiedPhone(String verifiedPhone) async {
+    final profileService = ref.read(userProfileServiceProvider);
+    final authUser = ref.read(authStateProvider).asData?.value;
+
+    if (authUser == null) {
+      return;
+    }
+
+    final existing = await profileService.getById(authUser.uid);
+    final now = DateTime.now();
+
+    final updated = AppUser(
+      id: authUser.uid,
+      email: authUser.email ?? existing?.email ?? '',
+      displayName: (authUser.displayName ?? existing?.displayName ?? '').trim(),
+      phoneNumber: verifiedPhone,
+      role: existing?.role ?? AppUserRole.ngo,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    );
+
+    await profileService.upsert(updated);
+  }
+
+  Future<void> _verifyPhone() async {
+    setState(() => _isVerifyingPhone = true);
+
+    try {
+      final response = await _pnvChannel.invokeMethod<Map<dynamic, dynamic>>('getVerifiedPhone');
+      final phone = (response?['phoneNumber'] as String?)?.trim();
+
+      if (phone != null && phone.isNotEmpty) {
+        await _persistVerifiedPhone(phone);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _verifiedPhone = phone;
+      });
+
+      if (phone != null && phone.isNotEmpty) {
+        _showVerificationSuccessToast(phone);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone number verified.')),
+        );
+      }
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Phone verification failed: ${error.message ?? error.code}')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Phone verification failed: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isVerifyingPhone = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final authUser = ref.watch(authStateProvider).asData?.value;
     final profile = ref.watch(currentUserProfileProvider).asData?.value;
     final authService = ref.watch(authServiceProvider);
+    final hasVerifiedPhone = _verifiedPhone != null && _verifiedPhone!.isNotEmpty;
 
     final demoProfile = AppUser(
       id: 'demo-user',
@@ -103,35 +203,52 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.24),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(999),
+                          onTap: hasVerifiedPhone
+                              ? null
+                              : () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      behavior: SnackBarBehavior.floating,
+                                      content: Text('Phone verification is pending. Please verify to continue.'),
+                                    ),
+                                  );
+                                },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.verified_rounded,
-                                size: 14,
-                                color: Colors.white,
+                            decoration: BoxDecoration(
+                              color: hasVerifiedPhone
+                                  ? Colors.white.withValues(alpha: 0.18)
+                                  : const Color(0xFFFFF1C4).withValues(alpha: 0.95),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: hasVerifiedPhone
+                                    ? Colors.white.withValues(alpha: 0.24)
+                                    : const Color(0xFFE7B22B),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Verified',
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  hasVerifiedPhone ? Icons.verified_rounded : Icons.help_rounded,
+                                  size: 14,
+                                  color: hasVerifiedPhone ? Colors.white : const Color(0xFF9A6A00),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  hasVerifiedPhone ? 'Verified' : 'Verify',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: hasVerifiedPhone ? Colors.white : const Color(0xFF7A5300),
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -150,6 +267,230 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.screenHorizontalPadding,
+              14,
+              AppConstants.screenHorizontalPadding,
+              0,
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: _verifiedPhone != null && _verifiedPhone!.isNotEmpty
+                    ? const LinearGradient(
+                        colors: [Color(0xFFE8F9F0), Color(0xFFD3F4E2)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : const LinearGradient(
+                        colors: [Color(0xFFF8F9FF), Color(0xFFEFF3FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _verifiedPhone != null && _verifiedPhone!.isNotEmpty
+                      ? const Color(0xFF2AA866).withValues(alpha: 0.55)
+                      : const Color(0xFF5078D1).withValues(alpha: 0.25),
+                  width: 1.3,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (_verifiedPhone != null && _verifiedPhone!.isNotEmpty
+                            ? const Color(0xFF2AA866)
+                            : const Color(0xFF5078D1))
+                        .withValues(alpha: 0.16),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: _verifiedPhone != null && _verifiedPhone!.isNotEmpty
+                              ? const Color(0xFF1A9A5A).withValues(alpha: 0.14)
+                              : const Color(0xFF2F56B3).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          _verifiedPhone != null && _verifiedPhone!.isNotEmpty
+                              ? Icons.verified_rounded
+                              : Icons.shield_moon_rounded,
+                          color: _verifiedPhone != null && _verifiedPhone!.isNotEmpty
+                              ? const Color(0xFF1A9A5A)
+                              : const Color(0xFF2F56B3),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _verifiedPhone != null && _verifiedPhone!.isNotEmpty
+                                  ? 'Identity Verified'
+                                  : 'Phone Verification Center',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: _verifiedPhone != null && _verifiedPhone!.isNotEmpty
+                                    ? const Color(0xFF0E6138)
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'OTP-less verification powered by Firebase PNV.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: _verifiedPhone != null && _verifiedPhone!.isNotEmpty
+                                    ? const Color(0xFF1A7A4A)
+                                    : theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.sim_card_rounded,
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'SIM-backed',
+                              style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.lock_clock_rounded,
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Instant secure check',
+                              style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  if (!hasVerifiedPhone)
+                    FilledButton.icon(
+                      onPressed: _isVerifyingPhone ? null : _verifyPhone,
+                      icon: _isVerifyingPhone
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.verified_user_rounded),
+                      label: Text(
+                        _isVerifyingPhone
+                            ? 'Verifying with Firebase PNV...'
+                            : 'Start OTP-less Verification',
+                      ),
+                    ),
+                  if (_verifiedPhone != null && _verifiedPhone!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF1F9D55).withValues(alpha: 0.5)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: Color(0xFF1F9D55),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(Icons.done_rounded, color: Colors.white, size: 14),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Your phone number is verified',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: const Color(0xFF0E6138),
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _verifiedPhone!,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: const Color(0xFF164F35),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),

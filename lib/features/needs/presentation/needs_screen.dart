@@ -483,76 +483,111 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                           onChanged: (value) => setState(() => _urgency = value),
                           colorFor: _urgencyColor,
                         ),
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF6E8),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFF2CC8F).withValues(alpha: 0.7)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(top: 2),
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFE4B0),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.tips_and_updates_rounded, size: 16, color: Color(0xFF9B6A1A)),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Tip: Pick the level that best matches current risk. You can always share extra context in details so teams prioritize better.',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: const Color(0xFF7A4F0E),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                       if (_step == 3) ...[
                         _SectionLabel(title: 'Impact Details'),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
                           child: CustomCard(
-                            child: Row(
+                            child: Column(
                               children: [
-                                _CircleCounterButton(
-                                  icon: Icons.remove_rounded,
-                                  onTap: _peopleAffected > 1 ? () => _setPeopleAffected(_peopleAffected - 1) : null,
+                                Row(
+                                  children: [
+                                    _CircleCounterButton(
+                                      icon: Icons.remove_rounded,
+                                      onTap: _peopleAffected > 1 ? () => _setPeopleAffected(_peopleAffected - 1) : null,
+                                    ),
+                                    const Spacer(),
+                                    SizedBox(
+                                      width: 110,
+                                      child: TextFormField(
+                                        controller: _peopleAffectedController,
+                                        keyboardType: TextInputType.number,
+                                        textAlign: TextAlign.center,
+                                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                        style: theme.textTheme.displaySmall?.copyWith(
+                                          fontWeight: FontWeight.w500,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.zero,
+                                        ),
+                                        onTap: () {
+                                          _peopleAffectedController.selection = TextSelection(
+                                            baseOffset: 0,
+                                            extentOffset: _peopleAffectedController.text.length,
+                                          );
+                                        },
+                                        onChanged: (value) {
+                                          final parsedValue = int.tryParse(value);
+                                          if (parsedValue != null && parsedValue > 0) {
+                                            setState(() => _peopleAffected = parsedValue);
+                                          }
+                                        },
+                                        validator: (value) {
+                                          final parsedValue = int.tryParse((value ?? '').trim());
+                                          if (parsedValue == null || parsedValue < 1) {
+                                            return 'Enter a valid count';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    _CircleCounterButton(
+                                      icon: Icons.add_rounded,
+                                      onTap: () => _setPeopleAffected(_peopleAffected + 1),
+                                    ),
+                                  ],
                                 ),
-                                const Spacer(),
-                                SizedBox(
-                                  width: 110,
-                                  child: TextFormField(
-                                    controller: _peopleAffectedController,
-                                    keyboardType: TextInputType.number,
-                                    textAlign: TextAlign.center,
-                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                    style: theme.textTheme.displaySmall?.copyWith(
-                                      fontWeight: FontWeight.w500,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                    onTap: () {
-                                      _peopleAffectedController.selection = TextSelection(
-                                        baseOffset: 0,
-                                        extentOffset: _peopleAffectedController.text.length,
-                                      );
-                                    },
-                                    onChanged: (value) {
-                                      final parsedValue = int.tryParse(value);
-                                      if (parsedValue != null && parsedValue > 0) {
-                                        setState(() => _peopleAffected = parsedValue);
-                                      }
-                                    },
-                                    validator: (value) {
-                                      final parsedValue = int.tryParse((value ?? '').trim());
-                                      if (parsedValue == null || parsedValue < 1) {
-                                        return 'Enter a valid count';
-                                      }
-                                      return null;
-                                    },
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Approximate numbers are enough here if the exact count is still being verified.',
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const Spacer(),
-                                _CircleCounterButton(
-                                  icon: Icons.add_rounded,
-                                  onTap: () => _setPeopleAffected(_peopleAffected + 1),
-                                ),
                               ],
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppConstants.screenHorizontalPadding,
-                            8,
-                            AppConstants.screenHorizontalPadding,
-                            0,
-                          ),
-                          child: Text(
-                            'Approximate is okay. Add your best estimate of people impacted right now.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -759,7 +794,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                 const SizedBox(height: 10),
                                 _ReviewRow(label: 'Reported by', value: reporterName),
                                 const SizedBox(height: 10),
-                                _ReviewRow(label: 'Source', value: profile == null ? 'Demo fallback' : 'Firebase profile'),
+                                // _ReviewRow(label: 'Source', value: profile == null ? 'Demo fallback' : 'Firebase profile'),
                               ],
                             ),
                           ),
@@ -978,7 +1013,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       case _UrgencyLevel.medium:
         return const Color(0xFFE0B64D);
       case _UrgencyLevel.low:
-        return const Color(0xFF5DA66F);
+        return const Color(0xFF58A55C);
     }
   }
 
