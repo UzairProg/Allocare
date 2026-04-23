@@ -12,8 +12,80 @@ import '../../../services/user_profile_service.dart';
 import '../application/need_submission_service.dart';
 
 enum _LocationMode { current, search, map }
-enum _NeedCategory { medical, food, mental }
 enum _UrgencyLevel { critical, high, medium }
+
+const List<_NeedCategoryOption> _needCategoryOptions = [
+  _NeedCategoryOption(
+    key: 'medical',
+    title: 'Medical',
+    icon: Icons.medical_services_outlined,
+    color: Color(0xFFE16A79),
+    subcategories: ['Injuries', 'Chronic illness', 'Medicine/First Aid', 'Other Medical care'],
+  ),
+  _NeedCategoryOption(
+    key: 'food_nutrition',
+    title: 'Food & Nutrition',
+    icon: Icons.restaurant_menu_outlined,
+    color: Color(0xFFF0A55A),
+    subcategories: ['Hunger', 'Malnutrition', 'Infant formula', 'Other Food supply'],
+  ),
+  _NeedCategoryOption(
+    key: 'shelter_essentials',
+    title: 'Shelter & Essentials',
+    icon: Icons.night_shelter_outlined,
+    color: Color(0xFF8B8FD6),
+    subcategories: ['Eviction risk', 'Repair needed', 'Heating/Cooling', 'Other Shelter'],
+  ),
+  _NeedCategoryOption(
+    key: 'disaster_emergency',
+    title: 'Disaster & Emergency',
+    icon: Icons.warning_amber_rounded,
+    color: Color(0xFFE66A5F),
+    subcategories: ['Missing persons', 'Rescue needed', 'Natural disaster', 'Other Emergency'],
+  ),
+  _NeedCategoryOption(
+    key: 'mental_wellbeing',
+    title: 'Mental Health & Wellbeing',
+    icon: Icons.psychology_alt_outlined,
+    color: Color(0xFF6E90C5),
+    subcategories: ['Grief support', 'Panic attacks', 'Support network', 'Other Wellbeing'],
+  ),
+  _NeedCategoryOption(
+    key: 'education_child_support',
+    title: 'Education & Child Support',
+    icon: Icons.school_outlined,
+    color: Color(0xFF4D97A5),
+    subcategories: ['Tutoring', 'Youth programs', 'Child protection', 'Other Child help'],
+  ),
+  _NeedCategoryOption(
+    key: 'elderly_special_care',
+    title: 'Elderly & Special Care',
+    icon: Icons.accessibility_new_rounded,
+    color: Color(0xFF7E9B70),
+    subcategories: ['Isolated senior', 'Home visit', 'Caregiver respite', 'Other Elderly care'],
+  ),
+  _NeedCategoryOption(
+    key: 'livelihood_financial_support',
+    title: 'Livelihood & Financial Support',
+    icon: Icons.account_balance_wallet_outlined,
+    color: Color(0xFFB37F52),
+    subcategories: ['Small business', 'Debt relief', 'Grant assistance', 'Other Financial'],
+  ),
+  _NeedCategoryOption(
+    key: 'women_safety',
+    title: 'Women & Safety',
+    icon: Icons.shield_outlined,
+    color: Color(0xFFC75D87),
+    subcategories: ['Resource access', 'Legal aid', 'Escort service', 'Other Women safety'],
+  ),
+  _NeedCategoryOption(
+    key: 'others',
+    title: 'Others',
+    icon: Icons.category_outlined,
+    color: Color(0xFF7B8794),
+    subcategories: ['Other'],
+  ),
+];
 
 class NeedsScreen extends ConsumerStatefulWidget {
   const NeedsScreen({super.key});
@@ -30,12 +102,15 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   final _contactNameController = TextEditingController();
   final _contactPhoneController = TextEditingController();
   final _peopleAffectedController = TextEditingController(text: '24');
+  final _otherSubcategoryController = TextEditingController();
 
   _LocationMode _locationMode = _LocationMode.current;
   String _currentLocationLabel = 'Tap to fetch your live location';
   double? _currentLatitude;
   double? _currentLongitude;
-  _NeedCategory _category = _NeedCategory.medical;
+  String _categoryKey = 'medical';
+  String _selectedSubcategory = 'Injuries';
+  String? _expandedCategoryKey = 'medical';
   _UrgencyLevel _urgency = _UrgencyLevel.critical;
   int _peopleAffected = 24;
   int _step = 0;
@@ -49,6 +124,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
     _contactNameController.dispose();
     _contactPhoneController.dispose();
     _peopleAffectedController.dispose();
+    _otherSubcategoryController.dispose();
     super.dispose();
   }
 
@@ -280,15 +356,40 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                       ],
                       if (_step == 1) ...[
                         _SectionLabel(title: 'What kind of need?'),
-                        _ChoiceGrid<_NeedCategory>(
-                          selected: _category,
-                          items: const [
-                            _ChoiceItem(value: _NeedCategory.medical, label: 'Medical', icon: Icons.medical_services_outlined),
-                            _ChoiceItem(value: _NeedCategory.food, label: 'Food', icon: Icons.restaurant_menu_outlined),
-                            _ChoiceItem(value: _NeedCategory.mental, label: 'Mental', icon: Icons.psychology_alt_outlined),
-                          ],
-                          onChanged: (value) => setState(() => _category = value),
-                          colorFor: _categoryColor,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          child: Column(
+                            children: [
+                              for (final option in _needCategoryOptions) ...[
+                                _NeedCategoryCard(
+                                  option: option,
+                                  isSelected: _categoryKey == option.key,
+                                  isExpanded: _expandedCategoryKey == option.key,
+                                  selectedSubcategory: _categoryKey == option.key ? _selectedSubcategory : null,
+                                  onHeaderTap: () {
+                                    setState(() {
+                                      _expandedCategoryKey = _expandedCategoryKey == option.key ? null : option.key;
+                                      _categoryKey = option.key;
+                                      if (_categoryKey != 'others' && _otherSubcategoryController.text.isNotEmpty) {
+                                        _otherSubcategoryController.clear();
+                                      }
+                                      if (!option.subcategories.contains(_selectedSubcategory)) {
+                                        _selectedSubcategory = option.subcategories.first;
+                                      }
+                                    });
+                                  },
+                                  onSubcategoryTap: (subcategory) {
+                                    setState(() {
+                                      _categoryKey = option.key;
+                                      _selectedSubcategory = subcategory;
+                                    });
+                                  },
+                                  customOtherController: option.key == 'others' ? _otherSubcategoryController : null,
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+                            ],
+                          ),
                         ),
                       ],
                       if (_step == 2) ...[
@@ -531,14 +632,24 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   }
 
   String get _categoryLabel {
-    switch (_category) {
-      case _NeedCategory.medical:
-        return 'Medical Support';
-      case _NeedCategory.food:
-        return 'Food Support';
-      case _NeedCategory.mental:
-        return 'Mental Support';
+    return '${_selectedCategory.title} • $_resolvedSubcategory';
+  }
+
+  _NeedCategoryOption get _selectedCategory {
+    return _needCategoryOptions.firstWhere(
+      (option) => option.key == _categoryKey,
+      orElse: () => _needCategoryOptions.first,
+    );
+  }
+
+  String get _resolvedSubcategory {
+    if (_categoryKey == 'others') {
+      final customValue = _otherSubcategoryController.text.trim();
+      if (customValue.isNotEmpty) {
+        return customValue;
+      }
     }
+    return _selectedSubcategory;
   }
 
   String get _urgencyLabel {
@@ -549,17 +660,6 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         return 'High';
       case _UrgencyLevel.medium:
         return 'Medium';
-    }
-  }
-
-  Color _categoryColor(_NeedCategory category) {
-    switch (category) {
-      case _NeedCategory.medical:
-        return const Color(0xFFE16A79);
-      case _NeedCategory.food:
-        return const Color(0xFFF0A55A);
-      case _NeedCategory.mental:
-        return const Color(0xFF6E90C5);
     }
   }
 
@@ -630,7 +730,8 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       final need = NeedModel(
         id: '',
         title: title,
-        category: _category.name,
+        category: _categoryKey,
+        subcategory: _resolvedSubcategory,
         urgency: _urgency.name,
         description: description,
         location: _resolvedLocation,
@@ -664,7 +765,10 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         _currentLocationLabel = 'Tap to fetch your live location';
         _currentLatitude = null;
         _currentLongitude = null;
-        _category = _NeedCategory.medical;
+        _categoryKey = 'medical';
+        _selectedSubcategory = 'Injuries';
+        _expandedCategoryKey = 'medical';
+        _otherSubcategoryController.clear();
         _urgency = _UrgencyLevel.critical;
         _peopleAffected = 24;
         _peopleAffectedController.text = '24';
@@ -828,6 +932,199 @@ class _LocationCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NeedCategoryOption {
+  const _NeedCategoryOption({
+    required this.key,
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.subcategories,
+  });
+
+  final String key;
+  final String title;
+  final IconData icon;
+  final Color color;
+  final List<String> subcategories;
+}
+
+class _NeedCategoryCard extends StatelessWidget {
+  const _NeedCategoryCard({
+    required this.option,
+    required this.isSelected,
+    required this.isExpanded,
+    required this.selectedSubcategory,
+    required this.onHeaderTap,
+    required this.onSubcategoryTap,
+    this.customOtherController,
+  });
+
+  final _NeedCategoryOption option;
+  final bool isSelected;
+  final bool isExpanded;
+  final String? selectedSubcategory;
+  final VoidCallback onHeaderTap;
+  final ValueChanged<String> onSubcategoryTap;
+  final TextEditingController? customOtherController;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: isSelected ? option.color.withValues(alpha: 0.08) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isSelected ? option.color.withValues(alpha: 0.75) : theme.colorScheme.outlineVariant,
+          width: isSelected ? 1.4 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onHeaderTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: option.color.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Icon(option.icon, color: option.color),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          option.title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF2A3338),
+                          ),
+                        ),
+                        if (isSelected && selectedSubcategory != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            selectedSubcategory!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: option.color.withValues(alpha: 0.9),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final subcategory in option.subcategories)
+                        if (subcategory == 'Other')
+                          Tooltip(
+                            message: 'Can\'t find your specific need? Tell us more in the description.',
+                            child: ChoiceChip(
+                              avatar: Icon(
+                                Icons.lightbulb_outline_rounded,
+                                size: 16,
+                                color: selectedSubcategory == subcategory
+                                    ? option.color
+                                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              ),
+                              label: Text(
+                                subcategory,
+                                style: const TextStyle(fontStyle: FontStyle.italic),
+                              ),
+                              selected: selectedSubcategory == subcategory,
+                              showCheckmark: false,
+                              selectedColor: option.color.withValues(alpha: 0.15),
+                              backgroundColor: Colors.white,
+                              side: BorderSide(
+                                color: selectedSubcategory == subcategory
+                                    ? option.color.withValues(alpha: 0.8)
+                                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                width: selectedSubcategory == subcategory ? 1.5 : 1,
+                                strokeAlign: BorderSide.strokeAlignOutside,
+                              ),
+                              labelStyle: theme.textTheme.bodySmall?.copyWith(
+                                color: selectedSubcategory == subcategory ? option.color : theme.colorScheme.onSurfaceVariant,
+                                fontWeight: selectedSubcategory == subcategory ? FontWeight.w700 : FontWeight.w500,
+                              ),
+                              onSelected: (_) => onSubcategoryTap(subcategory),
+                            ),
+                          )
+                        else
+                          ChoiceChip(
+                            label: Text(subcategory),
+                            selected: selectedSubcategory == subcategory,
+                            showCheckmark: false,
+                            selectedColor: option.color.withValues(alpha: 0.2),
+                            backgroundColor: Colors.white,
+                            side: BorderSide(
+                              color: selectedSubcategory == subcategory ? option.color : theme.colorScheme.outlineVariant,
+                            ),
+                            labelStyle: theme.textTheme.bodySmall?.copyWith(
+                              color: selectedSubcategory == subcategory ? option.color : theme.colorScheme.onSurfaceVariant,
+                              fontWeight: selectedSubcategory == subcategory ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                            onSelected: (_) => onSubcategoryTap(subcategory),
+                          ),
+                    ],
+                  ),
+                  if (option.key == 'others' && selectedSubcategory == 'Other' && customOtherController != null) ...[
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: customOtherController,
+                      decoration: const InputDecoration(
+                        labelText: 'Specify other category',
+                        hintText: 'Type the specific need category',
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 190),
+          ),
+        ],
       ),
     );
   }
@@ -1014,3 +1311,4 @@ class _ReviewRow extends StatelessWidget {
     );
   }
 }
+

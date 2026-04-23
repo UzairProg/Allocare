@@ -5,6 +5,7 @@ class NeedModel {
     required this.id,
     required this.title,
     required this.category,
+    this.subcategory,
     required this.urgency,
     required this.description,
     required this.location,
@@ -23,6 +24,7 @@ class NeedModel {
   final String id;
   final String title;
   final String category;
+  final String? subcategory;
   final String urgency;
   final String description;
   final String location;
@@ -42,6 +44,7 @@ class NeedModel {
       id: id,
       title: (map['title'] as String?) ?? 'Untitled need',
       category: (map['category'] as String?) ?? 'general',
+      subcategory: (map['subcategory'] as String?)?.trim(),
       urgency: (map['urgency'] as String?) ?? 'normal',
       description: (map['description'] as String?) ?? '',
       location: (map['location'] as String?) ?? 'Unknown',
@@ -62,6 +65,7 @@ class NeedModel {
     return {
       'title': title,
       'category': category,
+      if (subcategory != null && subcategory!.trim().isNotEmpty) 'subcategory': subcategory,
       'urgency': urgency,
       'description': description,
       'location': location,
