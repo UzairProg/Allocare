@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
@@ -19,6 +20,7 @@ import '../../../services/user_profile_service.dart';
 import '../application/need_submission_service.dart';
 
 enum _LocationMode { current, search, map }
+
 enum _UrgencyLevel { critical, high, medium, low }
 
 const List<_NeedCategoryOption> _needCategoryOptions = [
@@ -27,63 +29,108 @@ const List<_NeedCategoryOption> _needCategoryOptions = [
     title: 'Medical',
     icon: Icons.medical_services_outlined,
     color: Color(0xFFE16A79),
-    subcategories: ['Injuries', 'Chronic illness', 'Medicine/First Aid', 'Other Medical care'],
+    subcategories: [
+      'Injuries',
+      'Chronic illness',
+      'Medicine/First Aid',
+      'Other Medical care',
+    ],
   ),
   _NeedCategoryOption(
     key: 'food_nutrition',
     title: 'Food & Nutrition',
     icon: Icons.restaurant_menu_outlined,
     color: Color(0xFFF0A55A),
-    subcategories: ['Hunger', 'Malnutrition', 'Infant formula', 'Other Food supply'],
+    subcategories: [
+      'Hunger',
+      'Malnutrition',
+      'Infant formula',
+      'Other Food supply',
+    ],
   ),
   _NeedCategoryOption(
     key: 'shelter_essentials',
     title: 'Shelter & Essentials',
     icon: Icons.night_shelter_outlined,
     color: Color(0xFF8B8FD6),
-    subcategories: ['Eviction risk', 'Repair needed', 'Heating/Cooling', 'Other Shelter'],
+    subcategories: [
+      'Eviction risk',
+      'Repair needed',
+      'Heating/Cooling',
+      'Other Shelter',
+    ],
   ),
   _NeedCategoryOption(
     key: 'disaster_emergency',
     title: 'Disaster & Emergency',
     icon: Icons.warning_amber_rounded,
     color: Color(0xFFE66A5F),
-    subcategories: ['Missing persons', 'Rescue needed', 'Natural disaster', 'Other Emergency'],
+    subcategories: [
+      'Missing persons',
+      'Rescue needed',
+      'Natural disaster',
+      'Other Emergency',
+    ],
   ),
   _NeedCategoryOption(
     key: 'mental_wellbeing',
     title: 'Mental Health & Wellbeing',
     icon: Icons.psychology_alt_outlined,
     color: Color(0xFF6E90C5),
-    subcategories: ['Grief support', 'Panic attacks', 'Support network', 'Other Wellbeing'],
+    subcategories: [
+      'Grief support',
+      'Panic attacks',
+      'Support network',
+      'Other Wellbeing',
+    ],
   ),
   _NeedCategoryOption(
     key: 'education_child_support',
     title: 'Education & Child Support',
     icon: Icons.school_outlined,
     color: Color(0xFF4D97A5),
-    subcategories: ['Tutoring', 'Youth programs', 'Child protection', 'Other Child help'],
+    subcategories: [
+      'Tutoring',
+      'Youth programs',
+      'Child protection',
+      'Other Child help',
+    ],
   ),
   _NeedCategoryOption(
     key: 'elderly_special_care',
     title: 'Elderly & Special Care',
     icon: Icons.accessibility_new_rounded,
     color: Color(0xFF7E9B70),
-    subcategories: ['Isolated senior', 'Home visit', 'Caregiver respite', 'Other Elderly care'],
+    subcategories: [
+      'Isolated senior',
+      'Home visit',
+      'Caregiver respite',
+      'Other Elderly care',
+    ],
   ),
   _NeedCategoryOption(
     key: 'livelihood_financial_support',
     title: 'Livelihood & Financial Support',
     icon: Icons.account_balance_wallet_outlined,
     color: Color(0xFFB37F52),
-    subcategories: ['Small business', 'Debt relief', 'Grant assistance', 'Other Financial'],
+    subcategories: [
+      'Small business',
+      'Debt relief',
+      'Grant assistance',
+      'Other Financial',
+    ],
   ),
   _NeedCategoryOption(
     key: 'women_safety',
     title: 'Women & Safety',
     icon: Icons.shield_outlined,
     color: Color(0xFFC75D87),
-    subcategories: ['Resource access', 'Legal aid', 'Escort service', 'Other Women safety'],
+    subcategories: [
+      'Resource access',
+      'Legal aid',
+      'Escort service',
+      'Other Women safety',
+    ],
   ),
   _NeedCategoryOption(
     key: 'others',
@@ -115,6 +162,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   String _currentLocationLabel = 'Tap to fetch your live location';
   double? _currentLatitude;
   double? _currentLongitude;
+  String _mapLocationLabel = 'Tap "Pick on Map" to choose a location';
+  double? _mapLatitude;
+  double? _mapLongitude;
   String _categoryKey = 'medical';
   String _selectedSubcategory = 'Injuries';
   String? _expandedCategoryKey = 'medical';
@@ -175,7 +225,8 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         permission = await Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.deniedForever || permission == LocationPermission.denied) {
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
         if (!mounted) return;
         setState(() {
           _currentLocationLabel = 'Location permission needed';
@@ -197,7 +248,8 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       setState(() {
         _currentLatitude = position.latitude;
         _currentLongitude = position.longitude;
-        _currentLocationLabel = 'Live location · ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+        _currentLocationLabel =
+            'Live location · ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
         _isCurrentLocationFetched = true;
       });
     } catch (error) {
@@ -208,9 +260,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         _currentLongitude = null;
         _isCurrentLocationFetched = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Location fetch failed: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Location fetch failed: $error')));
     }
   }
 
@@ -235,13 +287,13 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
     final reporterName = visibleProfile.displayName.trim().isNotEmpty
         ? visibleProfile.displayName.trim()
         : authUser?.displayName?.trim().isNotEmpty ?? false
-            ? authUser!.displayName!.trim()
-            : 'Allocare NGO';
+        ? authUser!.displayName!.trim()
+        : 'Allocare NGO';
     final reporterEmail = visibleProfile.email.trim().isNotEmpty
         ? visibleProfile.email.trim()
         : authUser?.email?.trim().isNotEmpty ?? false
-            ? authUser!.email!.trim()
-            : 'ngo@allocare.app';
+        ? authUser!.email!.trim()
+        : 'ngo@allocare.app';
 
     return Scaffold(
       body: SafeArea(
@@ -275,7 +327,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.screenHorizontalPadding,
+              ),
               child: _ProgressBar(step: _step, totalSteps: 6),
             ),
             Padding(
@@ -292,7 +346,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                   color: const Color(0xFFF8F7F2),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.8),
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.8,
+                    ),
                   ),
                 ),
                 child: Column(
@@ -344,9 +400,26 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                           subtitle: _currentLocationLabel,
                           icon: Icons.location_on_rounded,
                           onTap: () {
-                            setState(() => _locationMode = _LocationMode.current);
+                            setState(() {
+                              _locationMode = _LocationMode.current;
+                              _mapLocationLabel =
+                                  'Tap "Pick on Map" to choose a location';
+                              _mapLatitude = null;
+                              _mapLongitude = null;
+                              _locationController.clear();
+                            });
                             _fetchCurrentLocation();
                           },
+                        ),
+                        const SizedBox(height: 10),
+                        _LocationCard(
+                          mode: _LocationMode.map,
+                          selected: _locationMode == _LocationMode.map,
+                          title: 'Pick on Map',
+                          subtitle: _mapLocationLabel,
+                          icon: Icons.map_rounded,
+                          trailing: Icons.chevron_right_rounded,
+                          onTap: _pickLocationOnMap,
                         ),
                         const SizedBox(height: 10),
                         _LocationCard(
@@ -356,21 +429,22 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                           subtitle: 'Type a location or zone',
                           icon: Icons.search_rounded,
                           trailing: Icons.chevron_right_rounded,
-                          onTap: () => setState(() => _locationMode = _LocationMode.search),
-                        ),
-                        const SizedBox(height: 10),
-                        _LocationCard(
-                          mode: _LocationMode.map,
-                          selected: _locationMode == _LocationMode.map,
-                          title: 'Pick on Map',
-                          subtitle: 'Tap a zone to select',
-                          icon: Icons.map_rounded,
-                          trailing: Icons.chevron_right_rounded,
-                          onTap: () => setState(() => _locationMode = _LocationMode.map),
+                          onTap: () {
+                            setState(() {
+                              _locationMode = _LocationMode.search;
+                              _mapLocationLabel =
+                                  'Tap "Pick on Map" to choose a location';
+                              _mapLatitude = null;
+                              _mapLongitude = null;
+                              _locationController.clear();
+                            });
+                          },
                         ),
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 220),
-                          child: _locationMode == _LocationMode.current && _isCurrentLocationFetched
+                          child:
+                              _locationMode == _LocationMode.current &&
+                                  _isCurrentLocationFetched
                               ? Padding(
                                   key: const ValueKey('location-success-note'),
                                   padding: const EdgeInsets.fromLTRB(
@@ -380,12 +454,17 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                     0,
                                   ),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFEAF9F2),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: const Color(0xFF1F9D55).withValues(alpha: 0.45),
+                                        color: const Color(
+                                          0xFF1F9D55,
+                                        ).withValues(alpha: 0.45),
                                       ),
                                     ),
                                     child: Row(
@@ -399,10 +478,13 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                         Expanded(
                                           child: Text(
                                             'Current location fetched successfully.',
-                                            style: theme.textTheme.bodySmall?.copyWith(
-                                              color: const Color(0xFF166A41),
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: const Color(
+                                                    0xFF166A41,
+                                                  ),
+                                                  fontWeight: FontWeight.w700,
+                                                ),
                                           ),
                                         ),
                                       ],
@@ -411,10 +493,59 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                 )
                               : const SizedBox.shrink(),
                         ),
+                        if (_locationMode == _LocationMode.map &&
+                            _mapLatitude != null &&
+                            _mapLongitude != null)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppConstants.screenHorizontalPadding,
+                              10,
+                              AppConstants.screenHorizontalPadding,
+                              0,
+                            ),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEAF3FF),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFF2563EB,
+                                  ).withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.place_rounded,
+                                    color: Color(0xFF2563EB),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Pinned location saved as ${_mapLatitude!.toStringAsFixed(5)}, ${_mapLongitude!.toStringAsFixed(5)}',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: const Color(0xFF1D4ED8),
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         if (_locationMode != _LocationMode.current) ...[
                           const SizedBox(height: 12),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppConstants.screenHorizontalPadding,
+                            ),
                             child: TextFormField(
                               controller: _locationController,
                               decoration: const InputDecoration(
@@ -422,9 +553,15 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                 hintText: 'Enter area, landmark, or zone',
                               ),
                               validator: (value) {
-                                if (_locationMode == _LocationMode.current) return null;
+                                if (_locationMode == _LocationMode.current)
+                                  return null;
                                 if ((value ?? '').trim().isEmpty) {
                                   return 'Location is required';
+                                }
+                                if (_locationMode == _LocationMode.map &&
+                                    (_mapLatitude == null ||
+                                        _mapLongitude == null)) {
+                                  return 'Pick a location on the map first';
                                 }
                                 return null;
                               },
@@ -435,24 +572,39 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                       if (_step == 1) ...[
                         _SectionLabel(title: 'Choose Need Category'),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.screenHorizontalPadding,
+                          ),
                           child: Column(
                             children: [
                               for (final option in _needCategoryOptions) ...[
                                 _NeedCategoryCard(
                                   option: option,
                                   isSelected: _categoryKey == option.key,
-                                  isExpanded: _expandedCategoryKey == option.key,
-                                  selectedSubcategory: _categoryKey == option.key ? _selectedSubcategory : null,
+                                  isExpanded:
+                                      _expandedCategoryKey == option.key,
+                                  selectedSubcategory:
+                                      _categoryKey == option.key
+                                      ? _selectedSubcategory
+                                      : null,
                                   onHeaderTap: () {
                                     setState(() {
-                                      _expandedCategoryKey = _expandedCategoryKey == option.key ? null : option.key;
+                                      _expandedCategoryKey =
+                                          _expandedCategoryKey == option.key
+                                          ? null
+                                          : option.key;
                                       _categoryKey = option.key;
-                                      if (_categoryKey != 'others' && _otherSubcategoryController.text.isNotEmpty) {
+                                      if (_categoryKey != 'others' &&
+                                          _otherSubcategoryController
+                                              .text
+                                              .isNotEmpty) {
                                         _otherSubcategoryController.clear();
                                       }
-                                      if (!option.subcategories.contains(_selectedSubcategory)) {
-                                        _selectedSubcategory = option.subcategories.first;
+                                      if (!option.subcategories.contains(
+                                        _selectedSubcategory,
+                                      )) {
+                                        _selectedSubcategory =
+                                            option.subcategories.first;
                                       }
                                     });
                                   },
@@ -462,7 +614,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                       _selectedSubcategory = subcategory;
                                     });
                                   },
-                                  customOtherController: option.key == 'others' ? _otherSubcategoryController : null,
+                                  customOtherController: option.key == 'others'
+                                      ? _otherSubcategoryController
+                                      : null,
                                 ),
                                 const SizedBox(height: 10),
                               ],
@@ -475,24 +629,47 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                         _ChoiceGrid<_UrgencyLevel>(
                           selected: _urgency,
                           items: const [
-                            _ChoiceItem(value: _UrgencyLevel.critical, label: 'Critical', icon: Icons.brightness_1_rounded),
-                            _ChoiceItem(value: _UrgencyLevel.high, label: 'High', icon: Icons.brightness_1_rounded),
-                            _ChoiceItem(value: _UrgencyLevel.medium, label: 'Medium', icon: Icons.brightness_1_rounded),
-                            _ChoiceItem(value: _UrgencyLevel.low, label: 'Low', icon: Icons.brightness_1_rounded),
+                            _ChoiceItem(
+                              value: _UrgencyLevel.critical,
+                              label: 'Critical',
+                              icon: Icons.brightness_1_rounded,
+                            ),
+                            _ChoiceItem(
+                              value: _UrgencyLevel.high,
+                              label: 'High',
+                              icon: Icons.brightness_1_rounded,
+                            ),
+                            _ChoiceItem(
+                              value: _UrgencyLevel.medium,
+                              label: 'Medium',
+                              icon: Icons.brightness_1_rounded,
+                            ),
+                            _ChoiceItem(
+                              value: _UrgencyLevel.low,
+                              label: 'Low',
+                              icon: Icons.brightness_1_rounded,
+                            ),
                           ],
-                          onChanged: (value) => setState(() => _urgency = value),
+                          onChanged: (value) =>
+                              setState(() => _urgency = value),
                           colorFor: _urgencyColor,
                         ),
                         const SizedBox(height: 12),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.screenHorizontalPadding,
+                          ),
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFF6E8),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFF2CC8F).withValues(alpha: 0.7)),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFFF2CC8F,
+                                ).withValues(alpha: 0.7),
+                              ),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,7 +681,11 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                     color: const Color(0xFFFFE4B0),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.tips_and_updates_rounded, size: 16, color: Color(0xFF9B6A1A)),
+                                  child: const Icon(
+                                    Icons.tips_and_updates_rounded,
+                                    size: 16,
+                                    color: Color(0xFF9B6A1A),
+                                  ),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -524,7 +705,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                       if (_step == 3) ...[
                         _SectionLabel(title: 'Impact Details'),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.screenHorizontalPadding,
+                          ),
                           child: CustomCard(
                             child: Column(
                               children: [
@@ -532,7 +715,11 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                   children: [
                                     _CircleCounterButton(
                                       icon: Icons.remove_rounded,
-                                      onTap: _peopleAffected > 1 ? () => _setPeopleAffected(_peopleAffected - 1) : null,
+                                      onTap: _peopleAffected > 1
+                                          ? () => _setPeopleAffected(
+                                              _peopleAffected - 1,
+                                            )
+                                          : null,
                                     ),
                                     const Spacer(),
                                     SizedBox(
@@ -541,30 +728,47 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                         controller: _peopleAffectedController,
                                         keyboardType: TextInputType.number,
                                         textAlign: TextAlign.center,
-                                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                        style: theme.textTheme.displaySmall?.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                          color: theme.colorScheme.primary,
-                                        ),
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                        ],
+                                        style: theme.textTheme.displaySmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                              color: theme.colorScheme.primary,
+                                            ),
                                         decoration: const InputDecoration(
                                           border: InputBorder.none,
                                           contentPadding: EdgeInsets.zero,
                                         ),
                                         onTap: () {
-                                          _peopleAffectedController.selection = TextSelection(
-                                            baseOffset: 0,
-                                            extentOffset: _peopleAffectedController.text.length,
-                                          );
+                                          _peopleAffectedController.selection =
+                                              TextSelection(
+                                                baseOffset: 0,
+                                                extentOffset:
+                                                    _peopleAffectedController
+                                                        .text
+                                                        .length,
+                                              );
                                         },
                                         onChanged: (value) {
-                                          final parsedValue = int.tryParse(value);
-                                          if (parsedValue != null && parsedValue > 0) {
-                                            setState(() => _peopleAffected = parsedValue);
+                                          final parsedValue = int.tryParse(
+                                            value,
+                                          );
+                                          if (parsedValue != null &&
+                                              parsedValue > 0) {
+                                            setState(
+                                              () =>
+                                                  _peopleAffected = parsedValue,
+                                            );
                                           }
                                         },
                                         validator: (value) {
-                                          final parsedValue = int.tryParse((value ?? '').trim());
-                                          if (parsedValue == null || parsedValue < 1) {
+                                          final parsedValue = int.tryParse(
+                                            (value ?? '').trim(),
+                                          );
+                                          if (parsedValue == null ||
+                                              parsedValue < 1) {
                                             return 'Enter a valid count';
                                           }
                                           return null;
@@ -574,7 +778,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                     const Spacer(),
                                     _CircleCounterButton(
                                       icon: Icons.add_rounded,
-                                      onTap: () => _setPeopleAffected(_peopleAffected + 1),
+                                      onTap: () => _setPeopleAffected(
+                                        _peopleAffected + 1,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -594,7 +800,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                         const SizedBox(height: 18),
                         _SectionLabel(title: 'Need Details'),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.screenHorizontalPadding,
+                          ),
                           child: Column(
                             children: [
                               TextFormField(
@@ -617,7 +825,8 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                 maxLines: 5,
                                 decoration: const InputDecoration(
                                   labelText: 'Description',
-                                  hintText: 'Describe the issue, severity, and any immediate needs',
+                                  hintText:
+                                      'Describe the issue, severity, and any immediate needs',
                                 ),
                                 validator: (value) {
                                   if ((value ?? '').trim().isEmpty) {
@@ -650,7 +859,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                       if (_step == 4) ...[
                         _SectionLabel(title: 'Supporting Evidence (Optional)'),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.screenHorizontalPadding,
+                          ),
                           child: Text(
                             'Attach photos, documents, or reports to strengthen your report',
                             style: theme.textTheme.bodyMedium?.copyWith(
@@ -660,27 +871,35 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                         ),
                         const SizedBox(height: 16),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.screenHorizontalPadding,
+                          ),
                           child: Column(
                             children: [
                               _DocumentUploadCard(
                                 label: 'Take Photo',
                                 icon: Icons.camera_alt_rounded,
-                                onTap: _isUploadingFile ? null : () => _pickFileFromCamera(),
+                                onTap: _isUploadingFile
+                                    ? null
+                                    : () => _pickFileFromCamera(),
                                 isLoading: _isUploadingFile,
                               ),
                               const SizedBox(height: 10),
                               _DocumentUploadCard(
                                 label: 'From Gallery',
                                 icon: Icons.image_rounded,
-                                onTap: _isUploadingFile ? null : () => _pickFileFromGallery(),
+                                onTap: _isUploadingFile
+                                    ? null
+                                    : () => _pickFileFromGallery(),
                                 isLoading: _isUploadingFile,
                               ),
                               const SizedBox(height: 10),
                               _DocumentUploadCard(
                                 label: 'Upload File',
                                 icon: Icons.description_rounded,
-                                onTap: _isUploadingFile ? null : () => _pickFileFromBrowser(),
+                                onTap: _isUploadingFile
+                                    ? null
+                                    : () => _pickFileFromBrowser(),
                                 isLoading: _isUploadingFile,
                               ),
                             ],
@@ -689,7 +908,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                         if (_supportingDocs.isNotEmpty) ...[
                           const SizedBox(height: 16),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppConstants.screenHorizontalPadding,
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -701,7 +922,8 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                for (final (index, doc) in _supportingDocs.indexed) ...[
+                                for (final (index, doc)
+                                    in _supportingDocs.indexed) ...[
                                   InkWell(
                                     borderRadius: BorderRadius.circular(18),
                                     onTap: () => _previewAttachment(doc),
@@ -712,11 +934,16 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                             width: 44,
                                             height: 44,
                                             decoration: BoxDecoration(
-                                              color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                                              borderRadius: BorderRadius.circular(14),
+                                              color: theme.colorScheme.primary
+                                                  .withValues(alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
                                             ),
                                             child: Icon(
-                                              doc.isImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded,
+                                              doc.isImage
+                                                  ? Icons.image_rounded
+                                                  : Icons
+                                                        .picture_as_pdf_rounded,
                                               size: 24,
                                               color: theme.colorScheme.primary,
                                             ),
@@ -724,35 +951,59 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   doc.fileName,
                                                   maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: theme.textTheme.labelMedium?.copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: theme
+                                                      .textTheme
+                                                      .labelMedium
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
-                                                  doc.isImage ? 'Tap to view image' : 'Tap to open in app',
-                                                  style: theme.textTheme.labelSmall?.copyWith(
-                                                    color: theme.colorScheme.onSurfaceVariant,
-                                                  ),
+                                                  doc.isImage
+                                                      ? 'Tap to view image'
+                                                      : 'Tap to open in app',
+                                                  style: theme
+                                                      .textTheme
+                                                      .labelSmall
+                                                      ?.copyWith(
+                                                        color: theme
+                                                            .colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
                                                 ),
                                                 Text(
                                                   doc.fileSizeDisplay,
-                                                  style: theme.textTheme.labelSmall?.copyWith(
-                                                    color: theme.colorScheme.onSurfaceVariant,
-                                                  ),
+                                                  style: theme
+                                                      .textTheme
+                                                      .labelSmall
+                                                      ?.copyWith(
+                                                        color: theme
+                                                            .colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
                                                 ),
                                               ],
                                             ),
                                           ),
                                           IconButton(
-                                            onPressed: () => setState(() => _supportingDocs.removeAt(index)),
-                                            icon: const Icon(Icons.close_rounded),
+                                            onPressed: () => setState(
+                                              () => _supportingDocs.removeAt(
+                                                index,
+                                              ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.close_rounded,
+                                            ),
                                             iconSize: 20,
                                             constraints: const BoxConstraints(),
                                             padding: EdgeInsets.zero,
@@ -761,7 +1012,8 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                       ),
                                     ),
                                   ),
-                                  if (index < _supportingDocs.length - 1) const SizedBox(height: 8),
+                                  if (index < _supportingDocs.length - 1)
+                                    const SizedBox(height: 8),
                                 ],
                               ],
                             ),
@@ -771,28 +1023,53 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                       if (_step == 5) ...[
                         _SectionLabel(title: 'Review Report'),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.screenHorizontalPadding,
+                          ),
                           child: CustomCard(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _ReviewRow(label: 'Location', value: _resolvedLocation),
+                                _ReviewRow(
+                                  label: 'Location',
+                                  value: _resolvedLocation,
+                                ),
                                 const SizedBox(height: 10),
-                                _ReviewRow(label: 'Type', value: _categoryLabel),
+                                _ReviewRow(
+                                  label: 'Type',
+                                  value: _categoryLabel,
+                                ),
                                 const SizedBox(height: 10),
-                                _ReviewRow(label: 'Urgency', value: _urgencyLabel),
+                                _ReviewRow(
+                                  label: 'Urgency',
+                                  value: _urgencyLabel,
+                                ),
                                 const SizedBox(height: 10),
-                                _ReviewRow(label: 'People', value: '$_peopleAffected people'),
+                                _ReviewRow(
+                                  label: 'People',
+                                  value: '$_peopleAffected people',
+                                ),
                                 const SizedBox(height: 10),
-                                _ReviewRow(label: 'Title', value: _titleController.text.trim().isEmpty ? 'Untitled need' : _titleController.text.trim()),
+                                _ReviewRow(
+                                  label: 'Title',
+                                  value: _titleController.text.trim().isEmpty
+                                      ? 'Untitled need'
+                                      : _titleController.text.trim(),
+                                ),
                                 const SizedBox(height: 10),
                                 _ReviewRow(
                                   label: 'Description',
-                                  value: _descriptionController.text.trim().isEmpty ? 'No description provided' : _descriptionController.text.trim(),
+                                  value:
+                                      _descriptionController.text.trim().isEmpty
+                                      ? 'No description provided'
+                                      : _descriptionController.text.trim(),
                                   alignTop: true,
                                 ),
                                 const SizedBox(height: 10),
-                                _ReviewRow(label: 'Reported by', value: reporterName),
+                                _ReviewRow(
+                                  label: 'Reported by',
+                                  value: reporterName,
+                                ),
                                 const SizedBox(height: 10),
                                 // _ReviewRow(label: 'Source', value: profile == null ? 'Demo fallback' : 'Firebase profile'),
                               ],
@@ -802,7 +1079,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                         if (_supportingDocs.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppConstants.screenHorizontalPadding,
+                            ),
                             child: Text(
                               'Supporting Evidence (${_supportingDocs.length} file${_supportingDocs.length != 1 ? 's' : ''})',
                               style: theme.textTheme.labelMedium?.copyWith(
@@ -813,12 +1092,15 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                           ),
                           const SizedBox(height: 8),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppConstants.screenHorizontalPadding,
+                            ),
                             child: SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: Row(
                                 children: [
-                                  for (final (index, doc) in _supportingDocs.indexed) ...[
+                                  for (final (index, doc)
+                                      in _supportingDocs.indexed) ...[
                                     if (index > 0) const SizedBox(width: 8),
                                     InkWell(
                                       borderRadius: BorderRadius.circular(10),
@@ -827,40 +1109,58 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                         width: 80,
                                         height: 80,
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(8),
-                                          color: theme.colorScheme.surfaceContainerHigh,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          color: theme
+                                              .colorScheme
+                                              .surfaceContainerHigh,
                                         ),
                                         child: doc.isImage
                                             ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                                 child: Image.memory(
                                                   base64Decode(doc.base64Data),
                                                   fit: BoxFit.cover,
                                                 ),
                                               )
                                             : Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
                                                 children: [
                                                   Icon(
-                                                    Icons.picture_as_pdf_rounded,
+                                                    Icons
+                                                        .picture_as_pdf_rounded,
                                                     size: 28,
-                                                    color: theme.colorScheme.primary,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary,
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 4,
+                                                        ),
                                                     child: Text(
                                                       'PDF',
                                                       maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      textAlign: TextAlign.center,
-                                                      style: theme.textTheme.labelSmall?.copyWith(
-                                                        fontWeight: FontWeight.w700,
-                                                      ),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: theme
+                                                          .textTheme
+                                                          .labelSmall
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                          ),
                                                     ),
                                                   ),
                                                 ],
-                                                ),
+                                              ),
                                       ),
                                     ),
                                   ],
@@ -871,7 +1171,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                         ],
                         const SizedBox(height: 12),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.screenHorizontalPadding,
+                          ),
                           child: Text(
                             'Your report helps AI prioritize resource allocation fairly',
                             textAlign: TextAlign.center,
@@ -883,13 +1185,17 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                       ],
                       const SizedBox(height: 18),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.screenHorizontalPadding,
+                        ),
                         child: Row(
                           children: [
                             if (_step > 0)
                               Expanded(
                                 child: OutlinedButton(
-                                  onPressed: _isSubmitting ? null : () => setState(() => _step -= 1),
+                                  onPressed: _isSubmitting
+                                      ? null
+                                      : () => setState(() => _step -= 1),
                                   child: const Text('Back'),
                                 ),
                               ),
@@ -898,17 +1204,30 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                               flex: _step == 5 ? 2 : 1,
                               child: FilledButton(
                                 onPressed: _isSubmitting
-                                  ? null
+                                    ? null
                                     : _step == 5
-                                        ? () => _submitNeed(context, authService, submissionService, reporterName, reporterEmail)
-                                        : () => _nextStep(context),
+                                    ? () => _submitNeed(
+                                        context,
+                                        authService,
+                                        submissionService,
+                                        reporterName,
+                                        reporterEmail,
+                                      )
+                                    : () => _nextStep(context),
                                 child: _isSubmitting
                                     ? const SizedBox(
                                         height: 18,
                                         width: 18,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
                                       )
-                                    : Text(_step == 5 ? 'Submit Report ->' : 'Continue'),
+                                    : Text(
+                                        _step == 5
+                                            ? 'Submit Report ->'
+                                            : 'Continue',
+                                      ),
                               ),
                             ),
                           ],
@@ -967,7 +1286,15 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       }
       return 'Live location not fetched yet';
     }
-    return _locationController.text.trim().isEmpty ? 'Search location' : _locationController.text.trim();
+    if (_locationMode == _LocationMode.map) {
+      if (_mapLatitude != null && _mapLongitude != null) {
+        return 'Pinned location · ${_mapLatitude!.toStringAsFixed(5)}, ${_mapLongitude!.toStringAsFixed(5)}';
+      }
+      return 'Map location not selected yet';
+    }
+    return _locationController.text.trim().isEmpty
+        ? 'Search location'
+        : _locationController.text.trim();
   }
 
   String get _categoryLabel {
@@ -1038,7 +1365,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         final fileName = picked.name.trim().isNotEmpty
             ? picked.name
             : 'camera_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final ext = _normalizedExtension(_extensionFromNameOrPath(fileName, picked.path));
+        final ext = _normalizedExtension(
+          _extensionFromNameOrPath(fileName, picked.path),
+        );
         final doc = DocumentAttachment(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           fileName: fileName,
@@ -1056,9 +1385,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error capturing photo: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error capturing photo: $e')));
       }
     } finally {
       if (mounted) setState(() => _isUploadingFile = false);
@@ -1086,7 +1415,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         final fileName = picked.name.trim().isNotEmpty
             ? picked.name
             : 'gallery_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final ext = _normalizedExtension(_extensionFromNameOrPath(fileName, picked.path));
+        final ext = _normalizedExtension(
+          _extensionFromNameOrPath(fileName, picked.path),
+        );
         final doc = DocumentAttachment(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           fileName: fileName,
@@ -1118,7 +1449,16 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       setState(() => _isUploadingFile = true);
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif'],
+        allowedExtensions: [
+          'pdf',
+          'doc',
+          'docx',
+          'txt',
+          'jpg',
+          'jpeg',
+          'png',
+          'gif',
+        ],
         withData: true,
       );
 
@@ -1134,7 +1474,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
           final doc = DocumentAttachment(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             fileName: file.name,
-            fileType: ext != null ? _getMimeType(ext) : 'application/octet-stream',
+            fileType: ext != null
+                ? _getMimeType(ext)
+                : 'application/octet-stream',
             fileSizeBytes: file.size,
             base64Data: base64,
             uploadedAt: DateTime.now(),
@@ -1148,9 +1490,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking file: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking file: $e')));
       }
     } finally {
       if (mounted) setState(() => _isUploadingFile = false);
@@ -1216,13 +1558,18 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       return false;
     }
 
-    final currentBytes = _supportingDocs.fold<int>(0, (sum, doc) => sum + doc.fileSizeBytes);
+    final currentBytes = _supportingDocs.fold<int>(
+      0,
+      (sum, doc) => sum + doc.fileSizeBytes,
+    );
     final nextBytes = currentBytes + newFileSize;
     const maxTotalBytes = 50 * 1024 * 1024;
 
     if (nextBytes > maxTotalBytes) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Total attachment size must stay within 50 MB.')),
+        const SnackBar(
+          content: Text('Total attachment size must stay within 50 MB.'),
+        ),
       );
       return false;
     }
@@ -1258,14 +1605,18 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Text(
                   'File uploaded successfully',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -1324,9 +1675,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                   child: Text(
                     'Report submitted successfully',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -1378,15 +1729,21 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                 attachment.fileName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: Theme.of(dialogContext).textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                style: Theme.of(dialogContext)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 attachment.fileSizeDisplay,
-                                style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(dialogContext).colorScheme.onSurfaceVariant,
+                                style: Theme.of(dialogContext)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        dialogContext,
+                                      ).colorScheme.onSurfaceVariant,
                                     ),
                               ),
                             ],
@@ -1410,11 +1767,16 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
 
     if (attachment.isPdf) {
       try {
-        final pdfPath = await _resolveLocalPreviewPath(attachment, extensionHint: 'pdf');
+        final pdfPath = await _resolveLocalPreviewPath(
+          attachment,
+          extensionHint: 'pdf',
+        );
         if (pdfPath == null) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Unable to prepare the PDF for opening.')),
+            const SnackBar(
+              content: Text('Unable to prepare the PDF for opening.'),
+            ),
           );
           return;
         }
@@ -1430,21 +1792,25 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('PDF opener is not initialized yet. Fully stop and rerun the app once.'),
+            content: Text(
+              'PDF opener is not initialized yet. Fully stop and rerun the app once.',
+            ),
           ),
         );
       } catch (error) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open PDF: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not open PDF: $error')));
       }
       return;
     }
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Preview is available for images and PDFs only.')),
+      const SnackBar(
+        content: Text('Preview is available for images and PDFs only.'),
+      ),
     );
   }
 
@@ -1478,9 +1844,19 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
 
   void _nextStep(BuildContext context) {
     if (_step == 0) {
-      if (_locationMode != _LocationMode.current && _locationController.text.trim().isEmpty) {
+      if (_locationMode != _LocationMode.current &&
+          _locationController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please enter a location first.')),
+        );
+        return;
+      }
+      if (_locationMode == _LocationMode.map &&
+          (_mapLatitude == null || _mapLongitude == null)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please pick a location on the map first.'),
+          ),
         );
         return;
       }
@@ -1489,7 +1865,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
     if (_step == 3) {
       final titleError = _validateTitle();
       if (titleError != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(titleError)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(titleError)));
         return;
       }
     }
@@ -1507,6 +1885,34 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
     return null;
   }
 
+  Future<void> _pickLocationOnMap() async {
+    setState(() {
+      _locationMode = _LocationMode.map;
+    });
+
+    final selected = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute<LatLng>(
+        builder: (_) => _MapLocationPickerPage(
+          initialLocation: _mapLatitude != null && _mapLongitude != null
+              ? LatLng(_mapLatitude!, _mapLongitude!)
+              : const LatLng(19.8762, 75.3433),
+        ),
+      ),
+    );
+
+    if (!mounted || selected == null) {
+      return;
+    }
+
+    setState(() {
+      _mapLatitude = selected.latitude;
+      _mapLongitude = selected.longitude;
+      _mapLocationLabel =
+          'Pinned location · ${selected.latitude.toStringAsFixed(5)}, ${selected.longitude.toStringAsFixed(5)}';
+      _locationController.text = _mapLocationLabel;
+    });
+  }
+
   Future<void> _submitNeed(
     BuildContext context,
     AuthService authService,
@@ -1518,7 +1924,8 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       return;
     }
 
-    final parsedPeopleAffected = int.tryParse(_peopleAffectedController.text.trim()) ?? _peopleAffected;
+    final parsedPeopleAffected =
+        int.tryParse(_peopleAffectedController.text.trim()) ?? _peopleAffected;
 
     setState(() => _isSubmitting = true);
 
@@ -1528,6 +1935,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       final contactName = _contactNameController.text.trim();
       final contactPhone = _contactPhoneController.text.trim();
       final currentUser = authService.currentUser;
+      final imageFile = await _resolvePrimaryImageFile();
 
       final need = NeedModel(
         id: '',
@@ -1541,18 +1949,34 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         reportedBy: currentUser?.uid ?? reporterEmail,
         peopleAffected: parsedPeopleAffected,
         status: 'open',
-        latitude: _locationMode == _LocationMode.current ? _currentLatitude : null,
-        longitude: _locationMode == _LocationMode.current ? _currentLongitude : null,
+        latitude: _locationMode == _LocationMode.current
+            ? _currentLatitude
+            : _locationMode == _LocationMode.map
+            ? _mapLatitude
+            : null,
+        longitude: _locationMode == _LocationMode.current
+            ? _currentLongitude
+            : _locationMode == _LocationMode.map
+            ? _mapLongitude
+            : null,
         contactName: contactName.isEmpty ? null : contactName,
         contactPhone: contactPhone.isEmpty ? null : contactPhone,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         supportingDocsMetadata: _supportingDocs.isNotEmpty
-          ? _supportingDocs.map((doc) => doc.toFirestoreMetadataMap()).toList()
+            ? _supportingDocs
+                  .map((doc) => doc.toFirestoreMetadataMap())
+                  .toList()
             : null,
       );
 
-      await submissionService.submitNeed(need);
+      final reportId = await submissionService.submitReport(
+        need,
+        imageFile: imageFile,
+      );
+      if (reportId.isEmpty) {
+        throw Exception('Image upload failed. Report was not saved.');
+      }
 
       if (!context.mounted) return;
 
@@ -1568,6 +1992,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         _currentLocationLabel = 'Tap to fetch your live location';
         _currentLatitude = null;
         _currentLongitude = null;
+        _mapLocationLabel = 'Tap "Pick on Map" to choose a location';
+        _mapLatitude = null;
+        _mapLongitude = null;
         _isCurrentLocationFetched = false;
         _categoryKey = 'medical';
         _selectedSubcategory = 'Injuries';
@@ -1590,13 +2017,142 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       }
     }
   }
+
+  Future<File?> _resolvePrimaryImageFile() async {
+    for (final doc in _supportingDocs) {
+      if (!doc.isImage) {
+        continue;
+      }
+
+      final localPath = doc.localPath;
+      if (localPath != null && localPath.trim().isNotEmpty) {
+        final file = File(localPath);
+        if (await file.exists()) {
+          return file;
+        }
+      }
+
+      if (doc.base64Data.trim().isNotEmpty) {
+        try {
+          final bytes = base64Decode(doc.base64Data);
+          final extension = _normalizedExtension(
+            _extensionFromNameOrPath(doc.fileName, doc.localPath),
+          );
+          final suffix = extension == null || extension.isEmpty
+              ? 'jpg'
+              : extension;
+          final tempPath =
+              '${Directory.systemTemp.path}${Platform.pathSeparator}allocare_report_${DateTime.now().microsecondsSinceEpoch}.$suffix';
+          final tempFile = File(tempPath);
+          await tempFile.writeAsBytes(bytes, flush: true);
+          return tempFile;
+        } catch (_) {
+          continue;
+        }
+      }
+    }
+
+    return null;
+  }
+}
+
+class _MapLocationPickerPage extends StatefulWidget {
+  const _MapLocationPickerPage({required this.initialLocation});
+
+  final LatLng initialLocation;
+
+  @override
+  State<_MapLocationPickerPage> createState() => _MapLocationPickerPageState();
+}
+
+class _MapLocationPickerPageState extends State<_MapLocationPickerPage> {
+  GoogleMapController? _controller;
+  LatLng? _selectedLocation;
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _selectLocation(LatLng location) {
+    setState(() {
+      _selectedLocation = location;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final marker = _selectedLocation;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Pick Location'),
+        actions: [
+          TextButton(
+            onPressed: marker == null
+                ? null
+                : () => Navigator.of(context).pop(marker),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: widget.initialLocation,
+              zoom: 14,
+            ),
+            onMapCreated: (controller) {
+              _controller = controller;
+            },
+            onTap: _selectLocation,
+            markers: {
+              if (marker != null)
+                Marker(
+                  markerId: const MarkerId('picked-location'),
+                  position: marker,
+                ),
+            },
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: true,
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: Card(
+              elevation: 8,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tap once to place the pin, then confirm.',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      marker == null
+                          ? 'No location selected yet'
+                          : '${marker.latitude.toStringAsFixed(5)}, ${marker.longitude.toStringAsFixed(5)}',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({
-    required this.step,
-    required this.totalSteps,
-  });
+  const _ProgressBar({required this.step, required this.totalSteps});
 
   final int step;
   final int totalSteps;
@@ -1613,7 +2169,9 @@ class _ProgressBar extends StatelessWidget {
             margin: EdgeInsets.only(right: index == totalSteps - 1 ? 0 : 8),
             height: 4,
             decoration: BoxDecoration(
-              color: active ? theme.colorScheme.primary : const Color(0xFFE6E1D4),
+              color: active
+                  ? theme.colorScheme.primary
+                  : const Color(0xFFE6E1D4),
               borderRadius: BorderRadius.circular(999),
             ),
           ),
@@ -1640,9 +2198,9 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF4A4A4A),
-            ),
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF4A4A4A),
+        ),
       ),
     );
   }
@@ -1673,18 +2231,20 @@ class _LocationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final borderColor = success
-      ? const Color(0xFF1F9D55).withValues(alpha: 0.70)
-      : selected
+        ? const Color(0xFF1F9D55).withValues(alpha: 0.70)
+        : selected
         ? theme.colorScheme.primary.withValues(alpha: 0.55)
         : theme.colorScheme.outlineVariant;
     final background = success
-      ? const Color(0xFFEAF9F2)
-      : selected
+        ? const Color(0xFFEAF9F2)
+        : selected
         ? const Color(0xFFF2F0DE)
         : Colors.white;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.screenHorizontalPadding,
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
@@ -1711,13 +2271,17 @@ class _LocationCard extends StatelessWidget {
                   color: success
                       ? const Color(0xFFDFF3E9)
                       : selected
-                          ? const Color(0xFFE8DDC1)
-                          : const Color(0xFFF4F1E8),
+                      ? const Color(0xFFE8DDC1)
+                      : const Color(0xFFF4F1E8),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   success ? Icons.gps_fixed_rounded : icon,
-                  color: success ? const Color(0xFF1F9D55) : (selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
+                  color: success
+                      ? const Color(0xFF1F9D55)
+                      : (selected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1742,20 +2306,11 @@ class _LocationCard extends StatelessWidget {
                 ),
               ),
               if (success)
-                const Icon(
-                  Icons.check_circle_rounded,
-                  color: Color(0xFF1F9D55),
-                )
+                const Icon(Icons.check_circle_rounded, color: Color(0xFF1F9D55))
               else if (selected)
-                Icon(
-                  Icons.check_rounded,
-                  color: theme.colorScheme.primary,
-                )
+                Icon(Icons.check_rounded, color: theme.colorScheme.primary)
               else if (trailing != null)
-                Icon(
-                  trailing,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                Icon(trailing, color: theme.colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -1810,7 +2365,9 @@ class _NeedCategoryCard extends StatelessWidget {
         color: isSelected ? option.color.withValues(alpha: 0.08) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isSelected ? option.color.withValues(alpha: 0.75) : theme.colorScheme.outlineVariant,
+          color: isSelected
+              ? option.color.withValues(alpha: 0.75)
+              : theme.colorScheme.outlineVariant,
           width: isSelected ? 1.4 : 1,
         ),
         boxShadow: [
@@ -1865,7 +2422,9 @@ class _NeedCategoryCard extends StatelessWidget {
                     ),
                   ),
                   Icon(
-                    isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                    isExpanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ],
@@ -1886,33 +2445,46 @@ class _NeedCategoryCard extends StatelessWidget {
                       for (final subcategory in option.subcategories)
                         if (subcategory == 'Other')
                           Tooltip(
-                            message: 'Can\'t find your specific need? Tell us more in the description.',
+                            message:
+                                'Can\'t find your specific need? Tell us more in the description.',
                             child: ChoiceChip(
                               avatar: Icon(
                                 Icons.lightbulb_outline_rounded,
                                 size: 16,
                                 color: selectedSubcategory == subcategory
                                     ? option.color
-                                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                    : theme.colorScheme.onSurfaceVariant
+                                          .withValues(alpha: 0.6),
                               ),
                               label: Text(
                                 subcategory,
-                                style: const TextStyle(fontStyle: FontStyle.italic),
+                                style: const TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                ),
                               ),
                               selected: selectedSubcategory == subcategory,
                               showCheckmark: false,
-                              selectedColor: option.color.withValues(alpha: 0.15),
+                              selectedColor: option.color.withValues(
+                                alpha: 0.15,
+                              ),
                               backgroundColor: Colors.white,
                               side: BorderSide(
                                 color: selectedSubcategory == subcategory
                                     ? option.color.withValues(alpha: 0.8)
-                                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-                                width: selectedSubcategory == subcategory ? 1.5 : 1,
+                                    : theme.colorScheme.outlineVariant
+                                          .withValues(alpha: 0.5),
+                                width: selectedSubcategory == subcategory
+                                    ? 1.5
+                                    : 1,
                                 strokeAlign: BorderSide.strokeAlignOutside,
                               ),
                               labelStyle: theme.textTheme.bodySmall?.copyWith(
-                                color: selectedSubcategory == subcategory ? option.color : theme.colorScheme.onSurfaceVariant,
-                                fontWeight: selectedSubcategory == subcategory ? FontWeight.w700 : FontWeight.w500,
+                                color: selectedSubcategory == subcategory
+                                    ? option.color
+                                    : theme.colorScheme.onSurfaceVariant,
+                                fontWeight: selectedSubcategory == subcategory
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
                               ),
                               onSelected: (_) => onSubcategoryTap(subcategory),
                             ),
@@ -1925,17 +2497,25 @@ class _NeedCategoryCard extends StatelessWidget {
                             selectedColor: option.color.withValues(alpha: 0.2),
                             backgroundColor: Colors.white,
                             side: BorderSide(
-                              color: selectedSubcategory == subcategory ? option.color : theme.colorScheme.outlineVariant,
+                              color: selectedSubcategory == subcategory
+                                  ? option.color
+                                  : theme.colorScheme.outlineVariant,
                             ),
                             labelStyle: theme.textTheme.bodySmall?.copyWith(
-                              color: selectedSubcategory == subcategory ? option.color : theme.colorScheme.onSurfaceVariant,
-                              fontWeight: selectedSubcategory == subcategory ? FontWeight.w700 : FontWeight.w500,
+                              color: selectedSubcategory == subcategory
+                                  ? option.color
+                                  : theme.colorScheme.onSurfaceVariant,
+                              fontWeight: selectedSubcategory == subcategory
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                             ),
                             onSelected: (_) => onSubcategoryTap(subcategory),
                           ),
                     ],
                   ),
-                  if (option.key == 'others' && selectedSubcategory == 'Other' && customOtherController != null) ...[
+                  if (option.key == 'others' &&
+                      selectedSubcategory == 'Other' &&
+                      customOtherController != null) ...[
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: customOtherController,
@@ -1948,7 +2528,9 @@ class _NeedCategoryCard extends StatelessWidget {
                 ],
               ),
             ),
-            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 190),
           ),
         ],
@@ -1985,7 +2567,9 @@ class _ChoiceGrid<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppConstants.screenHorizontalPadding),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.screenHorizontalPadding,
+      ),
       child: Row(
         children: [
           for (int i = 0; i < items.length; i++) ...[
@@ -2043,7 +2627,9 @@ class _ChoiceTile<T> extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: selected ? color.withValues(alpha: 0.12) : const Color(0xFFF3F0E6),
+                color: selected
+                    ? color.withValues(alpha: 0.12)
+                    : const Color(0xFFF3F0E6),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(item.icon, color: color, size: 24),
@@ -2064,10 +2650,7 @@ class _ChoiceTile<T> extends StatelessWidget {
 }
 
 class _CircleCounterButton extends StatelessWidget {
-  const _CircleCounterButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _CircleCounterButton({required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback? onTap;
@@ -2111,7 +2694,9 @@ class _ReviewRow extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Row(
-      crossAxisAlignment: alignTop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      crossAxisAlignment: alignTop
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.center,
       children: [
         SizedBox(
           width: 82,
@@ -2134,7 +2719,6 @@ class _ReviewRow extends StatelessWidget {
             ),
           ),
         ),
-
       ],
     );
   }
@@ -2165,10 +2749,7 @@ class _DocumentUploadCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant,
-            width: 1,
-          ),
+          border: Border.all(color: theme.colorScheme.outlineVariant, width: 1),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -2183,17 +2764,15 @@ class _DocumentUploadCard extends StatelessWidget {
                 ),
               )
             else
-              Icon(
-                icon,
-                color: theme.colorScheme.primary,
-                size: 24,
-              ),
+              Icon(icon, color: theme.colorScheme.primary, size: 24),
             const SizedBox(width: 12),
             Text(
               label,
               style: theme.textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: isLoading ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary,
+                color: isLoading
+                    ? theme.colorScheme.onSurfaceVariant
+                    : theme.colorScheme.primary,
               ),
             ),
           ],
@@ -2202,4 +2781,3 @@ class _DocumentUploadCard extends StatelessWidget {
     );
   }
 }
-
