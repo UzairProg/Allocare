@@ -6,6 +6,26 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.reader(Charsets.UTF_8).use { reader ->
+        localProperties.load(reader)
+    }
+}
+
+val pnvTestToken = ((project.findProperty("PNV_TEST_TOKEN") as String?) ?: "")
+    .trim()
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+
+val mapsApiKey = (localProperties.getProperty("MAPS_API_KEY") ?: "")
+    .trim()
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+
 android {
     namespace = "com.example.allocare_app"
     compileSdk = flutter.compileSdkVersion
@@ -29,6 +49,12 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        buildConfigField("String", "PNV_TEST_TOKEN", "\"$pnvTestToken\"")
+        manifestPlaceholders["mapsApiKey"] = mapsApiKey
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

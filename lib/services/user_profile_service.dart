@@ -65,6 +65,7 @@ class UserProfileService {
       role: existing?.role ?? requestedRole,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
+      inventoryItems: existing?.inventoryItems ?? const [],
     );
 
     await upsert(profile);

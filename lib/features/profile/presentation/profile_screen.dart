@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +9,7 @@ import '../../../core/utils/primary_button.dart';
 import '../../../models/app_user.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/user_profile_service.dart';
+import 'manage_ngo_inventory_page.dart';
 import 'manage_volunteer_page.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -67,6 +68,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       role: existing?.role ?? AppUserRole.ngo,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
+      inventoryItems: existing?.inventoryItems ?? const [],
     );
 
     await profileService.upsert(updated);
@@ -501,13 +503,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               AppConstants.screenHorizontalPadding,
               0,
             ),
-            child: Text(
-              'NGO INVENTORY',
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.7,
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'NGO INVENTORY',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.7,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ManageNgoInventoryPage(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Icon(
+                      Icons.edit_outlined,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(
@@ -517,14 +547,66 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               AppConstants.screenHorizontalPadding,
               0,
             ),
-            child: Column(
-              children: [
-                for (final item in ui.inventoryItems) ...[
-                  _InventoryCard(item: item),
-                  const SizedBox(height: 10),
-                ],
-              ],
-            ),
+            child: ui.inventoryItems.isEmpty
+                ? CustomCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'No inventory added yet',
+                                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Add medical kits, food packs, shelter supplies, or any other NGO stock here.',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.tonalIcon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ManageNgoInventoryPage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Add Inventory'),
+                        ),
+                      ],
+                    ),
+                  )
+                : Column(
+                    children: [
+                      for (int i = 0; i < ui.inventoryItems.length; i++) ...[
+                        _InventoryCard(item: ui.inventoryItems[i]),
+                        if (i != ui.inventoryItems.length - 1) const SizedBox(height: 10),
+                      ],
+                    ],
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -793,39 +875,27 @@ class _ProfileUiData {
                 progress: 0.86,
               ),
             ]
-          : const [
-              _InventoryItem(
-                title: 'Medical Kits',
-                subtitle: 'Emergency + first aid',
-                units: '72 units',
-                icon: Icons.medication_outlined,
-                accent: Color(0xFFE45B5B),
-                progress: 0.74,
-              ),
-              _InventoryItem(
-                title: 'Food Ration Kits',
-                subtitle: '5-day family supply',
-                units: '185 kits',
-                icon: Icons.inventory_2_outlined,
-                accent: Color(0xFFEEA24B),
-                progress: 0.58,
-              ),
-              _InventoryItem(
-                title: 'Counseling Hours',
-                subtitle: 'Licensed therapists',
-                units: '44 hrs',
-                icon: Icons.event_note_rounded,
-                accent: Color(0xFF6B8FC5),
-                progress: 0.86,
-              ),
-            ],
+          : profile.inventoryItems.isNotEmpty
+              ? profile.inventoryItems.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+                  return _InventoryItem(
+                    title: item.title,
+                    subtitle: item.subtitle,
+                    units: item.units,
+                    icon: _inventoryIconFor(index, item.title),
+                    accent: _inventoryColorFor(index),
+                    progress: item.progress,
+                  );
+                }).toList()
+              : const [],
       teamMembers: const [
         _TeamMember(
           name: 'Dr. Meera Joshi',
           role: 'Senior Medical Officer',
           tags: ['Emergency', 'Pediatrics', 'OB-GYN'],
           percent: '98%',
-          avatarLabel: '👩‍⚕️',
+          avatarLabel: '≡ƒæ⌐ΓÇìΓÜò∩╕Å',
           accent: Color(0xFF60A3A4),
         ),
         _TeamMember(
@@ -833,7 +903,7 @@ class _ProfileUiData {
           role: 'Logistics Coordinator',
           tags: ['Supply Chain', 'Mapping'],
           percent: '95%',
-          avatarLabel: '👨‍💼',
+          avatarLabel: '≡ƒæ¿ΓÇì≡ƒÆ╝',
           accent: Color(0xFF8A9EC9),
         ),
         _TeamMember(
@@ -841,7 +911,7 @@ class _ProfileUiData {
           role: 'Mental Health Counselor',
           tags: ['CBT', 'Trauma', 'Youth'],
           percent: '100%',
-          avatarLabel: '👩‍🏫',
+          avatarLabel: '≡ƒæ⌐ΓÇì≡ƒÅ½',
           accent: Color(0xFF7BA56B),
         ),
       ],
@@ -884,6 +954,42 @@ class _ProfileUiData {
     }
 
     return '${base.substring(0, 1).toUpperCase()}${base.substring(1)}';
+  }
+
+  static IconData _inventoryIconFor(int index, String title) {
+    final normalized = title.toLowerCase();
+    if (normalized.contains('food') || normalized.contains('ration') || normalized.contains('meal')) {
+      return Icons.restaurant_outlined;
+    }
+    if (normalized.contains('medical') || normalized.contains('medicine') || normalized.contains('kit')) {
+      return Icons.medication_outlined;
+    }
+    if (normalized.contains('shelter') || normalized.contains('home') || normalized.contains('repair')) {
+      return Icons.home_repair_service_outlined;
+    }
+    if (normalized.contains('counsel') || normalized.contains('mental') || normalized.contains('therapy')) {
+      return Icons.psychology_alt_outlined;
+    }
+
+    const icons = [
+      Icons.inventory_2_outlined,
+      Icons.medication_outlined,
+      Icons.event_note_rounded,
+      Icons.warehouse_outlined,
+    ];
+
+    return icons[index % icons.length];
+  }
+
+  static Color _inventoryColorFor(int index) {
+    const colors = [
+      Color(0xFFE45B5B),
+      Color(0xFFEEA24B),
+      Color(0xFF6B8FC5),
+      Color(0xFF7BA56B),
+    ];
+
+    return colors[index % colors.length];
   }
 }
 

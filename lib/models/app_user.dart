@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'ngo_inventory_item.dart';
+
 enum AppUserRole { admin, volunteer, ngo }
 
 class AppUser {
@@ -11,6 +13,7 @@ class AppUser {
     required this.role,
     required this.createdAt,
     required this.updatedAt,
+    this.inventoryItems = const [],
   });
 
   final String id;
@@ -20,27 +23,45 @@ class AppUser {
   final AppUserRole role;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<NgoInventoryItem> inventoryItems;
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) {
+    final source = (map['ngoProfile'] as Map?)?.cast<String, dynamic>() ?? map;
+
     return AppUser(
       id: id,
-      email: (map['email'] as String?) ?? '',
-      displayName: (map['displayName'] as String?) ?? '',
-      phoneNumber: (map['phoneNumber'] as String?) ?? '',
-      role: _roleFromString((map['role'] as String?) ?? 'volunteer'),
-      createdAt: _asDateTime(map['createdAt']) ?? DateTime.now(),
-      updatedAt: _asDateTime(map['updatedAt']) ?? DateTime.now(),
+      email: (source['email'] as String?) ?? '',
+      displayName: (source['displayName'] as String?) ?? '',
+      phoneNumber: (source['phoneNumber'] as String?) ?? '',
+      role: _roleFromString((source['role'] as String?) ?? 'volunteer'),
+      createdAt: _asDateTime(source['createdAt']) ?? DateTime.now(),
+      updatedAt: _asDateTime(source['updatedAt']) ?? DateTime.now(),
+      inventoryItems: (source['inventoryItems'] as List<dynamic>?)
+              ?.map((entry) {
+                final entryMap = (entry as Map).cast<String, dynamic>();
+                return NgoInventoryItem.fromMap(
+                  (entryMap['id'] as String?)?.trim().isNotEmpty ?? false
+                      ? (entryMap['id'] as String).trim()
+                      : DateTime.now().microsecondsSinceEpoch.toString(),
+                  entryMap,
+                );
+              })
+              .toList() ??
+          const [],
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'email': email,
-      'displayName': displayName,
-      'phoneNumber': phoneNumber,
-      'role': role.name,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'ngoProfile': {
+        'email': email,
+        'displayName': displayName,
+        'phoneNumber': phoneNumber,
+        'role': role.name,
+        'inventoryItems': inventoryItems.map((item) => item.toMap()).toList(),
+        'createdAt': Timestamp.fromDate(createdAt),
+        'updatedAt': Timestamp.fromDate(updatedAt),
+      },
     };
   }
 

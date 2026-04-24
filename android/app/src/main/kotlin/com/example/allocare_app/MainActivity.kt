@@ -14,7 +14,10 @@ class MainActivity : FlutterActivity() {
 		super.configureFlutterEngine(flutterEngine)
 
 		fpnv = FirebasePhoneNumberVerification.getInstance(this)
-		fpnv.enableTestSession("AdrTqXH0O1vu-SdRw14RN8A8RBdZmrj5kDls6cMtkzoY0Ud4-klpTzNy5obrqFcEsO19Pz5nu6M3BFLhczRXeOn2iyr4QRHqXz4Bzk3knjQwgFw-MQSmLXGSDGDV0kM7Fe3jORGmIt4zQPJqAR413WZEOw")
+		val testToken = BuildConfig.PNV_TEST_TOKEN.trim()
+		if (testToken.isNotEmpty()) {
+			fpnv.enableTestSession(testToken)
+		}
 
 		MethodChannel(
 			flutterEngine.dartExecutor.binaryMessenger,
@@ -36,8 +39,7 @@ class MainActivity : FlutterActivity() {
 							fpnv.getVerifiedPhoneNumber()
 								.addOnSuccessListener { verified: VerifiedPhoneNumberTokenResult ->
 									val payload = hashMapOf<String, String?>(
-										"phoneNumber" to verified.getPhoneNumber(),
-										"token" to verified.getToken()
+										"phoneNumber" to verified.getPhoneNumber()
 									)
 									result.success(payload)
 								}
