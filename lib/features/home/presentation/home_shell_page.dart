@@ -7,7 +7,6 @@ class HomeShellPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Keep this wrapper for compatibility with older route/import references.
     return const MainNavigationScreen();
   }
 }

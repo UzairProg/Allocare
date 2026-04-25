@@ -15,6 +15,7 @@ migrate_working_dir/
 # Local env/config
 .env
 .env.*
+!.env.json.example
 .fvm/
 .firebase/
 

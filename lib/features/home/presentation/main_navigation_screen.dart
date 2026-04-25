@@ -6,6 +6,7 @@ import '../../insights/presentation/insights_screen.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../needs/presentation/needs_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
+import '../../reports/presentation/report_entry_hub_page.dart';
 import 'home_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -30,10 +31,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: IndexedStack(
-          index: _index,
-          children: _tabs,
-        ),
+        child: IndexedStack(index: _index, children: _tabs),
       ),
       bottomNavigationBar: _PremiumBottomNav(
         currentIndex: _index,
@@ -95,11 +93,7 @@ class _PremiumBottomNav extends StatelessWidget {
                   selected: currentIndex == 1,
                   onTap: () => onChanged(1),
                 ),
-                _ReportNavTab(
-                  selected: currentIndex == 2,
-                  onTap: () => onChanged(2),
-                  scheme: scheme,
-                ),
+                _ReportNavTab(selected: false, scheme: scheme),
                 _NavItem(
                   label: 'Insights',
                   icon: Icons.auto_graph_rounded,
@@ -170,7 +164,9 @@ class _NavItem extends StatelessWidget {
                     child: Icon(
                       icon,
                       size: 22,
-                      color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                      color: selected
+                          ? scheme.primary
+                          : scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -178,9 +174,9 @@ class _NavItem extends StatelessWidget {
                 Text(
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                        color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                      ),
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                    color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 AnimatedContainer(
@@ -203,20 +199,32 @@ class _NavItem extends StatelessWidget {
 }
 
 class _ReportNavIcon extends StatelessWidget {
-  const _ReportNavIcon({
-    required this.isSelected,
-    required this.onTap,
-    required this.scheme,
-  });
+  const _ReportNavIcon({required this.isSelected, required this.scheme});
 
   final bool isSelected;
-  final VoidCallback onTap;
   final ColorScheme scheme;
+
+  void _openHub(BuildContext context) {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 220),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (_, __, ___) => const ReportEntryHubPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+          return FadeTransition(opacity: curved, child: child);
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _openHub(context),
       child: AnimatedScale(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
@@ -224,31 +232,20 @@ class _ReportNavIcon extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          width: 38,
-          height: 38,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                scheme.primary,
-                const Color(0xFF4F7D7E),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: const Color(0xFF1A73E8),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: scheme.primary.withValues(alpha: 0.24),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
+                color: const Color(0xFF1A73E8).withValues(alpha: 0.25),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
               ),
             ],
           ),
-          child: const Icon(
-            Icons.add_rounded,
-            color: Colors.white,
-            size: 21,
-          ),
+          child: const Icon(Icons.add_rounded, color: Colors.white, size: 21),
         ),
       ),
     );
@@ -256,45 +253,32 @@ class _ReportNavIcon extends StatelessWidget {
 }
 
 class _ReportNavTab extends StatelessWidget {
-  const _ReportNavTab({
-    required this.selected,
-    required this.onTap,
-    required this.scheme,
-  });
+  const _ReportNavTab({required this.selected, required this.scheme});
 
   final bool selected;
-  final VoidCallback onTap;
   final ColorScheme scheme;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Transform.translate(
-                offset: const Offset(0, -4),
-                child: _ReportNavIcon(
-                  isSelected: selected,
-                  onTap: onTap,
-                  scheme: scheme,
-                ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Transform.translate(
+              offset: const Offset(0, -4),
+              child: _ReportNavIcon(isSelected: selected, scheme: scheme),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Report',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected ? scheme.primary : scheme.onSurfaceVariant,
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Report',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                      color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                    ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
