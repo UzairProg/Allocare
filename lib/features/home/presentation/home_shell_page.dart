@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../services/auth_service.dart';
 import '../../allocation/presentation/allocation_placeholder_page.dart';
-import '../../insights/presentation/insights_placeholder_page.dart';
+import '../../insights/presentation/smart_allocation_center_page.dart';
 import '../../map/presentation/map_placeholder_page.dart';
 import '../../profile/presentation/profile_screen.dart';
 import 'home_dashboard_page.dart';
@@ -26,7 +26,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage> {
       HomeDashboardPage(),
       MapPlaceholderPage(),
       AllocationPlaceholderPage(),
-      InsightsPlaceholderPage(),
+      SmartAllocationCenterPage(),
       ProfileScreen(),
     ];
 
@@ -43,10 +43,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage> {
             ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentTab,
-        children: pages,
-      ),
+      body: IndexedStack(index: _currentTab, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentTab,
         onDestinationSelected: (index) {

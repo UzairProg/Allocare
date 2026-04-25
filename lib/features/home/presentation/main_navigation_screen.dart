@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../../insights/presentation/insights_screen.dart';
+import '../../insights/presentation/smart_allocation_center_page.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../needs/presentation/needs_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
@@ -23,7 +23,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     HomeScreen(),
     MapScreen(),
     NeedsScreen(),
-    InsightsScreen(),
+    SmartAllocationCenterPage(),
     ProfileScreen(),
   ];
 

@@ -21,7 +21,7 @@ import '../../../services/smart_allocation_service.dart';
 import '../../../services/user_profile_service.dart';
 import '../application/need_submission_service.dart';
 import '../../map/presentation/map_screen.dart';
-import '../../insights/presentation/insights_screen.dart';
+import '../../insights/presentation/smart_allocation_center_page.dart';
 
 enum _LocationMode { current, search, map }
 
@@ -231,10 +231,10 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   void _onViewDispatchOnMap() {
     if (_dispatchAlert == null) return;
     
-    // Navigate to insights page
+    // Navigate to smart allocation center page
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const InsightsScreen(),
+        builder: (_) => const SmartAllocationCenterPage(),
       ),
     );
   }
