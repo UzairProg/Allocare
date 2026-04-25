@@ -9,6 +9,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/custom_card.dart';
@@ -16,8 +17,11 @@ import '../../../models/app_user.dart';
 import '../../../models/need_model.dart';
 import '../../../models/document_attachment.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/smart_allocation_service.dart';
 import '../../../services/user_profile_service.dart';
 import '../application/need_submission_service.dart';
+import '../../map/presentation/map_screen.dart';
+import '../../insights/presentation/insights_screen.dart';
 
 enum _LocationMode { current, search, map }
 
@@ -175,6 +179,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   final List<DocumentAttachment> _supportingDocs = [];
   bool _isUploadingFile = false;
   bool _isCurrentLocationFetched = false;
+  
+  // Command Center Dispatch Alert state
+  CommandCenterDispatchData? _dispatchAlert;
 
   @override
   void dispose() {
@@ -197,6 +204,39 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         offset: _peopleAffectedController.text.length,
       );
     });
+  }
+
+  void _showDispatchAlert({
+    required String volunteerName,
+    required String crisisType,
+    required String areaName,
+    required LatLng reportPosition,
+  }) {
+    setState(() {
+      _dispatchAlert = CommandCenterDispatchData(
+        volunteerName: volunteerName,
+        crisisType: crisisType,
+        areaName: areaName,
+        reportPosition: reportPosition,
+      );
+    });
+  }
+
+  void _hideDispatchAlert() {
+    setState(() {
+      _dispatchAlert = null;
+    });
+  }
+
+  void _onViewDispatchOnMap() {
+    if (_dispatchAlert == null) return;
+    
+    // Navigate to insights page
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const InsightsScreen(),
+      ),
+    );
   }
 
   Future<void> _fetchCurrentLocation() async {
@@ -296,9 +336,11 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         : 'ngo@allocare.app';
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppConstants.screenHorizontalPadding,
@@ -1240,7 +1282,18 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
               ),
             ),
           ],
-        ),
+              ),
+            ),
+          if (_dispatchAlert != null)
+            CommandCenterDispatchAlert(
+              volunteerName: _dispatchAlert!.volunteerName,
+              crisisType: _dispatchAlert!.crisisType,
+              areaName: _dispatchAlert!.areaName,
+              reportPosition: _dispatchAlert!.reportPosition,
+              onViewOnMap: _onViewDispatchOnMap,
+              onDismiss: _hideDispatchAlert,
+            ),
+        ],
       ),
     );
   }
@@ -1978,7 +2031,53 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         throw Exception('Image upload failed. Report was not saved.');
       }
 
+      final allocationService = ref.read(smartAllocationServiceProvider);
+      final allocationResult = await allocationService.dispatchVolunteer(
+        reportId,
+        _categoryKey,
+      );
+
       if (!context.mounted) return;
+
+      // Show Command Center Dispatch alert if volunteer was assigned
+      if (allocationResult.success && allocationResult.volunteerName != null) {
+        // Extract location for the dispatch alert
+        final latitude = _locationMode == _LocationMode.current
+            ? _currentLatitude
+            : _locationMode == _LocationMode.map
+            ? _mapLatitude
+            : null;
+        final longitude = _locationMode == _LocationMode.current
+            ? _currentLongitude
+            : _locationMode == _LocationMode.map
+            ? _mapLongitude
+            : null;
+        
+        if (latitude != null && longitude != null) {
+          final areaName = _locationMode == _LocationMode.current
+              ? 'Current Location'
+              : _locationMode == _LocationMode.map
+              ? 'Pinned Location'
+              : _locationController.text.trim().isNotEmpty
+              ? _locationController.text.trim()
+              : 'Selected Area';
+          
+          _showDispatchAlert(
+            volunteerName: allocationResult.volunteerName!,
+            crisisType: _selectedCategory.title,
+            areaName: areaName,
+            reportPosition: LatLng(latitude, longitude),
+          );
+        }
+      } else {
+        // Show fallback message for no volunteer available
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No matching volunteer available right now. Report is pending dispatch.'),
+            backgroundColor: Color(0xFFF59E0B),
+          ),
+        );
+      }
 
       _showReportSubmittedToast();
 
@@ -2776,6 +2875,285 @@ class _DocumentUploadCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class CommandCenterDispatchData {
+  const CommandCenterDispatchData({
+    required this.volunteerName,
+    required this.crisisType,
+    required this.areaName,
+    required this.reportPosition,
+  });
+
+  final String volunteerName;
+  final String crisisType;
+  final String areaName;
+  final LatLng reportPosition;
+}
+
+class CommandCenterDispatchAlert extends StatefulWidget {
+  const CommandCenterDispatchAlert({
+    super.key,
+    required this.volunteerName,
+    required this.crisisType,
+    required this.areaName,
+    required this.reportPosition,
+    required this.onViewOnMap,
+    required this.onDismiss,
+  });
+
+  final String volunteerName;
+  final String crisisType;
+  final String areaName;
+  final LatLng reportPosition;
+  final VoidCallback onViewOnMap;
+  final VoidCallback onDismiss;
+
+  @override
+  State<CommandCenterDispatchAlert> createState() => _CommandCenterDispatchAlertState();
+}
+
+class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late AnimationController _pulseController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _pulseAnimation;
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.3,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    _animationController.forward();
+    _pulseController.repeat(reverse: true);
+    _startAutoDismissTimer();
+  }
+
+  void _startAutoDismissTimer() {
+    _dismissTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) {
+        _dismiss();
+      }
+    });
+  }
+
+  void _dismiss() {
+    _dismissTimer?.cancel();
+    _animationController.reverse().then((_) {
+      if (mounted) {
+        widget.onDismiss();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    _animationController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 16,
+      right: 16,
+      child: SafeArea(
+        bottom: false,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 600),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with Active Mission badge
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedBuilder(
+                                  animation: _pulseAnimation,
+                                  builder: (context, child) {
+                                    return Transform.scale(
+                                      scale: _pulseAnimation.value,
+                                      child: Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF34C759),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Active Mission',
+                                  style: TextStyle(
+                                    color: Color(0xFF34C759),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: _dismiss,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(
+                                Icons.close,
+                                color: Color(0xFF8E8E93),
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Title
+                      const Text(
+                        'Smart Allocation Center',
+                        style: TextStyle(
+                          color: Color(0xFF1C1C1E),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Body content
+                      Text(
+                        '${widget.volunteerName} has been notified for ${widget.crisisType} in ${widget.areaName}.',
+                        style: const TextStyle(
+                          color: Color(0xFF3C3C43),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Action button
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            _dismiss();
+                            widget.onViewOnMap();
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: const Color(0xFF007AFF),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.insights_rounded,
+                            size: 18,
+                          ),
+                          label: const Text(
+                            'OPEN SMART ALLOCATION PAGE',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

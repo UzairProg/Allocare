@@ -12,6 +12,7 @@ import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 import '../../../services/auth_service.dart';
 import '../../../services/gemini_service.dart';
+import '../../../services/smart_allocation_service.dart';
 
 class AIScanPage extends ConsumerStatefulWidget {
   const AIScanPage({super.key});
@@ -251,12 +252,18 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
 
       int peopleAffected = 0;
       try {
-        peopleAffected = int.parse(raw['peopleAffected']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '0');
+        peopleAffected = int.parse(
+          raw['peopleAffected']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
+              '0',
+        );
       } catch (_) {}
 
       int urgencyScore = 0;
       try {
-        urgencyScore = int.parse(raw['urgency_score']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '0');
+        urgencyScore = int.parse(
+          raw['urgency_score']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
+              '0',
+        );
       } catch (_) {}
 
       double lat = 0.0;
@@ -269,55 +276,76 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
         lng = double.parse(raw['longitude']?.toString() ?? '0');
       } catch (_) {}
 
-      String rawCategory = (raw['category']?.toString() ?? 'other').toLowerCase();
+      String rawCategory = (raw['category']?.toString() ?? 'other')
+          .toLowerCase();
       String category = 'other';
-      if (rawCategory.contains('medical')) category = 'medical';
-      else if (rawCategory.contains('fire')) category = 'fire';
-      else if (rawCategory.contains('police') || rawCategory.contains('crime')) category = 'police';
-      else if (rawCategory.contains('accident')) category = 'accident';
-      else if (rawCategory.contains('infrastructure')) category = 'infrastructure';
-      else if (rawCategory.contains('natural')) category = 'natural_disaster';
+      if (rawCategory.contains('medical'))
+        category = 'medical';
+      else if (rawCategory.contains('fire'))
+        category = 'fire';
+      else if (rawCategory.contains('police') || rawCategory.contains('crime'))
+        category = 'police';
+      else if (rawCategory.contains('accident'))
+        category = 'accident';
+      else if (rawCategory.contains('infrastructure'))
+        category = 'infrastructure';
+      else if (rawCategory.contains('natural'))
+        category = 'natural_disaster';
 
       String subcat = raw['subcategory']?.toString() ?? 'Other';
       if (subcat.isEmpty) subcat = 'Other';
 
-      String formattedLocation = raw['location']?.toString() ?? 'Unknown location';
+      String formattedLocation =
+          raw['location']?.toString() ?? 'Unknown location';
       if (lat != 0.0 || lng != 0.0) {
-        formattedLocation = 'Live location · ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}';
+        formattedLocation =
+            'Live location · ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}';
       }
 
-      await FirebaseFirestore.instance.collection('reports').add({
-        'category': category,
-        'createdAt': FieldValue.serverTimestamp(),
-        'crisis_type': subcat,
-        'description': raw['description']?.toString() ?? '',
-        'image_url': '',
-        'latitude': lat,
-        'location': formattedLocation,
-        'locationMode': 'ai_scan',
-        'longitude': lng,
-        'peopleAffected': peopleAffected,
-        'reportedBy': user.uid,
-        'status': 'open',
-        'subcategory': subcat,
-        'supportingDocsMetadata': [
-          {
-            'fileName': _selectedFileName ?? 'unknown',
-            'fileSizeBytes': _selectedFileBytes ?? 0,
-            'fileType': _selectedFileMimeType ?? 'unknown',
-            'uploadedAt': DateTime.now().toIso8601String(),
-          }
-        ],
-        'title': raw['title']?.toString() ?? 'AI Intel Scan Report',
-        'updatedAt': FieldValue.serverTimestamp(),
-        'urgency': raw['urgency']?.toString().toLowerCase() ?? 'low',
-        'urgency_score': urgencyScore,
-      });
+      final reportRef = await FirebaseFirestore.instance
+          .collection('reports')
+          .add({
+            'category': category,
+            'createdAt': FieldValue.serverTimestamp(),
+            'crisis_type': subcat,
+            'description': raw['description']?.toString() ?? '',
+            'image_url': '',
+            'latitude': lat,
+            'location': formattedLocation,
+            'locationMode': 'ai_scan',
+            'longitude': lng,
+            'peopleAffected': peopleAffected,
+            'reportedBy': user.uid,
+            'status': 'open',
+            'subcategory': subcat,
+            'supportingDocsMetadata': [
+              {
+                'fileName': _selectedFileName ?? 'unknown',
+                'fileSizeBytes': _selectedFileBytes ?? 0,
+                'fileType': _selectedFileMimeType ?? 'unknown',
+                'uploadedAt': DateTime.now().toIso8601String(),
+              },
+            ],
+            'title': raw['title']?.toString() ?? 'AI Intel Scan Report',
+            'updatedAt': FieldValue.serverTimestamp(),
+            'urgency': raw['urgency']?.toString().toLowerCase() ?? 'low',
+            'urgency_score': urgencyScore,
+          });
+
+      final allocationService = ref.read(smartAllocationServiceProvider);
+      final allocationResult = await allocationService.dispatchVolunteer(
+        reportRef.id,
+        category,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Report saved to Firebase successfully!'),
+          SnackBar(
+            content: Text(
+              allocationResult.success && allocationResult.volunteerName != null
+                  ? 'Report saved. Help dispatched: ${allocationResult.volunteerName}'
+                  : 'Report saved to Firebase successfully!',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -428,7 +456,7 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Scaffold(
       backgroundColor: colorScheme.surfaceVariant.withOpacity(0.3),
       appBar: AppBar(
@@ -504,7 +532,8 @@ class _PreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isImage = selectedFileData != null &&
+    final isImage =
+        selectedFileData != null &&
         selectedFileMimeType != null &&
         selectedFileMimeType!.startsWith('image/');
     final hasFile = selectedFileName != null;
@@ -569,136 +598,151 @@ class _PreviewCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                height: hasFile ? 260 : 160,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                  border: hasFile
-                      ? null
-                      : Border.all(
-                          color: theme.colorScheme.outlineVariant,
-                          width: 2,
-                        ),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (isImage)
-                      Image.memory(selectedFileData!, fit: BoxFit.cover)
-                    else if (hasFile)
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.insert_drive_file_rounded,
-                            size: 64,
-                            color: theme.colorScheme.primary.withOpacity(0.8),
+                  duration: const Duration(milliseconds: 400),
+                  height: hasFile ? 260 : 160,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                    border: hasFile
+                        ? null
+                        : Border.all(
+                            color: theme.colorScheme.outlineVariant,
+                            width: 2,
                           ),
-                          const SizedBox(height: 16),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Text(
-                              selectedFileName!,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (isImage)
+                        Image.memory(selectedFileData!, fit: BoxFit.cover)
+                      else if (hasFile)
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.insert_drive_file_rounded,
+                              size: 64,
+                              color: theme.colorScheme.primary.withOpacity(0.8),
+                            ),
+                            const SizedBox(height: 16),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Text(
+                                selectedFileName!,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                          if (selectedFileBytes != null) ...[
-                            const SizedBox(height: 8),
+                            if (selectedFileBytes != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                '${(selectedFileBytes! / 1024).toStringAsFixed(1)} KB',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        )
+                      else
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.upload_file_rounded,
+                              size: 48,
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.5),
+                            ),
+                            const SizedBox(height: 12),
                             Text(
-                              '${(selectedFileBytes! / 1024).toStringAsFixed(1)} KB',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                              'No asset selected',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant
+                                    .withOpacity(0.7),
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
-                        ],
-                      )
-                    else
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.upload_file_rounded,
-                            size: 48,
-                            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No asset selected',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-                              fontWeight: FontWeight.w500,
+                        ),
+
+                      if (isAnalyzing) ...[
+                        Positioned.fill(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0),
+                            child: Container(
+                              color: Colors.black.withOpacity(0.25),
                             ),
-                          ),
-                        ],
-                      ),
-                    
-                    if (isAnalyzing) ...[
-                      Positioned.fill(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0),
-                          child: Container(
-                            color: Colors.black.withOpacity(0.25),
                           ),
                         ),
-                      ),
-                      AnimatedBuilder(
-                        animation: pulseController,
-                        builder: (context, child) {
-                          return Align(
-                            alignment: Alignment(0, -1.0 + (pulseController.value * 2.0)),
-                            child: Container(
-                              height: 6,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF4285F4),
-                                    Color(0xFF9B72CB),
-                                    Color(0xFFD96570),
-                                    Color(0xFFF4B400),
+                        AnimatedBuilder(
+                          animation: pulseController,
+                          builder: (context, child) {
+                            return Align(
+                              alignment: Alignment(
+                                0,
+                                -1.0 + (pulseController.value * 2.0),
+                              ),
+                              child: Container(
+                                height: 6,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF4285F4),
+                                      Color(0xFF9B72CB),
+                                      Color(0xFFD96570),
+                                      Color(0xFFF4B400),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF9B72CB,
+                                      ).withOpacity(0.8),
+                                      blurRadius: 24,
+                                      spreadRadius: 6,
+                                    ),
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF4285F4,
+                                      ).withOpacity(0.6),
+                                      blurRadius: 12,
+                                      spreadRadius: 2,
+                                    ),
                                   ],
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF9B72CB).withOpacity(0.8),
-                                    blurRadius: 24,
-                                    spreadRadius: 6,
-                                  ),
-                                  BoxShadow(
-                                    color: const Color(0xFF4285F4).withOpacity(0.6),
-                                    blurRadius: 12,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                      const Positioned(
-                        bottom: 24,
-                        left: 0,
-                        right: 0,
-                        child: _ScanningOverlay(),
-                      ),
+                            );
+                          },
+                        ),
+                        const Positioned(
+                          bottom: 24,
+                          left: 0,
+                          right: 0,
+                          child: _ScanningOverlay(),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
             ),
             if (hasFile && isImage) ...[
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Icon(Icons.image_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.image_outlined,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -743,7 +787,7 @@ class _ActionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Row(
       children: [
         Expanded(
@@ -766,16 +810,23 @@ class _ActionPanel extends StatelessWidget {
         Expanded(
           child: FilledButton.icon(
             onPressed: (!hasSelection || isAnalyzing) ? null : onRunParse,
-            icon: isAnalyzing 
+            icon: isAnalyzing
                 ? const SizedBox(
-                    width: 20, height: 20, 
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
                   )
                 : SvgPicture.asset(
                     'assets/gemini.svg',
                     width: 20,
                     height: 20,
-                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
                   ),
             label: Text(
               isAnalyzing ? 'Analyzing...' : 'Analyze',
@@ -810,7 +861,7 @@ class _StructuredPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 600),
       curve: Curves.easeOutCubic,
@@ -887,9 +938,14 @@ class _StructuredPreviewCard extends StatelessWidget {
                             if (i > 0)
                               Divider(
                                 height: 24,
-                                color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                                color: theme.colorScheme.outlineVariant
+                                    .withOpacity(0.5),
                               ),
-                            _buildFieldRow(theme, fields.entries.elementAt(i).key, fields.entries.elementAt(i).value),
+                            _buildFieldRow(
+                              theme,
+                              fields.entries.elementAt(i).key,
+                              fields.entries.elementAt(i).value,
+                            ),
                           ],
                           const SizedBox(height: 32),
                           SizedBox(
@@ -898,16 +954,24 @@ class _StructuredPreviewCard extends StatelessWidget {
                               onPressed: isSaving ? null : onSave,
                               icon: isSaving
                                   ? const SizedBox(
-                                      width: 20, height: 20, 
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   : const Icon(Icons.cloud_upload_rounded),
                               label: Text(
                                 isSaving ? 'Saving...' : 'Save to Firebase',
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),

@@ -3,9 +3,9 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:custom_info_window/custom_info_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:custom_info_window/custom_info_window.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +13,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/firestore/firestore_paths.dart';
+
+Color _colorForUrgency(double score) {
+  if (score >= 4.5) return const Color(0xFFD32F2F);
+  if (score >= 3.5) return const Color(0xFFF57C00);
+  if (score >= 2.5) return const Color(0xFFFBC02D);
+  return const Color(0xFF388E3C);
+}
 
 class MapScreen extends StatelessWidget {
   const MapScreen({super.key});
@@ -102,19 +109,27 @@ class _MapPageState extends State<MapPage> {
   bool _hasAutoFramed = false;
 
   BitmapDescriptor _glowMarkerIcon = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _responderMarkerIcon = BitmapDescriptor.defaultMarker;
   _LayerCategory _selectedCategory = _LayerCategory.medical;
+  final Set<String> _announcedAssignmentKeys = <String>{};
+  _MissionDispatchAlert? _missionDispatchAlert;
+  Timer? _missionDispatchTimer;
+  bool _hasProcessedInitialSnapshot = false;
 
   bool _isMapInitializing = true;
   bool _isPermissionLoading = true;
   bool _hasLocationPermission = false;
   String? _permissionMessage;
   LatLng? _selectedMarkerPosition;
+  
+  // Command Center Dispatch Alert state
+  CommandCenterDispatchData? _dispatchAlert;
 
   @override
   void initState() {
     super.initState();
     unawaited(_resolveLocationPermission());
-    unawaited(_loadGlowPinIcon());
+    unawaited(_loadMarkerIcons());
     _reportsSubscription = _reportsStream.listen(
       _onReportsSnapshot,
       onError: (Object error, StackTrace stackTrace) {
@@ -126,6 +141,7 @@ class _MapPageState extends State<MapPage> {
   @override
   void dispose() {
     _reportsSubscription?.cancel();
+    _missionDispatchTimer?.cancel();
     _infoWindowController.dispose();
     _mapController?.dispose();
     super.dispose();
@@ -144,6 +160,7 @@ class _MapPageState extends State<MapPage> {
       _circles = layers.circles;
     });
 
+    _handleMissionDispatchSnapshot(snapshot);
     unawaited(_focusCameraOnData(layers.focusPoints));
 
     print('Mapped ${layers.markers.length} markers');
@@ -151,6 +168,101 @@ class _MapPageState extends State<MapPage> {
       'Layer=${_selectedCategory.name}, docs=$_docsInSnapshot, '
       'coords=$_docsWithCoordinates, heatPoints=$_heatPointsCount',
     );
+  }
+
+  void _handleMissionDispatchSnapshot(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    if (!_hasProcessedInitialSnapshot) {
+      _hasProcessedInitialSnapshot = true;
+      return;
+    }
+
+    _MissionDispatchAlert? latestAlert;
+
+    for (final change in snapshot.docChanges) {
+      if (change.type == DocumentChangeType.removed) {
+        continue;
+      }
+
+      final data = change.doc.data();
+      if (data == null) {
+        continue;
+      }
+
+      final category = (data['category'] as String? ?? '').trim().toLowerCase();
+      if (category != _selectedCategory.firestoreCategoryKey) {
+        continue;
+      }
+
+      final volunteerId = (data['assigned_volunteer_id'] as String?)?.trim();
+      final volunteerName = (data['assigned_volunteer_name'] as String?)
+          ?.trim();
+      if ((volunteerId == null || volunteerId.isEmpty) &&
+          (volunteerName == null || volunteerName.isEmpty)) {
+        continue;
+      }
+
+      final alertKey = _assignmentAlertKey(change.doc.id, data);
+      if (_announcedAssignmentKeys.contains(alertKey)) {
+        continue;
+      }
+
+      final position = _extractLatLng(data);
+      if (position == null) {
+        continue;
+      }
+
+      final crisisType = _readDisplayValue(data, const [
+        'crisis_type',
+        'subcategory',
+        'title',
+      ], 'Active Response');
+      final speciality = (data['assigned_volunteer_speciality'] as String?)
+          ?.trim();
+
+      latestAlert = _MissionDispatchAlert(
+        reportId: change.doc.id,
+        reportData: data,
+        position: position,
+        volunteerName: volunteerName?.isNotEmpty == true
+            ? volunteerName!
+            : 'Volunteer',
+        volunteerSpeciality: speciality == null || speciality.isEmpty
+            ? 'Specialist'
+            : speciality,
+        crisisType: crisisType,
+      );
+      _announcedAssignmentKeys.add(alertKey);
+    }
+
+    if (latestAlert == null) {
+      return;
+    }
+
+    _missionDispatchTimer?.cancel();
+    setState(() {
+      _missionDispatchAlert = latestAlert;
+    });
+
+    _missionDispatchTimer = Timer(const Duration(seconds: 8), () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _missionDispatchAlert = null;
+      });
+    });
+  }
+
+  String _assignmentAlertKey(String reportId, Map<String, dynamic> data) {
+    final volunteerId =
+        (data['assigned_volunteer_id'] as String?)?.trim() ?? '';
+    final assignedAt = data['assigned_at'];
+    final assignedAtKey = assignedAt is Timestamp
+        ? assignedAt.microsecondsSinceEpoch.toString()
+        : assignedAt?.toString() ?? '';
+    return '$reportId|$volunteerId|$assignedAtKey';
   }
 
   void _onLayerChanged(_LayerCategory category) {
@@ -195,14 +307,116 @@ class _MapPageState extends State<MapPage> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Future<void> _loadGlowPinIcon() async {
+  void _showDispatchAlert({
+    required String volunteerName,
+    required String crisisType,
+    required String areaName,
+    required LatLng reportPosition,
+  }) {
+    setState(() {
+      _dispatchAlert = CommandCenterDispatchData(
+        volunteerName: volunteerName,
+        crisisType: crisisType,
+        areaName: areaName,
+        reportPosition: reportPosition,
+      );
+    });
+  }
+
+  void _hideDispatchAlert() {
+    setState(() {
+      _dispatchAlert = null;
+    });
+  }
+
+  void _onViewDispatchOnMap() {
+    if (_dispatchAlert == null) return;
+    
+    // Animate camera to the report location
+    _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: _dispatchAlert!.reportPosition,
+          zoom: 15.0,
+        ),
+      ),
+    );
+    
+    // Show the report briefing for this location
+    // Note: We'll need to find the corresponding report data
+    // This is a placeholder - you may need to adjust based on your data structure
+  }
+
+  // Public method to be called from submitReport function after SmartAllocationService
+  void showSmartAllocationDispatch({
+    required String volunteerName,
+    required String crisisType,
+    required String areaName,
+    required double latitude,
+    required double longitude,
+  }) {
+    _showDispatchAlert(
+      volunteerName: volunteerName,
+      crisisType: crisisType,
+      areaName: areaName,
+      reportPosition: LatLng(latitude, longitude),
+    );
+  }
+
+  // Example integration method - call this from your submitReport function
+  // after SmartAllocationService successfully assigns a volunteer
+  Future<void> handleSmartAllocationResult({
+    required Map<String, dynamic> reportData,
+    required Map<String, dynamic> allocationResult,
+  }) async {
+    // Extract volunteer information from allocation result
+    final volunteerName = allocationResult['volunteer_name'] as String? ?? 'Unknown Volunteer';
+    final crisisType = reportData['crisis_type'] as String? ?? reportData['category'] as String? ?? 'Emergency';
+    final areaName = _extractAreaName(reportData);
+    final position = _extractLatLng(reportData);
+    
+    if (position != null) {
+      showSmartAllocationDispatch(
+        volunteerName: volunteerName,
+        crisisType: crisisType,
+        areaName: areaName,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+    }
+  }
+
+  String _extractAreaName(Map<String, dynamic> reportData) {
+    // Try to extract area name from various possible fields
+    final candidates = [
+      reportData['area_name'],
+      reportData['location_name'],
+      reportData['address'],
+      reportData['district'],
+      reportData['city'],
+    ];
+    
+    for (final candidate in candidates) {
+      if (candidate is String && candidate.trim().isNotEmpty) {
+        return candidate.trim();
+      }
+    }
+    
+    return 'Unknown Area';
+  }
+
+  Future<void> _loadMarkerIcons() async {
     try {
-      final icon = await _buildCreativePinIcon();
+      final icons = await Future.wait([
+        _buildCreativePinIcon(assigned: false),
+        _buildCreativePinIcon(assigned: true),
+      ]);
       if (!mounted) {
         return;
       }
       setState(() {
-        _glowMarkerIcon = icon;
+        _glowMarkerIcon = icons.first;
+        _responderMarkerIcon = icons.last;
       });
       if (_latestReportsSnapshot != null) {
         _onReportsSnapshot(_latestReportsSnapshot!);
@@ -212,15 +426,20 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  Future<BitmapDescriptor> _buildCreativePinIcon() async {
+  Future<BitmapDescriptor> _buildCreativePinIcon({
+    required bool assigned,
+  }) async {
     const markerSize = 126.0;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     const center = Offset(markerSize / 2, markerSize / 2);
 
-    final glowPaint = Paint()..color = const Color(0x66FF1744);
-    final pulsePaint = Paint()..color = const Color(0x88FF5252);
-    final corePaint = Paint()..color = const Color(0xFFE53935);
+    final glowPaint = Paint()
+      ..color = assigned ? const Color(0x6634D399) : const Color(0x66FF1744);
+    final pulsePaint = Paint()
+      ..color = assigned ? const Color(0x88388E3C) : const Color(0x88FF5252);
+    final corePaint = Paint()
+      ..color = assigned ? const Color(0xFF1A73E8) : const Color(0xFFE53935);
     final innerPaint = Paint()..color = Colors.white;
 
     canvas.drawCircle(center, 52, glowPaint);
@@ -233,6 +452,34 @@ class _MapPageState extends State<MapPage> {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
     canvas.drawCircle(center, 28, ringPaint);
+
+    if (assigned) {
+      final badgeCenter = Offset(markerSize - 34, 34);
+      final badgePaint = Paint()..color = const Color(0xFF16A34A);
+      canvas.drawCircle(badgeCenter, 16, badgePaint);
+
+      final borderPaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3;
+      canvas.drawCircle(badgeCenter, 16, borderPaint);
+
+      final textPainter = TextPainter(
+        text: const TextSpan(
+          text: 'V',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        textDirection: ui.TextDirection.ltr,
+      )..layout();
+      textPainter.paint(
+        canvas,
+        badgeCenter - Offset(textPainter.width / 2, textPainter.height / 2),
+      );
+    }
 
     final pointerPath = Path()
       ..moveTo(center.dx, markerSize - 8)
@@ -660,6 +907,12 @@ class _MapPageState extends State<MapPage> {
         _toDouble(reportData['urgency_score']) ??
         _extractUrgencyScore(reportData);
     final imageUrl = (reportData['image_url'] as String?)?.trim();
+    final assignedVolunteerName =
+        (reportData['assigned_volunteer_name'] as String?)?.trim();
+    final assignedVolunteerContact =
+        (reportData['assigned_volunteer_contact'] as String?)?.trim();
+    final assignedVolunteerSpeciality =
+        (reportData['assigned_volunteer_speciality'] as String?)?.trim();
 
     _infoWindowController.addInfoWindow!(
       _MapIntelCard(
@@ -667,6 +920,9 @@ class _MapPageState extends State<MapPage> {
         urgencyScore: urgencyScore,
         imageUrl: imageUrl,
         reportData: reportData,
+        assignedVolunteerName: assignedVolunteerName,
+        assignedVolunteerContact: assignedVolunteerContact,
+        assignedVolunteerSpeciality: assignedVolunteerSpeciality,
         onTap: () {
           _infoWindowController.hideInfoWindow!();
           Navigator.of(context).push(
@@ -834,7 +1090,11 @@ class _MapPageState extends State<MapPage> {
             Marker(
               markerId: markerId,
               position: position,
-              icon: _glowMarkerIcon,
+              icon:
+                  ((data['assigned_volunteer_id'] as String?)?.trim() ?? '')
+                      .isNotEmpty
+                  ? _responderMarkerIcon
+                  : _glowMarkerIcon,
               onTap: () {
                 _showReportBriefing(
                   reportId: doc.id,
@@ -915,9 +1175,55 @@ class _MapPageState extends State<MapPage> {
         CustomInfoWindow(
           controller: _infoWindowController,
           width: 250,
-          height: 165,
+          height: 200,
           offset: 42,
         ),
+        if (_missionDispatchAlert != null)
+          Positioned(
+            top: 12,
+            left: 16,
+            right: 16,
+            child: SafeArea(
+              bottom: false,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 340),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, -22 * (1 - value)),
+                    child: Opacity(opacity: value, child: child),
+                  );
+                },
+                child: _MissionDispatchCard(
+                  alert: _missionDispatchAlert!,
+                  urgencyColor: _colorForUrgency(
+                    _toDouble(
+                          _missionDispatchAlert!.reportData['urgency_score'],
+                        ) ??
+                        _extractUrgencyScore(_missionDispatchAlert!.reportData),
+                  ),
+                  onViewOnMap: () {
+                    final alert = _missionDispatchAlert;
+                    if (alert == null) {
+                      return;
+                    }
+                    _infoWindowController.hideInfoWindow!();
+                    _mapController?.animateCamera(
+                      CameraUpdate.newCameraPosition(
+                        CameraPosition(target: alert.position, zoom: 16),
+                      ),
+                    );
+                    _showReportBriefing(
+                      reportId: alert.reportId,
+                      reportData: alert.reportData,
+                      position: alert.position,
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
         if (showLoader)
           const ColoredBox(
             color: Color(0x33000000),
@@ -1061,6 +1367,15 @@ class _MapPageState extends State<MapPage> {
                 ],
               ),
             ),
+          ),
+        if (_dispatchAlert != null)
+          CommandCenterDispatchAlert(
+            volunteerName: _dispatchAlert!.volunteerName,
+            crisisType: _dispatchAlert!.crisisType,
+            areaName: _dispatchAlert!.areaName,
+            reportPosition: _dispatchAlert!.reportPosition,
+            onViewOnMap: _onViewDispatchOnMap,
+            onDismiss: _hideDispatchAlert,
           ),
       ],
     );
@@ -1231,6 +1546,9 @@ class _MapIntelCard extends StatelessWidget {
     required this.urgencyScore,
     required this.imageUrl,
     required this.reportData,
+    required this.assignedVolunteerName,
+    required this.assignedVolunteerContact,
+    required this.assignedVolunteerSpeciality,
     required this.onTap,
   });
 
@@ -1238,13 +1556,18 @@ class _MapIntelCard extends StatelessWidget {
   final double urgencyScore;
   final String? imageUrl;
   final Map<String, dynamic> reportData;
+  final String? assignedVolunteerName;
+  final String? assignedVolunteerContact;
+  final String? assignedVolunteerSpeciality;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = _briefingAccentColor(reportData['category']?.toString() ?? '');
+    final accentColor = _briefingAccentColor(
+      reportData['category']?.toString() ?? '',
+    );
     final peopleAffected = reportData['peopleAffected'] ?? 0;
-    
+
     // Time parsing
     String timeAgo = 'Just now';
     final dynamic createdRaw = reportData['createdAt'];
@@ -1298,13 +1621,18 @@ class _MapIntelCard extends StatelessWidget {
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                         Row(
                           children: [
-                            const Icon(Icons.access_time_rounded, size: 12, color: Colors.white54),
+                            const Icon(
+                              Icons.access_time_rounded,
+                              size: 12,
+                              color: Colors.white54,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               timeAgo,
@@ -1339,7 +1667,11 @@ class _MapIntelCard extends StatelessWidget {
                                     const SizedBox(height: 10),
                                     Row(
                                       children: [
-                                        const Icon(Icons.people_alt_rounded, size: 14, color: Colors.white70),
+                                        const Icon(
+                                          Icons.people_alt_rounded,
+                                          size: 14,
+                                          color: Colors.white70,
+                                        ),
                                         const SizedBox(width: 6),
                                         Text(
                                           '$peopleAffected affected',
@@ -1367,37 +1699,130 @@ class _MapIntelCard extends StatelessWidget {
                               clipBehavior: Clip.antiAlias,
                               child: imageUrl == null || imageUrl!.isEmpty
                                   ? const Center(
-                                      child: Icon(Icons.satellite_alt_rounded, color: Colors.white38, size: 24),
+                                      child: Icon(
+                                        Icons.satellite_alt_rounded,
+                                        color: Colors.white38,
+                                        size: 24,
+                                      ),
                                     )
                                   : Image.network(
                                       imageUrl!,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Center(
-                                        child: Icon(Icons.broken_image_rounded, color: Colors.white38, size: 24),
-                                      ),
+                                      errorBuilder: (_, __, ___) =>
+                                          const Center(
+                                            child: Icon(
+                                              Icons.broken_image_rounded,
+                                              color: Colors.white38,
+                                              size: 24,
+                                            ),
+                                          ),
                                     ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
+                        if ((assignedVolunteerName ?? '').isNotEmpty) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0D1B2A).withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 26,
+                                      height: 26,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF16A34A,
+                                        ).withOpacity(0.18),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.verified_rounded,
+                                        color: Color(0xFF86EFAC),
+                                        size: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Expanded(
+                                      child: Text(
+                                        'Responder Profile',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  assignedVolunteerName ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if ((assignedVolunteerSpeciality ?? '')
+                                    .isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    assignedVolunteerSpeciality!,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                                if ((assignedVolunteerContact ?? '')
+                                    .isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    assignedVolunteerContact!,
+                                    style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.06),
+                            color: const Color(0xFF16A34A).withOpacity(0.18),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
-                            'Tap to view report ➔',
-                            style: TextStyle(
+                          child: Text(
+                            (assignedVolunteerName ?? '').isEmpty
+                                ? 'Tap to view report'
+                                : 'Tap to open response details',
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                       ],
+                      ),
                     ),
                   ),
                 ],
@@ -1424,6 +1849,263 @@ class _MapIntelCard extends StatelessWidget {
     if (normalized.contains('police')) return const Color(0xFF536DFE);
     if (normalized.contains('natural_disaster')) return const Color(0xFFFF9100);
     return const Color(0xFFE53935);
+  }
+}
+
+class _MissionDispatchAlert {
+  const _MissionDispatchAlert({
+    required this.reportId,
+    required this.reportData,
+    required this.position,
+    required this.volunteerName,
+    required this.volunteerSpeciality,
+    required this.crisisType,
+  });
+
+  final String reportId;
+  final Map<String, dynamic> reportData;
+  final LatLng position;
+  final String volunteerName;
+  final String volunteerSpeciality;
+  final String crisisType;
+}
+
+class _MissionDispatchCard extends StatelessWidget {
+  const _MissionDispatchCard({
+    required this.alert,
+    required this.urgencyColor,
+    required this.onViewOnMap,
+  });
+
+  final _MissionDispatchAlert alert;
+  final Color urgencyColor;
+  final VoidCallback onViewOnMap;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 420;
+
+        return Material(
+          color: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 620),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF08111D), Color(0xFF121A28)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: Colors.white12),
+              boxShadow: [
+                BoxShadow(
+                  color: urgencyColor.withOpacity(0.22),
+                  blurRadius: 30,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(26),
+                      gradient: LinearGradient(
+                        colors: [
+                          urgencyColor.withOpacity(0.18),
+                          Colors.transparent,
+                          const Color(0xFF0D1622).withOpacity(0.35),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: isCompact
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: urgencyColor.withOpacity(0.16),
+                                    border: Border.all(
+                                      color: urgencyColor.withOpacity(0.36),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.location_on_rounded,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Mission Dispatch',
+                                        style: TextStyle(
+                                          color: urgencyColor,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.9,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        alert.crisisType,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          height: 1.12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${alert.volunteerName} assigned',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: onViewOnMap,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: urgencyColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.near_me_rounded),
+                                label: const Text(
+                                  'View Location',
+                                  style: TextStyle(fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Container(
+                              width: 58,
+                              height: 58,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: urgencyColor.withOpacity(0.16),
+                                border: Border.all(
+                                  color: urgencyColor.withOpacity(0.36),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.location_on_rounded,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Mission Dispatch',
+                                    style: TextStyle(
+                                      color: urgencyColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.9,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    alert.crisisType,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    '${alert.volunteerName} • ${alert.volunteerSpeciality}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            FilledButton.icon(
+                              onPressed: onViewOnMap,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: urgencyColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              icon: const Icon(Icons.near_me_rounded),
+                              label: const Text(
+                                'View Location',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -1514,6 +2196,9 @@ class ReportDetailsPage extends StatelessWidget {
             supplyLine: supplyLine,
             peopleAffected: peopleAffected is num ? peopleAffected.toInt() : 0,
             createdAt: createdAt,
+            assignedVolunteerName: reportData['assigned_volunteer_name'] as String?,
+            assignedVolunteerPhone: reportData['assigned_volunteer_contact'] as String?,
+            assignedVolunteerSpeciality: reportData['assigned_volunteer_speciality'] as String?,
           ),
           const SizedBox(height: 16),
           _IntelSectionCard(
@@ -1538,7 +2223,11 @@ class ReportDetailsPage extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.location_on_rounded, color: accentColor, size: 20),
+                    Icon(
+                      Icons.location_on_rounded,
+                      color: accentColor,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -1812,13 +2501,19 @@ class _EvidenceImageCard extends StatelessWidget {
                       filterQuality: FilterQuality.high,
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) return child;
-                        return const Center(child: CircularProgressIndicator(color: Colors.white));
+                        return const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        );
                       },
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           color: const Color(0xFF1E2329),
                           alignment: Alignment.center,
-                          child: const Icon(Icons.broken_image_rounded, size: 36, color: Color(0xFF9CA3AF)),
+                          child: const Icon(
+                            Icons.broken_image_rounded,
+                            size: 36,
+                            color: Color(0xFF9CA3AF),
+                          ),
                         );
                       },
                     ),
@@ -1828,7 +2523,10 @@ class _EvidenceImageCard extends StatelessWidget {
                   top: 14,
                   right: 14,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.65),
                       borderRadius: BorderRadius.circular(20),
@@ -1837,9 +2535,21 @@ class _EvidenceImageCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.zoom_out_map_rounded, color: Colors.white, size: 14),
+                        Icon(
+                          Icons.zoom_out_map_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
                         SizedBox(width: 8),
-                        Text('TAP TO EXPAND', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.6)),
+                        Text(
+                          'TAP TO EXPAND',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1861,6 +2571,9 @@ class _SmartAllocationCard extends StatelessWidget {
     required this.supplyLine,
     required this.peopleAffected,
     required this.createdAt,
+    this.assignedVolunteerName,
+    this.assignedVolunteerPhone,
+    this.assignedVolunteerSpeciality,
   });
 
   final Color accentColor;
@@ -1869,6 +2582,9 @@ class _SmartAllocationCard extends StatelessWidget {
   final String supplyLine;
   final int peopleAffected;
   final DateTime createdAt;
+  final String? assignedVolunteerName;
+  final String? assignedVolunteerPhone;
+  final String? assignedVolunteerSpeciality;
 
   @override
   Widget build(BuildContext context) {
@@ -1903,7 +2619,11 @@ class _SmartAllocationCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: accentColor.withOpacity(0.3)),
                 ),
-                child: Icon(Icons.auto_awesome_rounded, color: accentColor, size: 22),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: accentColor,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1936,17 +2656,37 @@ class _SmartAllocationCard extends StatelessWidget {
           const SizedBox(height: 24),
           Row(
             children: [
-              _buildMetricTile('CATEGORY', categoryLabel, Icons.category_rounded, accentColor),
+              _buildMetricTile(
+                'CATEGORY',
+                categoryLabel,
+                Icons.category_rounded,
+                accentColor,
+              ),
               const SizedBox(width: 14),
-              _buildMetricTile('URGENCY', '${riskScore.toStringAsFixed(1)}/10', Icons.warning_rounded, _colorForUrgency(riskScore)),
+              _buildMetricTile(
+                'URGENCY',
+                '${riskScore.toStringAsFixed(1)}/10',
+                Icons.warning_rounded,
+                _colorForUrgency(riskScore),
+              ),
             ],
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              _buildMetricTile('AFFECTED', peopleAffected > 0 ? '$peopleAffected People' : 'Unknown', Icons.people_alt_rounded, const Color(0xFF60A5FA)),
+              _buildMetricTile(
+                'AFFECTED',
+                peopleAffected > 0 ? '$peopleAffected People' : 'Unknown',
+                Icons.people_alt_rounded,
+                const Color(0xFF60A5FA),
+              ),
               const SizedBox(width: 14),
-              _buildMetricTile('REQUIRED', _truncate(supplyLine), Icons.health_and_safety_rounded, const Color(0xFF34D399)),
+              _buildMetricTile(
+                'REQUIRED',
+                _truncate(supplyLine),
+                Icons.health_and_safety_rounded,
+                const Color(0xFF34D399),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -1957,52 +2697,163 @@ class _SmartAllocationCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Colors.white.withOpacity(0.08)),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(child: Icon(Icons.radar_rounded, color: accentColor, size: 24)),
-                ),
-                const SizedBox(width: 16),
-                const Expanded(
-                  child: Column(
+            child: assignedVolunteerName != null && assignedVolunteerName!.isNotEmpty
+                ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Dispatching Local NGOs',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF16A34A).withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.verified_user_rounded,
+                                color: Color(0xFF86EFAC),
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Assigned Responder',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  assignedVolunteerName!,
+                                  style: const TextStyle(
+                                    color: Color(0xFF86EFAC),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (assignedVolunteerSpeciality != null && assignedVolunteerSpeciality!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    assignedVolunteerSpeciality!,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (assignedVolunteerPhone != null && assignedVolunteerPhone!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _makePhoneCall(assignedVolunteerPhone!),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF16A34A).withOpacity(0.2),
+                              foregroundColor: const Color(0xFF86EFAC),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(color: Color(0xFF16A34A), width: 1),
+                              ),
+                            ),
+                            icon: const Icon(Icons.call_rounded, size: 18),
+                            label: Text(
+                              'Call ${assignedVolunteerPhone!}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: accentColor.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.radar_rounded,
+                            color: accentColor,
+                            size: 24,
+                          ),
                         ),
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        'Allocare AI is scanning for the nearest available volunteers with matching resources.',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          height: 1.4,
-                          fontWeight: FontWeight.w500,
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Dispatching Local NGOs',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'Allocare AI is scanning for the nearest available volunteers with matching resources.',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                height: 1.4,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMetricTile(String label, String value, IconData icon, Color iconColor) {
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        debugPrint('Could not launch $phoneUri');
+      }
+    } catch (e) {
+      debugPrint('Error making phone call: $e');
+    }
+  }
+
+  Widget _buildMetricTile(
+    String label,
+    String value,
+    IconData icon,
+    Color iconColor,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -2045,7 +2896,7 @@ class _SmartAllocationCard extends StatelessWidget {
       ),
     );
   }
-  
+
   String _truncate(String value) {
     return value.length > 25 ? '${value.substring(0, 22)}...' : value;
   }
@@ -2217,6 +3068,285 @@ class _ReportImageViewerPage extends StatelessWidget {
                   size: 48,
                 );
               },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CommandCenterDispatchData {
+  const CommandCenterDispatchData({
+    required this.volunteerName,
+    required this.crisisType,
+    required this.areaName,
+    required this.reportPosition,
+  });
+
+  final String volunteerName;
+  final String crisisType;
+  final String areaName;
+  final LatLng reportPosition;
+}
+
+class CommandCenterDispatchAlert extends StatefulWidget {
+  const CommandCenterDispatchAlert({
+    super.key,
+    required this.volunteerName,
+    required this.crisisType,
+    required this.areaName,
+    required this.reportPosition,
+    required this.onViewOnMap,
+    required this.onDismiss,
+  });
+
+  final String volunteerName;
+  final String crisisType;
+  final String areaName;
+  final LatLng reportPosition;
+  final VoidCallback onViewOnMap;
+  final VoidCallback onDismiss;
+
+  @override
+  State<CommandCenterDispatchAlert> createState() => _CommandCenterDispatchAlertState();
+}
+
+class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late AnimationController _pulseController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _pulseAnimation;
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.3,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    _animationController.forward();
+    _pulseController.repeat(reverse: true);
+    _startAutoDismissTimer();
+  }
+
+  void _startAutoDismissTimer() {
+    _dismissTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) {
+        _dismiss();
+      }
+    });
+  }
+
+  void _dismiss() {
+    _dismissTimer?.cancel();
+    _animationController.reverse().then((_) {
+      if (mounted) {
+        widget.onDismiss();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    _animationController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 16,
+      right: 16,
+      child: SafeArea(
+        bottom: false,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 600),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with Active Mission badge
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedBuilder(
+                                  animation: _pulseAnimation,
+                                  builder: (context, child) {
+                                    return Transform.scale(
+                                      scale: _pulseAnimation.value,
+                                      child: Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF34C759),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Active Mission',
+                                  style: TextStyle(
+                                    color: Color(0xFF34C759),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: _dismiss,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(
+                                Icons.close,
+                                color: Color(0xFF8E8E93),
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Title
+                      const Text(
+                        'Smart Allocation Successful',
+                        style: TextStyle(
+                          color: Color(0xFF1C1C1E),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Body content
+                      Text(
+                        '${widget.volunteerName} has been dispatched for ${widget.crisisType} in ${widget.areaName}.',
+                        style: const TextStyle(
+                          color: Color(0xFF3C3C43),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Action button
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            _dismiss();
+                            widget.onViewOnMap();
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: const Color(0xFF007AFF),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.location_searching,
+                            size: 18,
+                          ),
+                          label: const Text(
+                            'VIEW ON MAP',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
