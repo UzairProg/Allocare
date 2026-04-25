@@ -101,13 +101,15 @@ Convert the raw field input into a clean structured report.
 
 Return strict JSON with these keys:
 - title
-- category
-- subcategory
-- urgency
-- urgency_score
-- location
+- category (Must be strictly one of: medical, fire, police, accident, infrastructure, natural_disaster, other. Do NOT append "emergency")
+- subcategory (e.g. "Other Medical care", "Traffic Collision", etc)
+- urgency (low, medium, high)
+- urgency_score (1 to 5)
+- location (city/address name)
+- latitude (double, you MUST provide an estimated latitude for the location)
+- longitude (double, you MUST provide an estimated longitude for the location)
 - description
-- peopleAffected
+- peopleAffected (integer)
 - contactName
 - contactPhone
 - summary
@@ -152,13 +154,15 @@ The file may be a scanned PDF or an image. Perform OCR if needed.
 
 Return strict JSON with these keys:
 - title
-- category
-- subcategory
-- urgency
-- urgency_score
-- location
+- category (Must be strictly one of: medical, fire, police, accident, infrastructure, natural_disaster, other. Do NOT append "emergency")
+- subcategory (e.g. "Other Medical care", "Traffic Collision", etc)
+- urgency (low, medium, high)
+- urgency_score (1 to 5)
+- location (city/address name)
+- latitude (double, you MUST provide an estimated latitude for the location)
+- longitude (double, you MUST provide an estimated longitude for the location)
 - description
-- peopleAffected
+- peopleAffected (integer)
 - contactName
 - contactPhone
 - summary
