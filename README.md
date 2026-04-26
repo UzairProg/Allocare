@@ -4,35 +4,15 @@ Allocare is a data-driven resource allocation system designed to help NGOs conve
 
 ---
 
-## 🚀 Problem
+##  Problem
 
-NGOs and social organizations collect valuable data through:
-- paper surveys  
-- field reports  
-- spreadsheets  
-- on-ground observations  
-
-However, this data is **scattered, inconsistent, and unstructured**, leading to:
-
-- poor visibility of real needs  
-- inefficient resource allocation  
-- delayed response to critical situations  
-- over-served and under-served regions  
-
-The core issue is **not lack of resources**, but **misallocation due to fragmented data**.
+Fragmented and unstructured data in healthcare, food, and mental support leads to inefficient and unfair resource allocation, where some areas receive repeated assistance while vulnerable communities remain underserved.
 
 ---
 
-## 💡 Solution
+##  Solution
 
-Allocare transforms fragmented NGO data into a structured, intelligent system that enables:
-
-- unified visibility of needs  
-- priority-based resource allocation  
-- smart volunteer coordination  
-- insight-driven decision making  
-
-Instead of a simple listing platform, Allocare acts as a **decision and action system**.
+AlloCare transforms disaster relief by using Gemini 2.5 Flash to synthesize fragmented field data—like handwritten notes and audio—into structured, actionable logistics. By employing a Gemma Verify strategy, the system cross-references photos with reports to ensure aid legitimacy and prevent fraud. This intelligence feeds into a real-time Priority-Based Realignment engine that shifts resources and volunteers to high-risk zones instantly. Ultimately, AlloCare synchronizes food, medicine, and mental health into a single, unified care plan, replacing coordination delays with a verified, AI-driven command center.
 
 ---
 
@@ -86,15 +66,8 @@ Instead of a simple listing platform, Allocare acts as a **decision and action s
 - Categories:
   - Medical
   - Food & Nutrition
-  - Shelter
-  - Disaster
   - Mental Health
-  - Education
-  - Elderly Care
-  - Livelihood
-  - Women Safety
-  - Others
-
+  
 ---
 
 ### 📊 Insights System (Planned)
