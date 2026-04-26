@@ -39,6 +39,12 @@ AlloCare transforms disaster relief by using Gemini 2.5 Flash to synthesize frag
 
 ---
 
+### 4. Execution Layer
+Assigns tasks to volunteers
+Enables accept/reject actions
+Tracks real-world execution
+Updates system in real-time
+
 ## 🔑 Core Features (Current Progress)
 
 ### ✅ Authentication
@@ -92,7 +98,7 @@ AlloCare transforms disaster relief by using Gemini 2.5 Flash to synthesize frag
 - **Firebase Authentication** – User authentication
 - **Cloud Firestore (Standard, Regional - asia-south1)** – Database
 - **Google Maps (planned)** – Visualization
-- **Gemini (planned)** – NLP-based classification
+- **Gemini (planned)** – NLP-based classification, Risk Detection of Airborne and Waterborne Diseases
 
 ---
 
