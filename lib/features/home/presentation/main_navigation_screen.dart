@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../../insights/presentation/smart_allocation_center_page.dart';
+import '../../insights/presentation/sentinel_strategic_hub_page.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../needs/presentation/needs_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
@@ -12,26 +12,45 @@ import 'home_screen.dart';
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
+  static MainNavigationScreenState? of(BuildContext context) {
+    return context.findAncestorStateOfType<MainNavigationScreenState>();
+  }
+
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() => MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class MainNavigationScreenState extends State<MainNavigationScreen> {
   int _index = 0;
+  MapLayerCategory _mapLaunchLayer = MapLayerCategory.medical;
+  int _mapLaunchNonce = 0;
 
-  static const _tabs = [
-    HomeScreen(),
-    MapScreen(),
-    NeedsScreen(),
-    SmartAllocationCenterPage(),
-    ProfileScreen(),
-  ];
+  void openStrategicMap({required MapLayerCategory layer}) {
+    setState(() {
+      _mapLaunchLayer = layer;
+      _mapLaunchNonce++;
+      _index = 1;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final tabs = [
+      const HomeScreen(),
+      MapScreen(
+        key: ValueKey<String>('map_${_mapLaunchLayer.name}_$_mapLaunchNonce'),
+        initialLayer: _mapLaunchLayer,
+        initialZoom: 14.8,
+        lockInitialFocus: true,
+      ),
+      const NeedsScreen(),
+      const SentinelStrategicHubPage(),
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
       body: SafeArea(
-        child: IndexedStack(index: _index, children: _tabs),
+        child: IndexedStack(index: _index, children: tabs),
       ),
       bottomNavigationBar: _PremiumBottomNav(
         currentIndex: _index,

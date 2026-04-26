@@ -21,17 +21,46 @@ Color _colorForUrgency(double score) {
   return const Color(0xFF388E3C);
 }
 
+enum MapLayerCategory { medical, food, airborne, waterborne }
+
 class MapScreen extends StatelessWidget {
-  const MapScreen({super.key});
+  const MapScreen({
+    super.key,
+    this.initialLayer = MapLayerCategory.medical,
+    this.initialFocus,
+    this.initialZoom = 13.0,
+    this.lockInitialFocus = false,
+  });
+
+  final MapLayerCategory initialLayer;
+  final LatLng? initialFocus;
+  final double initialZoom;
+  final bool lockInitialFocus;
 
   @override
   Widget build(BuildContext context) {
-    return const MapPage();
+    return MapPage(
+      initialLayer: initialLayer,
+      initialFocus: initialFocus,
+      initialZoom: initialZoom,
+      lockInitialFocus: lockInitialFocus,
+    );
   }
 }
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  const MapPage({
+    super.key,
+    this.initialLayer = MapLayerCategory.medical,
+    this.initialFocus,
+    this.initialZoom = 13.0,
+    this.lockInitialFocus = false,
+  });
+
+  final MapLayerCategory initialLayer;
+  final LatLng? initialFocus;
+  final double initialZoom;
+  final bool lockInitialFocus;
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -121,13 +150,15 @@ class _MapPageState extends State<MapPage> {
   bool _hasLocationPermission = false;
   String? _permissionMessage;
   LatLng? _selectedMarkerPosition;
-  
+  bool _didApplyRequestedInitialFocus = false;
+
   // Command Center Dispatch Alert state
   CommandCenterDispatchData? _dispatchAlert;
 
   @override
   void initState() {
     super.initState();
+    _selectedCategory = _fromMapLayer(widget.initialLayer);
     unawaited(_resolveLocationPermission());
     unawaited(_loadMarkerIcons());
     _reportsSubscription = _reportsStream.listen(
@@ -331,17 +362,14 @@ class _MapPageState extends State<MapPage> {
 
   void _onViewDispatchOnMap() {
     if (_dispatchAlert == null) return;
-    
+
     // Animate camera to the report location
     _mapController?.animateCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: _dispatchAlert!.reportPosition,
-          zoom: 15.0,
-        ),
+        CameraPosition(target: _dispatchAlert!.reportPosition, zoom: 15.0),
       ),
     );
-    
+
     // Show the report briefing for this location
     // Note: We'll need to find the corresponding report data
     // This is a placeholder - you may need to adjust based on your data structure
@@ -370,11 +398,15 @@ class _MapPageState extends State<MapPage> {
     required Map<String, dynamic> allocationResult,
   }) async {
     // Extract volunteer information from allocation result
-    final volunteerName = allocationResult['volunteer_name'] as String? ?? 'Unknown Volunteer';
-    final crisisType = reportData['crisis_type'] as String? ?? reportData['category'] as String? ?? 'Emergency';
+    final volunteerName =
+        allocationResult['volunteer_name'] as String? ?? 'Unknown Volunteer';
+    final crisisType =
+        reportData['crisis_type'] as String? ??
+        reportData['category'] as String? ??
+        'Emergency';
     final areaName = _extractAreaName(reportData);
     final position = _extractLatLng(reportData);
-    
+
     if (position != null) {
       showSmartAllocationDispatch(
         volunteerName: volunteerName,
@@ -395,13 +427,13 @@ class _MapPageState extends State<MapPage> {
       reportData['district'],
       reportData['city'],
     ];
-    
+
     for (final candidate in candidates) {
       if (candidate is String && candidate.trim().isNotEmpty) {
         return candidate.trim();
       }
     }
-    
+
     return 'Unknown Area';
   }
 
@@ -558,6 +590,7 @@ class _MapPageState extends State<MapPage> {
     _mapController = controller;
     _infoWindowController.googleMapController = controller;
     await _applyCustomMapStyle();
+    await _applyRequestedInitialView();
 
     if (!mounted) {
       return;
@@ -565,6 +598,37 @@ class _MapPageState extends State<MapPage> {
     setState(() {
       _isMapInitializing = false;
     });
+  }
+
+  _LayerCategory _fromMapLayer(MapLayerCategory layer) {
+    switch (layer) {
+      case MapLayerCategory.medical:
+        return _LayerCategory.medical;
+      case MapLayerCategory.food:
+        return _LayerCategory.food;
+      case MapLayerCategory.airborne:
+        return _LayerCategory.airborne;
+      case MapLayerCategory.waterborne:
+        return _LayerCategory.waterborne;
+    }
+  }
+
+  Future<void> _applyRequestedInitialView() async {
+    if (_mapController == null || _didApplyRequestedInitialFocus) {
+      return;
+    }
+    _didApplyRequestedInitialFocus = true;
+
+    final target = widget.initialFocus ?? _sambhajinagar;
+    if (widget.lockInitialFocus) {
+      _hasAutoFramed = true;
+    }
+
+    await _mapController!.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: target, zoom: widget.initialZoom),
+      ),
+    );
   }
 
   double? _toDouble(dynamic value) {
@@ -1626,202 +1690,204 @@ class _MapIntelCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time_rounded,
-                              size: 12,
-                              color: Colors.white54,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              timeAgo,
-                              style: const TextStyle(
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.access_time_rounded,
+                                size: 12,
                                 color: Colors.white54,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
+                              const SizedBox(width: 4),
+                              Text(
+                                timeAgo,
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      crisisType,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                    if (peopleAffected > 0) ...[
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.people_alt_rounded,
+                                            size: 14,
+                                            color: Colors.white70,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            '$peopleAffected affected',
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.white12),
+                                  color: const Color(0xFF1A1F26),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: imageUrl == null || imageUrl!.isEmpty
+                                    ? const Center(
+                                        child: Icon(
+                                          Icons.satellite_alt_rounded,
+                                          color: Colors.white38,
+                                          size: 24,
+                                        ),
+                                      )
+                                    : Image.network(
+                                        imageUrl!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Center(
+                                              child: Icon(
+                                                Icons.broken_image_rounded,
+                                                color: Colors.white38,
+                                                size: 24,
+                                              ),
+                                            ),
+                                      ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if ((assignedVolunteerName ?? '').isNotEmpty) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0D1B2A).withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white12),
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 26,
+                                        height: 26,
+                                        decoration: BoxDecoration(
+                                          color: const Color(
+                                            0xFF16A34A,
+                                          ).withOpacity(0.18),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.verified_rounded,
+                                          color: Color(0xFF86EFAC),
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Expanded(
+                                        child: Text(
+                                          'Responder Profile',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
                                   Text(
-                                    crisisType,
-                                    maxLines: 2,
+                                    assignedVolunteerName ?? '',
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      height: 1.2,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  if (peopleAffected > 0) ...[
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.people_alt_rounded,
-                                          size: 14,
-                                          color: Colors.white70,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          '$peopleAffected affected',
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
+                                  if ((assignedVolunteerSpeciality ?? '')
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      assignedVolunteerSpeciality!,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                  if ((assignedVolunteerContact ?? '')
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      assignedVolunteerContact!,
+                                      style: const TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 11,
+                                      ),
                                     ),
                                   ],
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 14),
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.white12),
-                                color: const Color(0xFF1A1F26),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: imageUrl == null || imageUrl!.isEmpty
-                                  ? const Center(
-                                      child: Icon(
-                                        Icons.satellite_alt_rounded,
-                                        color: Colors.white38,
-                                        size: 24,
-                                      ),
-                                    )
-                                  : Image.network(
-                                      imageUrl!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          const Center(
-                                            child: Icon(
-                                              Icons.broken_image_rounded,
-                                              color: Colors.white38,
-                                              size: 24,
-                                            ),
-                                          ),
-                                    ),
-                            ),
+                            const SizedBox(height: 10),
                           ],
-                        ),
-                        const SizedBox(height: 12),
-                        if ((assignedVolunteerName ?? '').isNotEmpty) ...[
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0D1B2A).withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white12),
+                              color: const Color(0xFF16A34A).withOpacity(0.18),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 26,
-                                      height: 26,
-                                      decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xFF16A34A,
-                                        ).withOpacity(0.18),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Icon(
-                                        Icons.verified_rounded,
-                                        color: Color(0xFF86EFAC),
-                                        size: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Expanded(
-                                      child: Text(
-                                        'Responder Profile',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  assignedVolunteerName ?? '',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                if ((assignedVolunteerSpeciality ?? '')
-                                    .isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    assignedVolunteerSpeciality!,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                                if ((assignedVolunteerContact ?? '')
-                                    .isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    assignedVolunteerContact!,
-                                    style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ],
+                            alignment: Alignment.center,
+                            child: Text(
+                              (assignedVolunteerName ?? '').isEmpty
+                                  ? 'Tap to view report'
+                                  : 'Tap to open response details',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 10),
                         ],
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF16A34A).withOpacity(0.18),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            (assignedVolunteerName ?? '').isEmpty
-                                ? 'Tap to view report'
-                                : 'Tap to open response details',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
                       ),
                     ),
                   ),
@@ -2196,9 +2262,12 @@ class ReportDetailsPage extends StatelessWidget {
             supplyLine: supplyLine,
             peopleAffected: peopleAffected is num ? peopleAffected.toInt() : 0,
             createdAt: createdAt,
-            assignedVolunteerName: reportData['assigned_volunteer_name'] as String?,
-            assignedVolunteerPhone: reportData['assigned_volunteer_contact'] as String?,
-            assignedVolunteerSpeciality: reportData['assigned_volunteer_speciality'] as String?,
+            assignedVolunteerName:
+                reportData['assigned_volunteer_name'] as String?,
+            assignedVolunteerPhone:
+                reportData['assigned_volunteer_contact'] as String?,
+            assignedVolunteerSpeciality:
+                reportData['assigned_volunteer_speciality'] as String?,
           ),
           const SizedBox(height: 16),
           _IntelSectionCard(
@@ -2697,7 +2766,9 @@ class _SmartAllocationCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Colors.white.withOpacity(0.08)),
             ),
-            child: assignedVolunteerName != null && assignedVolunteerName!.isNotEmpty
+            child:
+                assignedVolunteerName != null &&
+                    assignedVolunteerName!.isNotEmpty
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -2740,7 +2811,9 @@ class _SmartAllocationCard extends StatelessWidget {
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                if (assignedVolunteerSpeciality != null && assignedVolunteerSpeciality!.isNotEmpty) ...[
+                                if (assignedVolunteerSpeciality != null &&
+                                    assignedVolunteerSpeciality!
+                                        .isNotEmpty) ...[
                                   const SizedBox(height: 2),
                                   Text(
                                     assignedVolunteerSpeciality!,
@@ -2756,19 +2829,26 @@ class _SmartAllocationCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (assignedVolunteerPhone != null && assignedVolunteerPhone!.isNotEmpty) ...[
+                      if (assignedVolunteerPhone != null &&
+                          assignedVolunteerPhone!.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: () => _makePhoneCall(assignedVolunteerPhone!),
+                            onPressed: () =>
+                                _makePhoneCall(assignedVolunteerPhone!),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF16A34A).withOpacity(0.2),
+                              backgroundColor: const Color(
+                                0xFF16A34A,
+                              ).withOpacity(0.2),
                               foregroundColor: const Color(0xFF86EFAC),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                side: const BorderSide(color: Color(0xFF16A34A), width: 1),
+                                side: const BorderSide(
+                                  color: Color(0xFF16A34A),
+                                  width: 1,
+                                ),
                               ),
                             ),
                             icon: const Icon(Icons.call_rounded, size: 18),
@@ -3109,7 +3189,8 @@ class CommandCenterDispatchAlert extends StatefulWidget {
   final VoidCallback onDismiss;
 
   @override
-  State<CommandCenterDispatchAlert> createState() => _CommandCenterDispatchAlertState();
+  State<CommandCenterDispatchAlert> createState() =>
+      _CommandCenterDispatchAlertState();
 }
 
 class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
@@ -3134,29 +3215,21 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
       vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -1.0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, -1.0), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
 
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.3,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
     _animationController.forward();
     _pulseController.repeat(reverse: true);
@@ -3285,7 +3358,7 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Title
                       const Text(
                         'Smart Allocation Successful',
@@ -3297,7 +3370,7 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       // Body content
                       Text(
                         '${widget.volunteerName} has been dispatched for ${widget.crisisType} in ${widget.areaName}.',
@@ -3309,7 +3382,7 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       // Action button
                       SizedBox(
                         width: double.infinity,
@@ -3329,10 +3402,7 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          icon: const Icon(
-                            Icons.location_searching,
-                            size: 18,
-                          ),
+                          icon: const Icon(Icons.location_searching, size: 18),
                           label: const Text(
                             'VIEW ON MAP',
                             style: TextStyle(

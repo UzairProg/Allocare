@@ -18,6 +18,7 @@ migrate_working_dir/
 !.env.json.example
 .fvm/
 .firebase/
+firebase_options.dart
 
 # Firebase Flutter config files can be generated per developer machine.
 android/app/google-services.json
