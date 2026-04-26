@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -6,13 +8,10 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-import java.util.Properties
-
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.reader(Charsets.UTF_8).use { reader ->
-        localProperties.load(reader)
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
     }
 }
 
@@ -21,10 +20,14 @@ val pnvTestToken = ((project.findProperty("PNV_TEST_TOKEN") as String?) ?: "")
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
 
-val mapsApiKey = (localProperties.getProperty("MAPS_API_KEY") ?: "")
-    .trim()
-    .replace("\\", "\\\\")
-    .replace("\"", "\\\"")
+val mapsApiKey = listOfNotNull(
+    project.findProperty("mapsApiKey") as String?,
+    project.findProperty("MAPS_API_KEY") as String?,
+    localProperties.getProperty("MAPS_API_KEY"),
+    System.getenv("MAPS_API_KEY"),
+).map { it.trim() }
+    .firstOrNull { it.isNotEmpty() }
+    ?: ""
 
 android {
     namespace = "com.example.allocare_app"

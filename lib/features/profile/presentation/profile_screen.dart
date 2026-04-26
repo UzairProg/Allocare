@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/custom_card.dart';
@@ -547,65 +548,100 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               AppConstants.screenHorizontalPadding,
               0,
             ),
-            child: ui.inventoryItems.isEmpty
-                ? CustomCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+            child: authUser == null
+                ? const CustomCard(child: Center(child: CircularProgressIndicator()))
+                : StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('inventory')
+                        .where('ngo_id', isEqualTo: authUser.uid)
+                        .limit(4)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CustomCard(child: Center(child: CircularProgressIndicator()));
+                      }
+                      if (snapshot.hasError) {
+                        return CustomCard(child: Center(child: Text('Error loading inventory: ${snapshot.error}')));
+                      }
+
+                      final docs = snapshot.data?.docs ?? [];
+                      if (docs.isEmpty) {
+                        return CustomCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Text(
-                                    'No inventory added yet',
-                                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                                  Container(
+                                    width: 42,
+                                    height: 42,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Icon(Icons.inventory_2_outlined, color: theme.colorScheme.primary),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Add medical kits, food packs, shelter supplies, or any other NGO stock here.',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'No inventory added yet',
+                                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Add medical kits, food packs, shelter supplies, or any other NGO stock here.',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        FilledButton.tonalIcon(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ManageNgoInventoryPage(),
+                              const SizedBox(height: 12),
+                              FilledButton.tonalIcon(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const ManageNgoInventoryPage(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.add_rounded),
+                                label: const Text('Add Inventory'),
                               ),
-                            );
-                          },
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('Add Inventory'),
-                        ),
-                      ],
-                    ),
-                  )
-                : Column(
-                    children: [
-                      for (int i = 0; i < ui.inventoryItems.length; i++) ...[
-                        _InventoryCard(item: ui.inventoryItems[i]),
-                        if (i != ui.inventoryItems.length - 1) const SizedBox(height: 10),
-                      ],
-                    ],
+                            ],
+                          ),
+                        );
+                      }
+
+                      return Column(
+                        children: [
+                          for (int i = 0; i < docs.length; i++) ...[
+                            Builder(
+                              builder: (context) {
+                                final data = docs[i].data() as Map<String, dynamic>;
+                                final title = data['title']?.toString() ?? 'Item';
+                                final item = _InventoryItem(
+                                  title: title,
+                                  subtitle: data['description']?.toString() ?? 'Stock item',
+                                  units: '${data['quantity'] ?? 0} ${data['unit'] ?? 'units'}',
+                                  icon: _ProfileUiData._inventoryIconFor(i, title),
+                                  accent: _ProfileUiData._inventoryColorFor(i),
+                                  progress: ((data['quantity'] as num?)?.toDouble() ?? 0) > 0 ? 1.0 : 0.0,
+                                );
+                                return _InventoryCard(item: item);
+                              },
+                            ),
+                            if (i != docs.length - 1) const SizedBox(height: 10),
+                          ],
+                        ],
+                      );
+                    },
                   ),
           ),
           Padding(
@@ -661,18 +697,108 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             child: CustomCard(
               padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  for (int i = 0; i < ui.teamMembers.length; i++) ...[
-                    _TeamMemberTile(member: ui.teamMembers[i]),
-                    if (i != ui.teamMembers.length - 1)
-                      Divider(
-                        height: 1,
-                        color: theme.colorScheme.outlineVariant,
-                      ),
-                  ],
-                ],
-              ),
+              child: authUser == null
+                  ? const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+                  : StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('volunteers')
+                          .where('ngo_id', isEqualTo: authUser.uid)
+                          .limit(5)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          return Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Center(child: Text('Error loading team: ${snapshot.error}')),
+                          );
+                        }
+
+                        final docs = snapshot.data?.docs ?? [];
+
+                        if (docs.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Icon(Icons.group_off_rounded, size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No volunteers found.',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tap Manage Volunteer to add one.',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          children: [
+                            for (int i = 0; i < docs.length; i++) ...[
+                              Builder(
+                                builder: (context) {
+                                  final data = docs[i].data() as Map<String, dynamic>;
+                                  final status = data['status']?.toString() ?? 'offline';
+                                  
+                                  Color accentColor;
+                                  String avatarLabel;
+                                  String percentLabel;
+                                  
+                                  if (status == 'available') {
+                                    accentColor = const Color(0xFF26A39C);
+                                    avatarLabel = '🟢';
+                                    percentLabel = 'Ready';
+                                  } else if (status == 'on_mission') {
+                                    accentColor = const Color(0xFFF59E0B);
+                                    avatarLabel = '🟠';
+                                    percentLabel = 'Deployed';
+                                  } else {
+                                    accentColor = const Color(0xFF94A3B8);
+                                    avatarLabel = '⚪';
+                                    percentLabel = 'Offline';
+                                  }
+
+                                  final member = _TeamMember(
+                                    name: data['name']?.toString() ?? 'Unknown',
+                                    role: data['speciality']?.toString() ?? 'General',
+                                    tags: [status.replaceAll('_', ' ').toUpperCase()],
+                                    percent: percentLabel,
+                                    avatarLabel: avatarLabel,
+                                    accent: accentColor,
+                                  );
+
+                                  return _TeamMemberTile(member: member);
+                                },
+                              ),
+                              if (i != docs.length - 1)
+                                Divider(
+                                  height: 1,
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
             ),
           ),
           Padding(
@@ -841,9 +967,7 @@ class _ProfileUiData {
 
     return _ProfileUiData(
       displayName: displayName,
-      subtitle: isDemo
-          ? 'Community NGO · Mumbai'
-          : '${_roleLabel(profile.role)} · ${_locationFromEmail(authUser?.email)}',
+      subtitle: 'Allocare Intelligence Node',
       missions: isDemo ? '342' : '128',
       served: isDemo ? '12k' : '4.1k',
       reliability: isDemo ? '98%' : '95%',
