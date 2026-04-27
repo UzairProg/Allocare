@@ -23,13 +23,6 @@ AlloCare transforms disaster relief by using Gemini 2.5 Flash to synthesize frag
 
 ---
 
-## 🎥 Preview
-
-<p align="center">
-  <img src="assets/allocare.gif" width="850"/>
-</p>
-
-
 ## 🧠 Core System Layers
 
 ### 1. Data & Visibility Layer
