@@ -2,6 +2,13 @@
 
 Allocare is a data-driven resource allocation system designed to help NGOs convert fragmented, unstructured data into actionable decisions and real-world impact.
 
+<p align="center">
+  <img src="assets/ALLOCARE.png" alt="Allocare Logo" width="120"/>
+</p>
+<p align="center">
+  <b>Right Help. Right Place. Right Time.</b>
+</p>
+
 ---
 
 ##  Problem
@@ -12,9 +19,18 @@ Fragmented and unstructured data in healthcare, food, and mental support leads t
 
 ##  Solution
 
-AlloCare transforms disaster relief by using Gemini 2.5 Flash to synthesize fragmented field data—like handwritten notes and audio—into structured, actionable logistics. By employing a Gemma Verify strategy, the system cross-references photos with reports to ensure aid legitimacy and prevent fraud. This intelligence feeds into a real-time Priority-Based Realignment engine that shifts resources and volunteers to high-risk zones instantly. Ultimately, AlloCare synchronizes food, medicine, and mental health into a single, unified care plan, replacing coordination delays with a verified, AI-driven command center.
+AlloCare transforms fragmented crisis reports into verified, structured, and actionable insights.  
+Using AI, it predicts airborne and waterborne risks, prioritizes neglected zones, prevents over-allocation, and connects the right resources and volunteers to the right communities in real time.
 
+> From fragmented data → verified insights → fair allocation → real-world action.
 ---
+
+## 🎥 Exclusive Preview
+
+<p align="center">
+  <img src="assets/allocare.gif" width="850"/>
+</p>
+
 
 ## 🧠 Core System Layers
 
@@ -45,60 +61,39 @@ Enables accept/reject actions
 Tracks real-world execution
 Updates system in real-time
 
-## 🔑 Core Features (Current Progress)
+## 🔑 Core Features 
+| FEATURE                     | SOLUTION                                                      |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| **Fragmented Data Structuring** | Converts handwritten notes, audio, forms, and reports into structured data |
+| **Photo-Report Verification**   | Checks whether uploaded photos match the report details                    |
+| **Duplicate Report Detection**  | Finds repeated or fake reports before allocation                           |
+| **Airborne Risk Prediction**    | Predicts possible airborne disease risk zones                              |
+| **Waterborne Risk Prediction**  | Predicts possible waterborne disease risk zones                            |
+| **Priority Zone Ranking**       | Ranks areas based on urgency, affected people, and past support            |
+| **Over-Allocation Prevention**  | Reduces priority of areas that already received recent help                |
+| **Neglected Area Detection**    | Highlights areas that have received little or no support                   |
+| **Smart Resource Allocation**   | Sends food, medical, or mental health support where it is needed most      |
+| **Volunteer Skill Matching**    | Assigns volunteers based on skill, location, availability, and reliability |
+| **Live Map Visualization**      | Shows risk zones, needs, and resource gaps on a map                        |
+| **Real-Time NGO Dashboard**     | Shows live reports, alerts, resources, and volunteer status                |
+| **Unified Care Planning**       | Combines food, healthcare, and mental support in one relief plan           |
 
-### ✅ Authentication
-- Email/password login & signup (Firebase Auth)
-- Role-based access:
-  - NGO
-  - Volunteer
-  - Admin (approval layer)
-
----
-
-### 🧱 Application Shell
-- Bottom navigation structure:
-  - Home
-  - Needs
-  - Map (placeholder)
-  - Insights
-  - Profile
-- Feature-based scalable architecture
-
----
-
-### 🧾 Needs Management (Planned UI Ready)
-- Add and manage needs
-- Categories:
-  - Medical
-  - Food & Nutrition
-  - Mental Health
-  
----
-
-### 📊 Insights System (Planned)
-- Area-based and city-level insights
-- Pattern detection from data
-- Actionable recommendations
-
----
-
-### 🗺️ Map (In Progress)
-- Placeholder implemented
-- Planned:
-  - medical pins
-  - food heatmaps
-  - urgency visualization
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Flutter** – Cross-platform frontend (Android, iOS, Web)
-- **Firebase Authentication** – User authentication
-- **Cloud Firestore (Standard, Regional - asia-south1)** – Database
-- **Google Maps (planned)** – Visualization
-- **Gemini (planned)** – NLP-based classification, Risk Detection of Airborne and Waterborne Diseases
+| Component | Technology | Core Purpose |
+|-----------|------------|--------------|
+| Logic & Synthesis | Gemini 2.5 Flash | Converts fragmented data into structured insights |
+| Verification Engine | Gemma 2 | Validates reports using images + text |
+| AI Hub | Vertex AI | Manages AI models and performance |
+| Real-time Engine | Firestore | Stores live reports and priority queue |
+| Media Management | Cloudinary | Optimizes images/videos for low bandwidth |
+| Automation | Cloud Functions | Triggers allocation based on AI insights |
+| UI Framework | Flutter | Multi-platform app (Android, iOS, Web) |
+| Identity & Trust | Firebase Auth | Secure volunteer authentication |
+| Geospatial Intel | Google Maps SDK | Visualizes zones and locations |
 
 ---
 
@@ -133,7 +128,19 @@ Allocare is designed to move beyond static dashboards and become a **real-time d
 > The right help reaches the right place at the right time.
 
 ---
+### 🎯 Supported Goals
 
+<p align="center">
+  <img src="assets/sdg2.png" width="140"/>
+  <img src="assets/sdg3.png" width="140"/>
+  <img src="assets/sdg10.png" width="140"/>
+</p>
+
+| SDG | Impact Through Allocare |
+|-----|--------------------------|
+| **SDG 2 – Zero Hunger** | Smart food aid allocation during shortages and emergencies |
+| **SDG 3 – Good Health & Well-being** | Faster medical response and healthcare resource prioritization |
+| **SDG 10 – Reduced Inequalities** | Fair, unbiased distribution of help to underserved communities |
 ## 📌 Status
 
 🚧 Active Development  
@@ -146,3 +153,4 @@ Allocare is designed to move beyond static dashboards and become a **real-time d
 ## 🤝 Team
 
 Built as part of the Google Solution Challenge.
+Team: **TRIVERSAL**
