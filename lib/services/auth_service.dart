@@ -73,6 +73,33 @@ class AuthService {
     return _auth.signInWithCredential(credential);
   }
 
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required void Function(PhoneAuthCredential) verificationCompleted,
+    required void Function(FirebaseAuthException) verificationFailed,
+    required void Function(String, int?) codeSent,
+    required void Function(String) codeAutoRetrievalTimeout,
+  }) async {
+    await _auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: verificationCompleted,
+      verificationFailed: verificationFailed,
+      codeSent: codeSent,
+      codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+    );
+  }
+
+  Future<UserCredential> signInWithPhoneNumber({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    return _auth.signInWithCredential(credential);
+  }
+
   Future<void> sendPasswordResetEmail({required String email}) {
     return _auth.sendPasswordResetEmail(email: email.trim());
   }

@@ -52,6 +52,10 @@ dependencies:
   flutter_svg: ^2.2.0
   google_generative_ai: ^0.4.6
   syncfusion_flutter_pdf: ^28.2.12
+  pinput: ^6.0.2
+  google_fonts: ^8.0.2
+  libphonenumber_plugin: ^0.3.3
+  country_picker: ^2.0.27
 
 dev_dependencies:
   flutter_test:
