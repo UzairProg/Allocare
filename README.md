@@ -133,7 +133,19 @@ Allocare is designed to move beyond static dashboards and become a **real-time d
 > The right help reaches the right place at the right time.
 
 ---
+### 🎯 Supported Goals
 
+<p align="center">
+  <img src="assets/sdg2.png" width="140"/>
+  <img src="assets/sdg3.png" width="140"/>
+  <img src="assets/sdg10.png" width="140"/>
+</p>
+
+| SDG | Impact Through Allocare |
+|-----|--------------------------|
+| **SDG 2 – Zero Hunger** | Smart food aid allocation during shortages and emergencies |
+| **SDG 3 – Good Health & Well-being** | Faster medical response and healthcare resource prioritization |
+| **SDG 10 – Reduced Inequalities** | Fair, unbiased distribution of help to underserved communities |
 ## 📌 Status
 
 🚧 Active Development  
