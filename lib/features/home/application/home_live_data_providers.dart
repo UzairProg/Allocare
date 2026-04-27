@@ -23,56 +23,79 @@ class NeedCategorySummary {
   final Color color;
 }
 
+enum ActivityVizType { heatmap, vectorLine, windPattern, none }
+
 class RecentActivityItem {
   const RecentActivityItem({
     required this.title,
     required this.subtitle,
     required this.timeAgo,
     required this.icon,
+    this.accentColor = Colors.blue,
+    this.vizType = ActivityVizType.none,
+    this.isHighPriority = false,
   });
 
   final String title;
   final String subtitle;
   final String timeAgo;
   final IconData icon;
+  final Color accentColor;
+  final ActivityVizType vizType;
+  final bool isHighPriority;
 }
 
 const homeDemoNeeds = [
   NeedCategorySummary(
     category: 'Medical',
-    total: 47,
-    urgent: 12,
+    total: 22,
+    urgent: 18,
     icon: Icons.local_hospital_outlined,
     color: Color(0xFFEF6D6D),
   ),
   NeedCategorySummary(
     category: 'Food',
-    total: 83,
+    total: 45,
     urgent: 5,
     icon: Icons.restaurant_menu_outlined,
     color: Color(0xFFF0B04A),
   ),
   NeedCategorySummary(
-    category: 'Mental',
-    total: 31,
-    urgent: 8,
-    icon: Icons.psychology_alt_outlined,
-    color: Color(0xFF6E90C5),
+    category: 'Shelter',
+    total: 12,
+    urgent: 9,
+    icon: Icons.home_outlined,
+    color: Color(0xFF5B888F),
   ),
 ];
 
 const homeDemoRecent = [
   RecentActivityItem(
-    title: 'Medical team dispatched to Dharavi',
-    subtitle: '12 people assisted · Confirmed',
-    timeAgo: '2m ago',
-    icon: Icons.local_hospital_outlined,
+    title: 'Food need reported in CIDCO Sector 4',
+    subtitle: '24 people affected · Open',
+    timeAgo: '2h ago',
+    icon: Icons.restaurant_menu_outlined,
+    accentColor: Colors.blue,
+    vizType: ActivityVizType.heatmap,
+    isHighPriority: false,
   ),
   RecentActivityItem(
-    title: 'Food supply allocated in Govandi',
-    subtitle: '85 ration kits distributed',
-    timeAgo: '18m ago',
-    icon: Icons.inventory_2_outlined,
+    title: 'Medical emergency in Kranti Chowk',
+    subtitle: 'High Priority Cluster · Critical',
+    timeAgo: '45m ago',
+    icon: Icons.local_hospital_outlined,
+    accentColor: Colors.orange,
+    vizType: ActivityVizType.vectorLine,
+    isHighPriority: true,
+  ),
+  RecentActivityItem(
+    title: 'Resource gap in Waluj Industrial Area',
+    subtitle: 'Volunteer realignment required',
+    timeAgo: '15m ago',
+    icon: Icons.security_outlined,
+    accentColor: Colors.purple,
+    vizType: ActivityVizType.windPattern,
+    isHighPriority: true,
   ),
 ];
 
@@ -128,13 +151,20 @@ final homeRecentActivityProvider = StreamProvider<List<RecentActivityItem>>((ref
     }
 
     final items = snapshot.docs.map((doc) {
-      final need = NeedModel.fromMap(doc.id, doc.data());
-      final icon = _categoryVisual(need.category).icon;
+      final data = doc.data();
+      final need = NeedModel.fromMap(doc.id, data);
+      final visual = _categoryVisual(need.category);
+      final area = _getLocalizedArea(data['lat'] as double?, data['long'] as double?);
+      final isHigh = _isUrgent(need.urgency);
+      
       return RecentActivityItem(
-        title: '${_toTitleCase(need.category)} need reported in ${need.location}',
+        title: '${_toTitleCase(need.category)} need reported in $area',
         subtitle: '${need.peopleAffected} people affected · ${_toTitleCase(need.status)}',
-        timeAgo: _timeAgo(doc.data()['updatedAt']),
-        icon: icon,
+        timeAgo: _timeAgo(data['updatedAt']),
+        icon: visual.icon,
+        accentColor: visual.color,
+        vizType: _determineVizType(need.category),
+        isHighPriority: isHigh,
       );
     }).toList();
 
@@ -161,14 +191,23 @@ bool _isUrgent(String value) {
 }
 
 String _toTitleCase(String value) {
-  final normalized = value.trim();
+  final normalized = value.trim().replaceAll('_', ' ');
   if (normalized.isEmpty) {
     return 'General';
   }
 
-  final first = normalized.substring(0, 1).toUpperCase();
-  final rest = normalized.substring(1).toLowerCase();
-  return '$first$rest';
+  return normalized.split(' ').map((word) {
+    if (word.isEmpty) return '';
+    return word[0].toUpperCase() + word.substring(1).toLowerCase();
+  }).join(' ');
+}
+
+ActivityVizType _determineVizType(String category) {
+  final key = category.toLowerCase();
+  if (key.contains('water') || key.contains('medical')) return ActivityVizType.heatmap;
+  if (key.contains('supply') || key.contains('food') || key.contains('volunteer')) return ActivityVizType.vectorLine;
+  if (key.contains('air') || key.contains('respiratory')) return ActivityVizType.windPattern;
+  return ActivityVizType.none;
 }
 
 _CategoryVisual _categoryVisual(String raw) {
@@ -230,4 +269,19 @@ DateTime? _toDateTime(Object? value) {
     return DateTime.tryParse(value);
   }
   return null;
+}
+
+String _getLocalizedArea(double? lat, double? lng) {
+  if (lat == null || lng == null) return 'Aurangabad Central';
+  
+  // High-fidelity geocoding for Chhatrapati Sambhajinagar landmarks
+  if (lat > 19.895 && lng > 75.355) return 'MGM Road';
+  if (lat > 19.885 && lat < 19.895 && lng > 75.325 && lng < 75.335) return 'Nirala Bazar';
+  if (lat > 19.875 && lat < 19.885 && lng > 75.315 && lng < 75.325) return 'Paithan Gate';
+  if (lat > 19.880 && lat < 19.890 && lng > 75.340 && lng < 75.350) return 'Seven Hills';
+  if (lat > 19.89 && lng > 75.35) return 'CIDCO Sector 4';
+  if (lat < 19.86 && lng < 75.32) return 'Kranti Chowk';
+  if (lat > 19.87 && lat < 19.89) return 'Waluj Industrial Area';
+  
+  return 'Aurangabad Central';
 }

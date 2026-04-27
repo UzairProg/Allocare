@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../insights/presentation/sentinel_strategic_hub_page.dart';
@@ -75,61 +76,90 @@ class _PremiumBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
     final scheme = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            height: 78,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF1D2A30).withValues(alpha: 0.12),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+    final navBody = ClipRRect(
+      borderRadius: BorderRadius.circular(isWeb ? 30 : 28),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: isWeb ? 11 : 8,
+          sigmaY: isWeb ? 11 : 8,
+        ),
+        child: Container(
+          height: isWeb ? 92 : 78,
+          padding: EdgeInsets.symmetric(horizontal: isWeb ? 14 : 10),
+          decoration: BoxDecoration(
+            gradient: isWeb
+                ? const LinearGradient(
+                    colors: [Color(0xEDFDFEFF), Color(0xE9EFF4FF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isWeb ? null : Colors.white.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(isWeb ? 30 : 28),
+            border: Border.all(
+              color: isWeb
+                  ? const Color(0xFFDCE6F8)
+                  : Colors.white.withValues(alpha: 0.75),
             ),
-            child: Row(
-              children: [
-                _NavItem(
-                  label: 'Home',
-                  icon: Icons.home_rounded,
-                  selected: currentIndex == 0,
-                  onTap: () => onChanged(0),
-                ),
-                _NavItem(
-                  label: 'Map',
-                  icon: Icons.map_rounded,
-                  selected: currentIndex == 1,
-                  onTap: () => onChanged(1),
-                ),
-                _ReportNavTab(selected: false, scheme: scheme),
-                _NavItem(
-                  label: 'Insights',
-                  icon: Icons.auto_graph_rounded,
-                  selected: currentIndex == 3,
-                  onTap: () => onChanged(3),
-                ),
-                _NavItem(
-                  label: 'Profile',
-                  icon: Icons.person_rounded,
-                  selected: currentIndex == 4,
-                  onTap: () => onChanged(4),
-                ),
-              ],
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(
+                  0xFF1D2A30,
+                ).withValues(alpha: isWeb ? 0.16 : 0.12),
+                blurRadius: isWeb ? 34 : 24,
+                offset: Offset(0, isWeb ? 12 : 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              _NavItem(
+                label: 'Home',
+                icon: Icons.home_rounded,
+                selected: currentIndex == 0,
+                onTap: () => onChanged(0),
+              ),
+              _NavItem(
+                label: 'Map',
+                icon: Icons.map_rounded,
+                selected: currentIndex == 1,
+                onTap: () => onChanged(1),
+              ),
+              _ReportNavTab(selected: false, scheme: scheme),
+              _NavItem(
+                label: 'Insights',
+                icon: Icons.auto_graph_rounded,
+                selected: currentIndex == 3,
+                onTap: () => onChanged(3),
+              ),
+              _NavItem(
+                label: 'Profile',
+                icon: Icons.person_rounded,
+                selected: currentIndex == 4,
+                onTap: () => onChanged(4),
+              ),
+            ],
           ),
         ),
       ),
+    );
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(14, 0, 14, isWeb ? 14 : 10),
+      child: isWeb
+          ? Align(
+              alignment: Alignment.bottomCenter,
+              widthFactor: 1,
+              heightFactor: 1,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1080),
+                child: navBody,
+              ),
+            )
+          : navBody,
     );
   }
 }
@@ -149,6 +179,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
     final scheme = Theme.of(context).colorScheme;
 
     return Expanded(
@@ -162,14 +193,14 @@ class _NavItem extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 240),
             curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 6),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 240),
                   curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.all(4),
+                  padding: EdgeInsets.all(isWeb ? 6 : 4),
                   decoration: BoxDecoration(
                     color: selected
                         ? scheme.primary.withValues(alpha: 0.12)
@@ -182,27 +213,28 @@ class _NavItem extends StatelessWidget {
                     scale: selected ? 1.08 : 1,
                     child: Icon(
                       icon,
-                      size: 22,
+                      size: isWeb ? 26 : 22,
                       color: selected
                           ? scheme.primary
                           : scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
-                const SizedBox(height: 3),
+                SizedBox(height: isWeb ? 5 : 3),
                 Text(
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                     color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                    fontSize: isWeb ? 12.5 : null,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: isWeb ? 3 : 2),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 240),
                   curve: Curves.easeOutCubic,
-                  width: selected ? 16 : 0,
-                  height: 2.5,
+                  width: selected ? (isWeb ? 20 : 16) : 0,
+                  height: isWeb ? 3 : 2.5,
                   decoration: BoxDecoration(
                     color: scheme.primary,
                     borderRadius: BorderRadius.circular(99),
@@ -242,6 +274,8 @@ class _ReportNavIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
+
     return GestureDetector(
       onTap: () => _openHub(context),
       child: AnimatedScale(
@@ -251,20 +285,24 @@ class _ReportNavIcon extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          width: 40,
-          height: 40,
+          width: isWeb ? 52 : 40,
+          height: isWeb ? 52 : 40,
           decoration: BoxDecoration(
             color: const Color(0xFF1A73E8),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF1A73E8).withValues(alpha: 0.25),
-                blurRadius: 14,
-                offset: const Offset(0, 7),
+                blurRadius: isWeb ? 18 : 14,
+                offset: Offset(0, isWeb ? 9 : 7),
               ),
             ],
           ),
-          child: const Icon(Icons.add_rounded, color: Colors.white, size: 21),
+          child: Icon(
+            Icons.add_rounded,
+            color: Colors.white,
+            size: isWeb ? 27 : 21,
+          ),
         ),
       ),
     );
@@ -279,22 +317,25 @@ class _ReportNavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
+
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: EdgeInsets.symmetric(vertical: isWeb ? 2 : 4),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Transform.translate(
-              offset: const Offset(0, -4),
+              offset: Offset(0, isWeb ? -7 : -4),
               child: _ReportNavIcon(isSelected: selected, scheme: scheme),
             ),
-            const SizedBox(height: 2),
+            SizedBox(height: isWeb ? 3 : 2),
             Text(
               'Report',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                 color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                fontSize: isWeb ? 12.5 : null,
               ),
             ),
           ],

@@ -9,12 +9,12 @@ final geminiServiceProvider = Provider<GeminiService>((ref) {
 });
 
 class GeminiService {
-  GeminiService({required String apiKey, String modelName = 'gemini-2.0-flash'})
+  GeminiService({required String apiKey, String modelName = 'gemini-2.5-flash'})
     : _apiKey = apiKey.trim(),
       _modelName = modelName {
     if (_apiKey.isEmpty) {
       throw StateError(
-        'Missing Gemini API key. Provide GEMINI_API_KEY (or GOOGLE_API_KEY) via --dart-define or --dart-define-from-file=.env.json',
+        'Missing Gemini API key. Provide GEMINI_API_KEY (or GOOGLE_API_KEY) via --dart-define.',
       );
     }
   }
@@ -48,12 +48,12 @@ class GeminiService {
       return fallback;
     }
 
-    return 'gemini-2.0-flash';
+    return 'gemini-2.5-flash';
   }
 
   factory GeminiService.fromEnvironment({
     String? fallbackApiKey,
-    String modelName = 'gemini-2.0-flash',
+    String modelName = 'gemini-2.5-flash',
   }) {
     final resolvedKey = resolveApiKey(fallbackApiKey: fallbackApiKey);
     final resolvedModel = resolveModelName(fallbackModelName: modelName);
@@ -70,9 +70,10 @@ class GeminiService {
     final candidates = [
       _modelName,
       'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash-latest',
+      'models/gemma-3-27b-it',
+      'gemma-3-27b',
       'gemini-1.5-flash',
+      'gemini-1.5-pro',
     ];
 
     final seen = <String>{};
@@ -198,13 +199,15 @@ ${context.isEmpty ? '' : 'Context metadata:\n$context'}
     Object? lastError;
 
     for (final candidateModel in _candidateModels()) {
+      final isGemma = candidateModel.toLowerCase().contains('gemma');
       final model = GenerativeModel(
         model: candidateModel,
         apiKey: _apiKey,
         generationConfig: GenerationConfig(
-          responseMimeType: 'application/json',
+          responseMimeType: isGemma ? null : 'application/json',
           temperature: 0.2,
         ),
+        requestOptions: const RequestOptions(apiVersion: 'v1beta'),
       );
 
       try {

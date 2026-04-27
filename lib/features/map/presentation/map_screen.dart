@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:custom_info_window/custom_info_window.dart';
@@ -21,7 +22,7 @@ Color _colorForUrgency(double score) {
   return const Color(0xFF388E3C);
 }
 
-enum MapLayerCategory { medical, food, airborne, waterborne }
+enum MapLayerCategory { medical, food, airborne, waterborne, mentalHealth }
 
 class MapScreen extends StatelessWidget {
   const MapScreen({
@@ -461,10 +462,14 @@ class _MapPageState extends State<MapPage> {
   Future<BitmapDescriptor> _buildCreativePinIcon({
     required bool assigned,
   }) async {
-    const markerSize = 126.0;
+    const baseMarkerSize = 126.0;
+    final markerSize = kIsWeb ? 78.0 : baseMarkerSize;
+    final scale = markerSize / baseMarkerSize;
+    double s(double value) => value * scale;
+
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    const center = Offset(markerSize / 2, markerSize / 2);
+    final center = Offset(markerSize / 2, markerSize / 2);
 
     final glowPaint = Paint()
       ..color = assigned ? const Color(0x6634D399) : const Color(0x66FF1744);
@@ -474,34 +479,34 @@ class _MapPageState extends State<MapPage> {
       ..color = assigned ? const Color(0xFF1A73E8) : const Color(0xFFE53935);
     final innerPaint = Paint()..color = Colors.white;
 
-    canvas.drawCircle(center, 52, glowPaint);
-    canvas.drawCircle(center, 38, pulsePaint);
-    canvas.drawCircle(center, 22, corePaint);
-    canvas.drawCircle(center, 10, innerPaint);
+    canvas.drawCircle(center, s(52), glowPaint);
+    canvas.drawCircle(center, s(38), pulsePaint);
+    canvas.drawCircle(center, s(22), corePaint);
+    canvas.drawCircle(center, s(10), innerPaint);
 
     final ringPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.9)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4;
-    canvas.drawCircle(center, 28, ringPaint);
+      ..strokeWidth = s(4);
+    canvas.drawCircle(center, s(28), ringPaint);
 
     if (assigned) {
-      final badgeCenter = Offset(markerSize - 34, 34);
+      final badgeCenter = Offset(markerSize - s(34), s(34));
       final badgePaint = Paint()..color = const Color(0xFF16A34A);
-      canvas.drawCircle(badgeCenter, 16, badgePaint);
+      canvas.drawCircle(badgeCenter, s(16), badgePaint);
 
       final borderPaint = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3;
-      canvas.drawCircle(badgeCenter, 16, borderPaint);
+        ..strokeWidth = s(3);
+      canvas.drawCircle(badgeCenter, s(16), borderPaint);
 
       final textPainter = TextPainter(
-        text: const TextSpan(
+        text: TextSpan(
           text: 'V',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 16,
+            fontSize: s(16),
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -514,9 +519,9 @@ class _MapPageState extends State<MapPage> {
     }
 
     final pointerPath = Path()
-      ..moveTo(center.dx, markerSize - 8)
-      ..lineTo(center.dx - 11, markerSize - 34)
-      ..lineTo(center.dx + 11, markerSize - 34)
+      ..moveTo(center.dx, markerSize - s(8))
+      ..lineTo(center.dx - s(11), markerSize - s(34))
+      ..lineTo(center.dx + s(11), markerSize - s(34))
       ..close();
     canvas.drawPath(pointerPath, corePaint);
 
@@ -610,6 +615,8 @@ class _MapPageState extends State<MapPage> {
         return _LayerCategory.airborne;
       case MapLayerCategory.waterborne:
         return _LayerCategory.waterborne;
+      case MapLayerCategory.mentalHealth:
+        return _LayerCategory.mentalHealth;
     }
   }
 
@@ -916,6 +923,27 @@ class _MapPageState extends State<MapPage> {
       }
     }
 
+    if (category == _LayerCategory.mentalHealth) {
+      // Mental Health palette: teal with emerald for high-risk zones.
+      switch (urgencyLevel) {
+        case 'critical':
+        case 'high':
+          return const HeatmapGradient([
+            HeatmapGradientColor(Color(0x14065F46), 0.12),
+            HeatmapGradientColor(Color(0x66065F46), 0.56),
+            HeatmapGradientColor(Color(0xFF065F46), 1.0),
+          ]);
+        case 'low':
+        case 'medium':
+        default:
+          return const HeatmapGradient([
+            HeatmapGradientColor(Color(0x140D9488), 0.12),
+            HeatmapGradientColor(Color(0x660D9488), 0.56),
+            HeatmapGradientColor(Color(0xFF0D9488), 1.0),
+          ]);
+      }
+    }
+
     switch (urgencyLevel) {
       case 'critical':
         return _criticalRiskGradient;
@@ -941,6 +969,72 @@ class _MapPageState extends State<MapPage> {
       default:
         return const HeatmapRadius.fromPixels(38);
     }
+  }
+
+  Color _webHeatFillColor({
+    required _LayerCategory category,
+    required String urgencyLevel,
+  }) {
+    if (category == _LayerCategory.airborne) {
+      return switch (urgencyLevel) {
+        'critical' || 'high' => const Color(0x667209B7),
+        _ => const Color(0x66B5179E),
+      };
+    }
+
+    if (category == _LayerCategory.waterborne) {
+      return switch (urgencyLevel) {
+        'critical' || 'high' => const Color(0x6603045E),
+        _ => const Color(0x6600B4D8),
+      };
+    }
+
+    if (category == _LayerCategory.mentalHealth) {
+      return switch (urgencyLevel) {
+        'critical' || 'high' => const Color(0x66065F46),
+        _ => const Color(0x660D9488),
+      };
+    }
+
+    return switch (urgencyLevel) {
+      'critical' => const Color(0x66D32F2F),
+      'high' => const Color(0x66F57C00),
+      'low' => const Color(0x662E7D32),
+      _ => const Color(0x66F9A825),
+    };
+  }
+
+  Color _webHeatStrokeColor({
+    required _LayerCategory category,
+    required String urgencyLevel,
+  }) {
+    if (category == _LayerCategory.airborne) {
+      return switch (urgencyLevel) {
+        'critical' || 'high' => const Color(0xCC7209B7),
+        _ => const Color(0xCCB5179E),
+      };
+    }
+
+    if (category == _LayerCategory.waterborne) {
+      return switch (urgencyLevel) {
+        'critical' || 'high' => const Color(0xCC03045E),
+        _ => const Color(0xCC00B4D8),
+      };
+    }
+
+    if (category == _LayerCategory.mentalHealth) {
+      return switch (urgencyLevel) {
+        'critical' || 'high' => const Color(0xCC065F46),
+        _ => const Color(0xCC0D9488),
+      };
+    }
+
+    return switch (urgencyLevel) {
+      'critical' => const Color(0xCCD32F2F),
+      'high' => const Color(0xCCF57C00),
+      'low' => const Color(0xCC2E7D32),
+      _ => const Color(0xCCF9A825),
+    };
   }
 
   String _readDisplayValue(
@@ -978,31 +1072,87 @@ class _MapPageState extends State<MapPage> {
     final assignedVolunteerSpeciality =
         (reportData['assigned_volunteer_speciality'] as String?)?.trim();
 
-    _infoWindowController.addInfoWindow!(
-      _MapIntelCard(
-        crisisType: crisisType,
-        urgencyScore: urgencyScore,
-        imageUrl: imageUrl,
-        reportData: reportData,
-        assignedVolunteerName: assignedVolunteerName,
-        assignedVolunteerContact: assignedVolunteerContact,
-        assignedVolunteerSpeciality: assignedVolunteerSpeciality,
-        onTap: () {
+    final briefingCard = _MapIntelCard(
+      crisisType: crisisType,
+      urgencyScore: urgencyScore,
+      imageUrl: imageUrl,
+      reportData: reportData,
+      assignedVolunteerName: assignedVolunteerName,
+      assignedVolunteerContact: assignedVolunteerContact,
+      assignedVolunteerSpeciality: assignedVolunteerSpeciality,
+      onTap: () {
+        if (kIsWeb) {
+          Navigator.of(context).pop();
+        } else {
           _infoWindowController.hideInfoWindow!();
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) =>
-                  ReportDetailsPage(reportId: reportId, reportData: reportData),
-            ),
-          );
-        },
-      ),
-      position,
+        }
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                ReportDetailsPage(reportId: reportId, reportData: reportData),
+          ),
+        );
+      },
     );
 
     setState(() {
       _selectedMarkerPosition = position;
     });
+
+    if (kIsWeb) {
+      showModalBottomSheet<void>(
+        context: context,
+        useSafeArea: true,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) {
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 620),
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xE50A111B), Color(0xE5101826)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(color: Colors.white12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x59000000),
+                      blurRadius: 28,
+                      offset: Offset(0, 14),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    briefingCard,
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    _infoWindowController.addInfoWindow!(briefingCard, position);
   }
 
   Future<void> _focusCameraOnData(List<LatLng> points) async {
@@ -1060,10 +1210,12 @@ class _MapPageState extends State<MapPage> {
     final shouldRenderHeatmap =
         _selectedCategory == _LayerCategory.food ||
         _selectedCategory == _LayerCategory.airborne ||
-        _selectedCategory == _LayerCategory.waterborne;
+        _selectedCategory == _LayerCategory.waterborne ||
+        _selectedCategory == _LayerCategory.mentalHealth;
     final shouldRenderHeatInteractions =
         _selectedCategory == _LayerCategory.airborne ||
-        _selectedCategory == _LayerCategory.waterborne;
+        _selectedCategory == _LayerCategory.waterborne ||
+        _selectedCategory == _LayerCategory.mentalHealth;
     final selectedCategoryKey = _selectedCategory.firestoreCategoryKey;
 
     final heatPointsByUrgency = <String, List<WeightedLatLng>>{
@@ -1341,13 +1493,15 @@ class _MapPageState extends State<MapPage> {
         Positioned(
           left: 16,
           bottom: 24,
-          child: _LayerDebugChip(
-            category: _selectedCategory,
-            docsInSnapshot: _docsInSnapshot,
-            docsWithCoordinates: _docsWithCoordinates,
-            markersCount: _markers.length,
-            heatPointsCount: _heatPointsCount,
-          ),
+          child: !kIsWeb
+              ? _LayerDebugChip(
+                  category: _selectedCategory,
+                  docsInSnapshot: _docsInSnapshot,
+                  docsWithCoordinates: _docsWithCoordinates,
+                  markersCount: _markers.length,
+                  heatPointsCount: _heatPointsCount,
+                )
+              : const SizedBox.shrink(),
         ),
         if (_selectedMarkerPosition != null)
           Positioned(
@@ -1446,7 +1600,7 @@ class _MapPageState extends State<MapPage> {
   }
 }
 
-enum _LayerCategory { medical, food, airborne, waterborne }
+enum _LayerCategory { medical, food, airborne, waterborne, mentalHealth }
 
 extension _LayerCategoryPresentation on _LayerCategory {
   String get label {
@@ -1459,6 +1613,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
         return 'Airborne';
       case _LayerCategory.waterborne:
         return 'Waterborne';
+      case _LayerCategory.mentalHealth:
+        return 'Mental Health';
     }
   }
 
@@ -1472,6 +1628,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
         return const Color(0xFFF57C00);
       case _LayerCategory.waterborne:
         return const Color(0xFF0288D1);
+      case _LayerCategory.mentalHealth:
+        return const Color(0xFF0D9488);
     }
   }
 
@@ -1485,6 +1643,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
         return 'airborne';
       case _LayerCategory.waterborne:
         return 'waterborne';
+      case _LayerCategory.mentalHealth:
+        return 'mentalhealth';
     }
   }
 }
@@ -1500,6 +1660,107 @@ class _LayerControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            colors: [Color(0xED0D1622), Color(0xED182232)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: Colors.white24),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x4D000000),
+              blurRadius: 22,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: PopupMenuButton<_LayerCategory>(
+          tooltip: 'Select Layer',
+          onSelected: onSelected,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          offset: const Offset(0, 52),
+          itemBuilder: (context) {
+            return _LayerCategory.values
+                .map(
+                  (category) => PopupMenuItem<_LayerCategory>(
+                    value: category,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 11,
+                          height: 11,
+                          decoration: BoxDecoration(
+                            color: category.indicatorColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          category.label,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList();
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: Colors.white12,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Icon(
+                    Icons.layers_rounded,
+                    size: 16,
+                    color: Colors.white.withValues(alpha: 0.95),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: selectedCategory.indicatorColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  selectedCategory.label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Colors.white70,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Material(
       color: const Color(0xFF10161F).withValues(alpha: 0.88),
       borderRadius: BorderRadius.circular(14),
@@ -1627,6 +1888,7 @@ class _MapIntelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
     final accentColor = _briefingAccentColor(
       reportData['category']?.toString() ?? '',
     );
@@ -1652,24 +1914,34 @@ class _MapIntelCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isWeb ? 22 : 20),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(isWeb ? 22 : 20),
           child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            filter: ui.ImageFilter.blur(
+              sigmaX: isWeb ? 14 : 12,
+              sigmaY: isWeb ? 14 : 12,
+            ),
             child: Container(
-              width: 250,
+              width: isWeb ? 420 : 250,
               decoration: BoxDecoration(
-                color: const Color(0xFF0F141A).withOpacity(0.85),
-                borderRadius: BorderRadius.circular(20),
+                gradient: isWeb
+                    ? const LinearGradient(
+                        colors: [Color(0xE70A111C), Color(0xE7172233)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: isWeb ? null : const Color(0xFF0F141A).withOpacity(0.85),
+                borderRadius: BorderRadius.circular(isWeb ? 22 : 20),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withOpacity(isWeb ? 0.16 : 0.12),
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: accentColor.withOpacity(0.2),
-                    blurRadius: 30,
+                    color: accentColor.withOpacity(isWeb ? 0.24 : 0.2),
+                    blurRadius: isWeb ? 36 : 30,
                     spreadRadius: -10,
                   ),
                 ],
