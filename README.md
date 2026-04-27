@@ -19,8 +19,10 @@ Fragmented and unstructured data in healthcare, food, and mental support leads t
 
 ##  Solution
 
-AlloCare transforms disaster relief by using Gemini 2.5 Flash to synthesize fragmented field data—like handwritten notes and audio—into structured, actionable logistics. By employing a Gemma Verify strategy, the system cross-references photos with reports to ensure aid legitimacy and prevent fraud. This intelligence feeds into a real-time Priority-Based Realignment engine that shifts resources and volunteers to high-risk zones instantly. Ultimately, AlloCare synchronizes food, medicine, and mental health into a single, unified care plan, replacing coordination delays with a verified, AI-driven command center.
+AlloCare transforms fragmented crisis reports into verified, structured, and actionable insights.  
+Using AI, it predicts airborne and waterborne risks, prioritizes neglected zones, prevents over-allocation, and connects the right resources and volunteers to the right communities in real time.
 
+> From fragmented data → verified insights → fair allocation → real-world action.
 ---
 
 ## 🎥 Exclusive Preview
@@ -59,50 +61,23 @@ Enables accept/reject actions
 Tracks real-world execution
 Updates system in real-time
 
-## 🔑 Core Features (Current Progress)
+## 🔑 Core Features 
+| FEATURE                     | SOLUTION                                                      |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| **Fragmented Data Structuring** | Converts handwritten notes, audio, forms, and reports into structured data |
+| **Photo-Report Verification**   | Checks whether uploaded photos match the report details                    |
+| **Duplicate Report Detection**  | Finds repeated or fake reports before allocation                           |
+| **Airborne Risk Prediction**    | Predicts possible airborne disease risk zones                              |
+| **Waterborne Risk Prediction**  | Predicts possible waterborne disease risk zones                            |
+| **Priority Zone Ranking**       | Ranks areas based on urgency, affected people, and past support            |
+| **Over-Allocation Prevention**  | Reduces priority of areas that already received recent help                |
+| **Neglected Area Detection**    | Highlights areas that have received little or no support                   |
+| **Smart Resource Allocation**   | Sends food, medical, or mental health support where it is needed most      |
+| **Volunteer Skill Matching**    | Assigns volunteers based on skill, location, availability, and reliability |
+| **Live Map Visualization**      | Shows risk zones, needs, and resource gaps on a map                        |
+| **Real-Time NGO Dashboard**     | Shows live reports, alerts, resources, and volunteer status                |
+| **Unified Care Planning**       | Combines food, healthcare, and mental support in one relief plan           |
 
-### ✅ Authentication
-- Email/password login & signup (Firebase Auth)
-- Role-based access:
-  - NGO
-  - Volunteer
-  - Admin (approval layer)
-
----
-
-### 🧱 Application Shell
-- Bottom navigation structure:
-  - Home
-  - Needs
-  - Map (placeholder)
-  - Insights
-  - Profile
-- Feature-based scalable architecture
-
----
-
-### 🧾 Needs Management (Planned UI Ready)
-- Add and manage needs
-- Categories:
-  - Medical
-  - Food & Nutrition
-  - Mental Health
-  
----
-
-### 📊 Insights System (Planned)
-- Area-based and city-level insights
-- Pattern detection from data
-- Actionable recommendations
-
----
-
-### 🗺️ Map (In Progress)
-- Placeholder implemented
-- Planned:
-  - medical pins
-  - food heatmaps
-  - urgency visualization
 
 ---
 
