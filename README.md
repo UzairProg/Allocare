@@ -94,11 +94,17 @@ Updates system in real-time
 
 ## 🛠️ Tech Stack
 
-- **Flutter** – Cross-platform frontend (Android, iOS, Web)
-- **Firebase Authentication** – User authentication
-- **Cloud Firestore (Standard, Regional - asia-south1)** – Database
-- **Google Maps (planned)** – Visualization
-- **Gemini (planned)** – NLP-based classification, Risk Detection of Airborne and Waterborne Diseases
+| Component | Technology | Core Purpose |
+|-----------|------------|--------------|
+| Logic & Synthesis | Gemini 2.5 Flash | Converts fragmented data into structured insights |
+| Verification Engine | Gemma 2 | Validates reports using images + text |
+| AI Hub | Vertex AI | Manages AI models and performance |
+| Real-time Engine | Firestore | Stores live reports and priority queue |
+| Media Management | Cloudinary | Optimizes images/videos for low bandwidth |
+| Automation | Cloud Functions | Triggers allocation based on AI insights |
+| UI Framework | Flutter | Multi-platform app (Android, iOS, Web) |
+| Identity & Trust | Firebase Auth | Secure volunteer authentication |
+| Geospatial Intel | Google Maps SDK | Visualizes zones and locations |
 
 ---
 
