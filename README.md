@@ -2,6 +2,13 @@
 
 Allocare is a data-driven resource allocation system designed to help NGOs convert fragmented, unstructured data into actionable decisions and real-world impact.
 
+<p align="center">
+  <img src="assets/ALLOCARE.png" alt="Allocare Logo" width="120"/>
+</p>
+<p align="center">
+  <b>Right Help. Right Place. Right Time.</b>
+</p>
+
 ---
 
 ##  Problem
