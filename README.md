@@ -158,3 +158,4 @@ Allocare is designed to move beyond static dashboards and become a **real-time d
 ## 🤝 Team
 
 Built as part of the Google Solution Challenge.
+Team: **TRIVERSAL**
