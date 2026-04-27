@@ -23,7 +23,7 @@ AlloCare transforms disaster relief by using Gemini 2.5 Flash to synthesize frag
 
 ---
 
-## 🎥 Demo Preview
+## 🎥 Exclusive Preview
 
 <p align="center">
   <img src="assets/allocare.gif" width="850"/>
