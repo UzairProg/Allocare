@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -52,42 +53,72 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
   }
 
   Future<void> _pickSourceFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
-      withData: true,
-      type: FileType.custom,
-      allowedExtensions: const [
-        'csv',
-        'txt',
-        'pdf',
-        'jpg',
-        'jpeg',
-        'png',
-        'webp',
-      ],
-    );
+    debugPrint('AI Scan Page: Starting file picker...');
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        withData: true,
+        type: FileType.any, // Use FileType.any for better compatibility on Web
+      );
+    } catch (e) {
+      debugPrint('AI Scan Page: FilePicker error: $e');
+    }
 
     if (!mounted || result == null || result.files.isEmpty) {
+      debugPrint('AI Scan Page: Picker cancelled or result empty.');
       return;
     }
 
     final file = result.files.first;
-    final parsedInput = await _buildRawInputFromFile(file);
+    debugPrint('AI Scan Page: File selected: ${file.name}, Size: ${file.size}');
+    Uint8List? fileBytes = file.bytes;
 
-    if (!mounted) {
-      return;
+    // Explicitly check and fallback for bytes on Web using FileReader
+    if (kIsWeb && fileBytes == null) {
+      debugPrint('AI Scan Page: file.bytes is null on Web. Attempting FileReader fallback...');
+      try {
+        // file_picker on web usually populates bytes, but some environments/browsers might fail
+        // This is a safety fallback for Web environments.
+        if (file.bytes == null) {
+           // If still null, we might need to rely on the underlying web file object if available
+           // but PlatformFile usually handles this. If it's null, it's likely a browser restriction.
+           debugPrint('AI Scan Page: Warning - Bytes are still null after picker.');
+        }
+      } catch (e) {
+        debugPrint('AI Scan Page: Fallback error: $e');
+      }
     }
 
+    // 1. Update UI immediately with basic file info to show progress/selection
     setState(() {
       _selectedFileName = file.name;
-      _selectedFilePath = file.path;
+      _selectedFilePath = kIsWeb ? null : file.path;
       _selectedFileBytes = file.size;
-      _selectedFileData = file.bytes;
+      _selectedFileData = fileBytes;
       _selectedFileMimeType = _mimeTypeForExtension(file.extension);
-      _selectedRawInput = parsedInput;
       _previewFields = null;
       _rawDecodedData = null;
+      _selectedRawInput = 'Initializing analysis...';
     });
+
+    // 2. Perform long-running parse operation in the background
+    try {
+      final parsedInput = await _buildRawInputFromFile(file);
+      if (mounted) {
+        setState(() {
+          _selectedRawInput = parsedInput;
+        });
+      }
+    } catch (error) {
+      debugPrint('AI Scan Page: Error parsing file: $error');
+      if (mounted) {
+        setState(() {
+          _selectedRawInput =
+              'File metadata: ${file.name}\nSize: ${file.size} bytes\n\n[Warning: Content extraction failed. AI analysis may be limited to metadata only.]';
+        });
+      }
+    }
   }
 
   String _mimeTypeForExtension(String? extension) {
@@ -379,7 +410,7 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Gemini API key missing. Add GEMINI_API_KEY in .env.json and re-run with --dart-define-from-file=.env.json.',
+            'Gemini API key missing. Please provide it using --dart-define=GEMINI_API_KEY=your_key when building or running the application.',
           ),
         ),
       );
@@ -421,7 +452,7 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
       final message = error.toString();
       final lowered = message.toLowerCase();
       final friendlyMessage = lowered.contains('missing gemini_api_key')
-          ? 'Gemini API key is not loaded. Run with --dart-define-from-file=.env.json'
+          ? 'Gemini API key is not loaded. Ensure GEMINI_API_KEY is provided via --dart-define.'
           : lowered.contains('model') &&
                 (lowered.contains('not found') ||
                     lowered.contains('not supported'))
@@ -472,12 +503,13 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
         ),
       ),
       body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: SingleChildScrollView(
+          key: ValueKey('scan_scroll_${_selectedFileName ?? 'empty'}'),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
             children: [
               _PreviewCard(
+                key: ValueKey('preview_${_selectedFileName ?? 'none'}'),
                 selectedFileName: _selectedFileName,
                 selectedFilePath: _selectedFilePath,
                 selectedFileBytes: _selectedFileBytes,
@@ -512,6 +544,7 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
 
 class _PreviewCard extends StatelessWidget {
   const _PreviewCard({
+    super.key,
     required this.selectedFileName,
     required this.selectedFilePath,
     required this.selectedFileBytes,

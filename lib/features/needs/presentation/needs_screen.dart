@@ -179,7 +179,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   final List<DocumentAttachment> _supportingDocs = [];
   bool _isUploadingFile = false;
   bool _isCurrentLocationFetched = false;
-  
+
   // Command Center Dispatch Alert state
   CommandCenterDispatchData? _dispatchAlert;
 
@@ -230,7 +230,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
 
   void _onViewDispatchOnMap() {
     if (_dispatchAlert == null) return;
-    
+
     // Navigate to smart allocation center page
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -341,949 +341,991 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
           SafeArea(
             child: Column(
               children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppConstants.screenHorizontalPadding,
-                8,
-                AppConstants.screenHorizontalPadding,
-                10,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: _step == 0
-                        ? () => Navigator.of(context).maybePop()
-                        : () => setState(() => _step -= 1),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    color: theme.colorScheme.onSurface,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppConstants.screenHorizontalPadding,
+                    8,
+                    AppConstants.screenHorizontalPadding,
+                    10,
                   ),
-                  Text(
-                    'Back',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.screenHorizontalPadding,
-              ),
-              child: _ProgressBar(step: _step, totalSteps: 6),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppConstants.screenHorizontalPadding,
-                14,
-                AppConstants.screenHorizontalPadding,
-                12,
-              ),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F7F2),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: theme.colorScheme.outlineVariant.withValues(
-                      alpha: 0.8,
-                    ),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'STEP ${_step + 1} OF 6',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _stepTitle,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF1E2A2E),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _stepContext,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                  child: Row(
                     children: [
-                      if (_step == 0) ...[
-                        _SectionLabel(title: 'Choose Location'),
-                        _LocationCard(
-                          mode: _LocationMode.current,
-                          selected: _locationMode == _LocationMode.current,
-                          success: _isCurrentLocationFetched,
-                          title: 'Use Current Location',
-                          subtitle: _currentLocationLabel,
-                          icon: Icons.location_on_rounded,
-                          onTap: () {
-                            setState(() {
-                              _locationMode = _LocationMode.current;
-                              _mapLocationLabel =
-                                  'Tap "Pick on Map" to choose a location';
-                              _mapLatitude = null;
-                              _mapLongitude = null;
-                              _locationController.clear();
-                            });
-                            _fetchCurrentLocation();
-                          },
+                      IconButton(
+                        onPressed: _step == 0
+                            ? () => Navigator.of(context).maybePop()
+                            : () => setState(() => _step -= 1),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      Text(
+                        'Back',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(height: 10),
-                        _LocationCard(
-                          mode: _LocationMode.map,
-                          selected: _locationMode == _LocationMode.map,
-                          title: 'Pick on Map',
-                          subtitle: _mapLocationLabel,
-                          icon: Icons.map_rounded,
-                          trailing: Icons.chevron_right_rounded,
-                          onTap: _pickLocationOnMap,
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.screenHorizontalPadding,
+                  ),
+                  child: _ProgressBar(step: _step, totalSteps: 6),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppConstants.screenHorizontalPadding,
+                    14,
+                    AppConstants.screenHorizontalPadding,
+                    12,
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F7F2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant.withValues(
+                          alpha: 0.8,
                         ),
-                        const SizedBox(height: 10),
-                        _LocationCard(
-                          mode: _LocationMode.search,
-                          selected: _locationMode == _LocationMode.search,
-                          title: 'Search Area',
-                          subtitle: 'Type a location or zone',
-                          icon: Icons.search_rounded,
-                          trailing: Icons.chevron_right_rounded,
-                          onTap: () {
-                            setState(() {
-                              _locationMode = _LocationMode.search;
-                              _mapLocationLabel =
-                                  'Tap "Pick on Map" to choose a location';
-                              _mapLatitude = null;
-                              _mapLongitude = null;
-                              _locationController.clear();
-                            });
-                          },
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'STEP ${_step + 1} OF 6',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.6,
+                          ),
                         ),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          child:
-                              _locationMode == _LocationMode.current &&
-                                  _isCurrentLocationFetched
-                              ? Padding(
-                                  key: const ValueKey('location-success-note'),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    AppConstants.screenHorizontalPadding,
-                                    10,
-                                    AppConstants.screenHorizontalPadding,
-                                    0,
-                                  ),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 10,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEAF9F2),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: const Color(
-                                          0xFF1F9D55,
-                                        ).withValues(alpha: 0.45),
+                        const SizedBox(height: 6),
+                        Text(
+                          _stepTitle,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1E2A2E),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _stepContext,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_step == 0) ...[
+                            _SectionLabel(title: 'Choose Location'),
+                            _LocationCard(
+                              mode: _LocationMode.current,
+                              selected: _locationMode == _LocationMode.current,
+                              success: _isCurrentLocationFetched,
+                              title: 'Use Current Location',
+                              subtitle: _currentLocationLabel,
+                              icon: Icons.location_on_rounded,
+                              onTap: () {
+                                setState(() {
+                                  _locationMode = _LocationMode.current;
+                                  _mapLocationLabel =
+                                      'Tap "Pick on Map" to choose a location';
+                                  _mapLatitude = null;
+                                  _mapLongitude = null;
+                                  _locationController.clear();
+                                });
+                                _fetchCurrentLocation();
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            _LocationCard(
+                              mode: _LocationMode.map,
+                              selected: _locationMode == _LocationMode.map,
+                              title: 'Pick on Map',
+                              subtitle: _mapLocationLabel,
+                              icon: Icons.map_rounded,
+                              trailing: Icons.chevron_right_rounded,
+                              onTap: _pickLocationOnMap,
+                            ),
+                            const SizedBox(height: 10),
+                            _LocationCard(
+                              mode: _LocationMode.search,
+                              selected: _locationMode == _LocationMode.search,
+                              title: 'Search Area',
+                              subtitle: 'Type a location or zone',
+                              icon: Icons.search_rounded,
+                              trailing: Icons.chevron_right_rounded,
+                              onTap: () {
+                                setState(() {
+                                  _locationMode = _LocationMode.search;
+                                  _mapLocationLabel =
+                                      'Tap "Pick on Map" to choose a location';
+                                  _mapLatitude = null;
+                                  _mapLongitude = null;
+                                  _locationController.clear();
+                                });
+                              },
+                            ),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              child:
+                                  _locationMode == _LocationMode.current &&
+                                      _isCurrentLocationFetched
+                                  ? Padding(
+                                      key: const ValueKey(
+                                        'location-success-note',
                                       ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.check_circle_rounded,
-                                          color: Color(0xFF1F9D55),
-                                          size: 18,
+                                      padding: const EdgeInsets.fromLTRB(
+                                        AppConstants.screenHorizontalPadding,
+                                        10,
+                                        AppConstants.screenHorizontalPadding,
+                                        0,
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            'Current location fetched successfully.',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: const Color(
-                                                    0xFF166A41,
-                                                  ),
-                                                  fontWeight: FontWeight.w700,
-                                                ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFEAF9F2),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(
+                                              0xFF1F9D55,
+                                            ).withValues(alpha: 0.45),
                                           ),
                                         ),
-                                      ],
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.check_circle_rounded,
+                                              color: Color(0xFF1F9D55),
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Current location fetched successfully.',
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                      color: const Color(
+                                                        0xFF166A41,
+                                                      ),
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                            if (_locationMode == _LocationMode.map &&
+                                _mapLatitude != null &&
+                                _mapLongitude != null)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  AppConstants.screenHorizontalPadding,
+                                  10,
+                                  AppConstants.screenHorizontalPadding,
+                                  0,
+                                ),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEAF3FF),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF2563EB,
+                                      ).withValues(alpha: 0.35),
                                     ),
                                   ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                        if (_locationMode == _LocationMode.map &&
-                            _mapLatitude != null &&
-                            _mapLongitude != null)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppConstants.screenHorizontalPadding,
-                              10,
-                              AppConstants.screenHorizontalPadding,
-                              0,
-                            ),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEAF3FF),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(
-                                    0xFF2563EB,
-                                  ).withValues(alpha: 0.35),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.place_rounded,
+                                        color: Color(0xFF2563EB),
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Pinned location saved as ${_mapLatitude!.toStringAsFixed(5)}, ${_mapLongitude!.toStringAsFixed(5)}',
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: const Color(0xFF1D4ED8),
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              child: Row(
+                            if (_locationMode != _LocationMode.current) ...[
+                              const SizedBox(height: 12),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal:
+                                      AppConstants.screenHorizontalPadding,
+                                ),
+                                child: TextFormField(
+                                  controller: _locationController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Location',
+                                    hintText: 'Enter area, landmark, or zone',
+                                  ),
+                                  validator: (value) {
+                                    if (_locationMode == _LocationMode.current)
+                                      return null;
+                                    if ((value ?? '').trim().isEmpty) {
+                                      return 'Location is required';
+                                    }
+                                    if (_locationMode == _LocationMode.map &&
+                                        (_mapLatitude == null ||
+                                            _mapLongitude == null)) {
+                                      return 'Pick a location on the map first';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ],
+                          if (_step == 1) ...[
+                            _SectionLabel(title: 'Choose Need Category'),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal:
+                                    AppConstants.screenHorizontalPadding,
+                              ),
+                              child: Column(
                                 children: [
-                                  const Icon(
-                                    Icons.place_rounded,
-                                    color: Color(0xFF2563EB),
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Pinned location saved as ${_mapLatitude!.toStringAsFixed(5)}, ${_mapLongitude!.toStringAsFixed(5)}',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: const Color(0xFF1D4ED8),
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                  for (final option
+                                      in _needCategoryOptions) ...[
+                                    _NeedCategoryCard(
+                                      option: option,
+                                      isSelected: _categoryKey == option.key,
+                                      isExpanded:
+                                          _expandedCategoryKey == option.key,
+                                      selectedSubcategory:
+                                          _categoryKey == option.key
+                                          ? _selectedSubcategory
+                                          : null,
+                                      onHeaderTap: () {
+                                        setState(() {
+                                          _expandedCategoryKey =
+                                              _expandedCategoryKey == option.key
+                                              ? null
+                                              : option.key;
+                                          _categoryKey = option.key;
+                                          if (_categoryKey != 'others' &&
+                                              _otherSubcategoryController
+                                                  .text
+                                                  .isNotEmpty) {
+                                            _otherSubcategoryController.clear();
+                                          }
+                                          if (!option.subcategories.contains(
+                                            _selectedSubcategory,
+                                          )) {
+                                            _selectedSubcategory =
+                                                option.subcategories.first;
+                                          }
+                                        });
+                                      },
+                                      onSubcategoryTap: (subcategory) {
+                                        setState(() {
+                                          _categoryKey = option.key;
+                                          _selectedSubcategory = subcategory;
+                                        });
+                                      },
+                                      customOtherController:
+                                          option.key == 'others'
+                                          ? _otherSubcategoryController
+                                          : null,
                                     ),
-                                  ),
+                                    const SizedBox(height: 10),
+                                  ],
                                 ],
                               ),
                             ),
-                          ),
-                        if (_locationMode != _LocationMode.current) ...[
-                          const SizedBox(height: 12),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppConstants.screenHorizontalPadding,
-                            ),
-                            child: TextFormField(
-                              controller: _locationController,
-                              decoration: const InputDecoration(
-                                labelText: 'Location',
-                                hintText: 'Enter area, landmark, or zone',
-                              ),
-                              validator: (value) {
-                                if (_locationMode == _LocationMode.current)
-                                  return null;
-                                if ((value ?? '').trim().isEmpty) {
-                                  return 'Location is required';
-                                }
-                                if (_locationMode == _LocationMode.map &&
-                                    (_mapLatitude == null ||
-                                        _mapLongitude == null)) {
-                                  return 'Pick a location on the map first';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ],
-                      if (_step == 1) ...[
-                        _SectionLabel(title: 'Choose Need Category'),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.screenHorizontalPadding,
-                          ),
-                          child: Column(
-                            children: [
-                              for (final option in _needCategoryOptions) ...[
-                                _NeedCategoryCard(
-                                  option: option,
-                                  isSelected: _categoryKey == option.key,
-                                  isExpanded:
-                                      _expandedCategoryKey == option.key,
-                                  selectedSubcategory:
-                                      _categoryKey == option.key
-                                      ? _selectedSubcategory
-                                      : null,
-                                  onHeaderTap: () {
-                                    setState(() {
-                                      _expandedCategoryKey =
-                                          _expandedCategoryKey == option.key
-                                          ? null
-                                          : option.key;
-                                      _categoryKey = option.key;
-                                      if (_categoryKey != 'others' &&
-                                          _otherSubcategoryController
-                                              .text
-                                              .isNotEmpty) {
-                                        _otherSubcategoryController.clear();
-                                      }
-                                      if (!option.subcategories.contains(
-                                        _selectedSubcategory,
-                                      )) {
-                                        _selectedSubcategory =
-                                            option.subcategories.first;
-                                      }
-                                    });
-                                  },
-                                  onSubcategoryTap: (subcategory) {
-                                    setState(() {
-                                      _categoryKey = option.key;
-                                      _selectedSubcategory = subcategory;
-                                    });
-                                  },
-                                  customOtherController: option.key == 'others'
-                                      ? _otherSubcategoryController
-                                      : null,
+                          ],
+                          if (_step == 2) ...[
+                            _SectionLabel(title: 'Urgency Level'),
+                            _ChoiceGrid<_UrgencyLevel>(
+                              selected: _urgency,
+                              items: const [
+                                _ChoiceItem(
+                                  value: _UrgencyLevel.critical,
+                                  label: 'Critical',
+                                  icon: Icons.brightness_1_rounded,
                                 ),
-                                const SizedBox(height: 10),
+                                _ChoiceItem(
+                                  value: _UrgencyLevel.high,
+                                  label: 'High',
+                                  icon: Icons.brightness_1_rounded,
+                                ),
+                                _ChoiceItem(
+                                  value: _UrgencyLevel.medium,
+                                  label: 'Medium',
+                                  icon: Icons.brightness_1_rounded,
+                                ),
+                                _ChoiceItem(
+                                  value: _UrgencyLevel.low,
+                                  label: 'Low',
+                                  icon: Icons.brightness_1_rounded,
+                                ),
                               ],
-                            ],
-                          ),
-                        ),
-                      ],
-                      if (_step == 2) ...[
-                        _SectionLabel(title: 'Urgency Level'),
-                        _ChoiceGrid<_UrgencyLevel>(
-                          selected: _urgency,
-                          items: const [
-                            _ChoiceItem(
-                              value: _UrgencyLevel.critical,
-                              label: 'Critical',
-                              icon: Icons.brightness_1_rounded,
+                              onChanged: (value) =>
+                                  setState(() => _urgency = value),
+                              colorFor: _urgencyColor,
                             ),
-                            _ChoiceItem(
-                              value: _UrgencyLevel.high,
-                              label: 'High',
-                              icon: Icons.brightness_1_rounded,
-                            ),
-                            _ChoiceItem(
-                              value: _UrgencyLevel.medium,
-                              label: 'Medium',
-                              icon: Icons.brightness_1_rounded,
-                            ),
-                            _ChoiceItem(
-                              value: _UrgencyLevel.low,
-                              label: 'Low',
-                              icon: Icons.brightness_1_rounded,
+                            const SizedBox(height: 12),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal:
+                                    AppConstants.screenHorizontalPadding,
+                              ),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF6E8),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFFF2CC8F,
+                                    ).withValues(alpha: 0.7),
+                                  ),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 2),
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFE4B0),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.tips_and_updates_rounded,
+                                        size: 16,
+                                        color: Color(0xFF9B6A1A),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Tip: Pick the level that best matches current risk. You can always share extra context in details so teams prioritize better.',
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: const Color(0xFF7A4F0E),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
-                          onChanged: (value) =>
-                              setState(() => _urgency = value),
-                          colorFor: _urgencyColor,
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.screenHorizontalPadding,
-                          ),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF6E8),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: const Color(
-                                  0xFFF2CC8F,
-                                ).withValues(alpha: 0.7),
+                          if (_step == 3) ...[
+                            _SectionLabel(title: 'Impact Details'),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal:
+                                    AppConstants.screenHorizontalPadding,
                               ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  margin: const EdgeInsets.only(top: 2),
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFE4B0),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.tips_and_updates_rounded,
-                                    size: 16,
-                                    color: Color(0xFF9B6A1A),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    'Tip: Pick the level that best matches current risk. You can always share extra context in details so teams prioritize better.',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: const Color(0xFF7A4F0E),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (_step == 3) ...[
-                        _SectionLabel(title: 'Impact Details'),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.screenHorizontalPadding,
-                          ),
-                          child: CustomCard(
-                            child: Column(
-                              children: [
-                                Row(
+                              child: CustomCard(
+                                child: Column(
                                   children: [
-                                    _CircleCounterButton(
-                                      icon: Icons.remove_rounded,
-                                      onTap: _peopleAffected > 1
-                                          ? () => _setPeopleAffected(
-                                              _peopleAffected - 1,
-                                            )
-                                          : null,
-                                    ),
-                                    const Spacer(),
-                                    SizedBox(
-                                      width: 110,
-                                      child: TextFormField(
-                                        controller: _peopleAffectedController,
-                                        keyboardType: TextInputType.number,
-                                        textAlign: TextAlign.center,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                        ],
-                                        style: theme.textTheme.displaySmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w500,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                        decoration: const InputDecoration(
-                                          border: InputBorder.none,
-                                          contentPadding: EdgeInsets.zero,
+                                    Row(
+                                      children: [
+                                        _CircleCounterButton(
+                                          icon: Icons.remove_rounded,
+                                          onTap: _peopleAffected > 1
+                                              ? () => _setPeopleAffected(
+                                                  _peopleAffected - 1,
+                                                )
+                                              : null,
                                         ),
-                                        onTap: () {
-                                          _peopleAffectedController.selection =
-                                              TextSelection(
+                                        const Spacer(),
+                                        SizedBox(
+                                          width: 110,
+                                          child: TextFormField(
+                                            controller:
+                                                _peopleAffectedController,
+                                            keyboardType: TextInputType.number,
+                                            textAlign: TextAlign.center,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .digitsOnly,
+                                            ],
+                                            style: theme.textTheme.displaySmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w500,
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                ),
+                                            decoration: const InputDecoration(
+                                              border: InputBorder.none,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                            onTap: () {
+                                              _peopleAffectedController
+                                                  .selection = TextSelection(
                                                 baseOffset: 0,
                                                 extentOffset:
                                                     _peopleAffectedController
                                                         .text
                                                         .length,
                                               );
-                                        },
-                                        onChanged: (value) {
-                                          final parsedValue = int.tryParse(
-                                            value,
-                                          );
-                                          if (parsedValue != null &&
-                                              parsedValue > 0) {
-                                            setState(
-                                              () =>
-                                                  _peopleAffected = parsedValue,
-                                            );
-                                          }
-                                        },
-                                        validator: (value) {
-                                          final parsedValue = int.tryParse(
-                                            (value ?? '').trim(),
-                                          );
-                                          if (parsedValue == null ||
-                                              parsedValue < 1) {
-                                            return 'Enter a valid count';
-                                          }
-                                          return null;
-                                        },
-                                      ),
+                                            },
+                                            onChanged: (value) {
+                                              final parsedValue = int.tryParse(
+                                                value,
+                                              );
+                                              if (parsedValue != null &&
+                                                  parsedValue > 0) {
+                                                setState(
+                                                  () => _peopleAffected =
+                                                      parsedValue,
+                                                );
+                                              }
+                                            },
+                                            validator: (value) {
+                                              final parsedValue = int.tryParse(
+                                                (value ?? '').trim(),
+                                              );
+                                              if (parsedValue == null ||
+                                                  parsedValue < 1) {
+                                                return 'Enter a valid count';
+                                              }
+                                              return null;
+                                            },
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        _CircleCounterButton(
+                                          icon: Icons.add_rounded,
+                                          onTap: () => _setPeopleAffected(
+                                            _peopleAffected + 1,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const Spacer(),
-                                    _CircleCounterButton(
-                                      icon: Icons.add_rounded,
-                                      onTap: () => _setPeopleAffected(
-                                        _peopleAffected + 1,
-                                      ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'Approximate numbers are enough here if the exact count is still being verified.',
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Approximate numbers are enough here if the exact count is still being verified.',
-                                  textAlign: TextAlign.center,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            _SectionLabel(title: 'Need Details'),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal:
+                                    AppConstants.screenHorizontalPadding,
+                              ),
+                              child: Column(
+                                children: [
+                                  TextFormField(
+                                    controller: _titleController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Need title',
+                                      hintText:
+                                          'Example: Food shortage in Ward 12',
+                                    ),
+                                    validator: (value) {
+                                      if ((value ?? '').trim().isEmpty) {
+                                        return 'Title is required';
+                                      }
+                                      return null;
+                                    },
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 12),
+                                  TextFormField(
+                                    controller: _descriptionController,
+                                    minLines: 3,
+                                    maxLines: 5,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Description',
+                                      hintText:
+                                          'Describe the issue, severity, and any immediate needs',
+                                    ),
+                                    validator: (value) {
+                                      if ((value ?? '').trim().isEmpty) {
+                                        return 'Description is required';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextFormField(
+                                    controller: _contactNameController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Contact person (optional)',
+                                      hintText: 'Name of local contact',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextFormField(
+                                    controller: _contactPhoneController,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Contact phone (optional)',
+                                      hintText: 'Mobile number',
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        _SectionLabel(title: 'Need Details'),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.screenHorizontalPadding,
-                          ),
-                          child: Column(
-                            children: [
-                              TextFormField(
-                                controller: _titleController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Need title',
-                                  hintText: 'Example: Food shortage in Ward 12',
-                                ),
-                                validator: (value) {
-                                  if ((value ?? '').trim().isEmpty) {
-                                    return 'Title is required';
-                                  }
-                                  return null;
-                                },
+                          ],
+                          if (_step == 4) ...[
+                            _SectionLabel(title: 'Supporting Evidence'),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal:
+                                    AppConstants.screenHorizontalPadding,
                               ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _descriptionController,
-                                minLines: 3,
-                                maxLines: 5,
-                                decoration: const InputDecoration(
-                                  labelText: 'Description',
-                                  hintText:
-                                      'Describe the issue, severity, and any immediate needs',
-                                ),
-                                validator: (value) {
-                                  if ((value ?? '').trim().isEmpty) {
-                                    return 'Description is required';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _contactNameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Contact person (optional)',
-                                  hintText: 'Name of local contact',
+                              child: Text(
+                                'Attach photos, documents, or reports to strengthen your report',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _contactPhoneController,
-                                keyboardType: TextInputType.phone,
-                                decoration: const InputDecoration(
-                                  labelText: 'Contact phone (optional)',
-                                  hintText: 'Mobile number',
+                            ),
+                            const SizedBox(height: 16),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal:
+                                    AppConstants.screenHorizontalPadding,
+                              ),
+                              child: Column(
+                                children: [
+                                  _DocumentUploadCard(
+                                    label: 'Take Photo',
+                                    icon: Icons.camera_alt_rounded,
+                                    onTap: _isUploadingFile
+                                        ? null
+                                        : () => _pickFileFromCamera(),
+                                    isLoading: _isUploadingFile,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _DocumentUploadCard(
+                                    label: 'From Gallery',
+                                    icon: Icons.image_rounded,
+                                    onTap: _isUploadingFile
+                                        ? null
+                                        : () => _pickFileFromGallery(),
+                                    isLoading: _isUploadingFile,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _DocumentUploadCard(
+                                    label: 'Upload File',
+                                    icon: Icons.description_rounded,
+                                    onTap: _isUploadingFile
+                                        ? null
+                                        : () => _pickFileFromBrowser(),
+                                    isLoading: _isUploadingFile,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_supportingDocs.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal:
+                                      AppConstants.screenHorizontalPadding,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Attached Files (${_supportingDocs.length})',
+                                      style: theme.textTheme.labelMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    for (final (index, doc)
+                                        in _supportingDocs.indexed) ...[
+                                      InkWell(
+                                        borderRadius: BorderRadius.circular(18),
+                                        onTap: () => _previewAttachment(doc),
+                                        child: CustomCard(
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 44,
+                                                height: 44,
+                                                decoration: BoxDecoration(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .primary
+                                                      .withValues(alpha: 0.12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(14),
+                                                ),
+                                                child: Icon(
+                                                  doc.isImage
+                                                      ? Icons.image_rounded
+                                                      : Icons
+                                                            .picture_as_pdf_rounded,
+                                                  size: 24,
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      doc.fileName,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: theme
+                                                          .textTheme
+                                                          .labelMedium
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      doc.isImage
+                                                          ? 'Tap to view image'
+                                                          : 'Tap to open in app',
+                                                      style: theme
+                                                          .textTheme
+                                                          .labelSmall
+                                                          ?.copyWith(
+                                                            color: theme
+                                                                .colorScheme
+                                                                .onSurfaceVariant,
+                                                          ),
+                                                    ),
+                                                    Text(
+                                                      doc.fileSizeDisplay,
+                                                      style: theme
+                                                          .textTheme
+                                                          .labelSmall
+                                                          ?.copyWith(
+                                                            color: theme
+                                                                .colorScheme
+                                                                .onSurfaceVariant,
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              IconButton(
+                                                onPressed: () => setState(
+                                                  () => _supportingDocs
+                                                      .removeAt(index),
+                                                ),
+                                                icon: const Icon(
+                                                  Icons.close_rounded,
+                                                ),
+                                                iconSize: 20,
+                                                constraints:
+                                                    const BoxConstraints(),
+                                                padding: EdgeInsets.zero,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      if (index < _supportingDocs.length - 1)
+                                        const SizedBox(height: 8),
+                                    ],
+                                  ],
                                 ),
                               ),
                             ],
-                          ),
-                        ),
-                      ],
-                      if (_step == 4) ...[
-                        _SectionLabel(title: 'Supporting Evidence (Optional)'),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.screenHorizontalPadding,
-                          ),
-                          child: Text(
-                            'Attach photos, documents, or reports to strengthen your report',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                          ],
+                          if (_step == 5) ...[
+                            _SectionLabel(title: 'Review Report'),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal:
+                                    AppConstants.screenHorizontalPadding,
+                              ),
+                              child: CustomCard(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _ReviewRow(
+                                      label: 'Location',
+                                      value: _resolvedLocation,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _ReviewRow(
+                                      label: 'Type',
+                                      value: _categoryLabel,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _ReviewRow(
+                                      label: 'Urgency',
+                                      value: _urgencyLabel,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _ReviewRow(
+                                      label: 'People',
+                                      value: '$_peopleAffected people',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _ReviewRow(
+                                      label: 'Title',
+                                      value:
+                                          _titleController.text.trim().isEmpty
+                                          ? 'Untitled need'
+                                          : _titleController.text.trim(),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _ReviewRow(
+                                      label: 'Description',
+                                      value:
+                                          _descriptionController.text
+                                              .trim()
+                                              .isEmpty
+                                          ? 'No description provided'
+                                          : _descriptionController.text.trim(),
+                                      alignTop: true,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _ReviewRow(
+                                      label: 'Reported by',
+                                      value: reporterName,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    // _ReviewRow(label: 'Source', value: profile == null ? 'Demo fallback' : 'Firebase profile'),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.screenHorizontalPadding,
-                          ),
-                          child: Column(
-                            children: [
-                              _DocumentUploadCard(
-                                label: 'Take Photo',
-                                icon: Icons.camera_alt_rounded,
-                                onTap: _isUploadingFile
-                                    ? null
-                                    : () => _pickFileFromCamera(),
-                                isLoading: _isUploadingFile,
-                              ),
-                              const SizedBox(height: 10),
-                              _DocumentUploadCard(
-                                label: 'From Gallery',
-                                icon: Icons.image_rounded,
-                                onTap: _isUploadingFile
-                                    ? null
-                                    : () => _pickFileFromGallery(),
-                                isLoading: _isUploadingFile,
-                              ),
-                              const SizedBox(height: 10),
-                              _DocumentUploadCard(
-                                label: 'Upload File',
-                                icon: Icons.description_rounded,
-                                onTap: _isUploadingFile
-                                    ? null
-                                    : () => _pickFileFromBrowser(),
-                                isLoading: _isUploadingFile,
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_supportingDocs.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppConstants.screenHorizontalPadding,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Attached Files (${_supportingDocs.length})',
+                            if (_supportingDocs.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal:
+                                      AppConstants.screenHorizontalPadding,
+                                ),
+                                child: Text(
+                                  'Supporting Evidence (${_supportingDocs.length} file${_supportingDocs.length != 1 ? 's' : ''})',
                                   style: theme.textTheme.labelMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                for (final (index, doc)
-                                    in _supportingDocs.indexed) ...[
-                                  InkWell(
-                                    borderRadius: BorderRadius.circular(18),
-                                    onTap: () => _previewAttachment(doc),
-                                    child: CustomCard(
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 44,
-                                            height: 44,
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.primary
-                                                  .withValues(alpha: 0.12),
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                            ),
-                                            child: Icon(
-                                              doc.isImage
-                                                  ? Icons.image_rounded
-                                                  : Icons
-                                                        .picture_as_pdf_rounded,
-                                              size: 24,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  doc.fileName,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: theme
-                                                      .textTheme
-                                                      .labelMedium
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  doc.isImage
-                                                      ? 'Tap to view image'
-                                                      : 'Tap to open in app',
-                                                  style: theme
-                                                      .textTheme
-                                                      .labelSmall
-                                                      ?.copyWith(
-                                                        color: theme
-                                                            .colorScheme
-                                                            .onSurfaceVariant,
-                                                      ),
-                                                ),
-                                                Text(
-                                                  doc.fileSizeDisplay,
-                                                  style: theme
-                                                      .textTheme
-                                                      .labelSmall
-                                                      ?.copyWith(
-                                                        color: theme
-                                                            .colorScheme
-                                                            .onSurfaceVariant,
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          IconButton(
-                                            onPressed: () => setState(
-                                              () => _supportingDocs.removeAt(
-                                                index,
-                                              ),
-                                            ),
-                                            icon: const Icon(
-                                              Icons.close_rounded,
-                                            ),
-                                            iconSize: 20,
-                                            constraints: const BoxConstraints(),
-                                            padding: EdgeInsets.zero,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  if (index < _supportingDocs.length - 1)
-                                    const SizedBox(height: 8),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                      if (_step == 5) ...[
-                        _SectionLabel(title: 'Review Report'),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.screenHorizontalPadding,
-                          ),
-                          child: CustomCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _ReviewRow(
-                                  label: 'Location',
-                                  value: _resolvedLocation,
-                                ),
-                                const SizedBox(height: 10),
-                                _ReviewRow(
-                                  label: 'Type',
-                                  value: _categoryLabel,
-                                ),
-                                const SizedBox(height: 10),
-                                _ReviewRow(
-                                  label: 'Urgency',
-                                  value: _urgencyLabel,
-                                ),
-                                const SizedBox(height: 10),
-                                _ReviewRow(
-                                  label: 'People',
-                                  value: '$_peopleAffected people',
-                                ),
-                                const SizedBox(height: 10),
-                                _ReviewRow(
-                                  label: 'Title',
-                                  value: _titleController.text.trim().isEmpty
-                                      ? 'Untitled need'
-                                      : _titleController.text.trim(),
-                                ),
-                                const SizedBox(height: 10),
-                                _ReviewRow(
-                                  label: 'Description',
-                                  value:
-                                      _descriptionController.text.trim().isEmpty
-                                      ? 'No description provided'
-                                      : _descriptionController.text.trim(),
-                                  alignTop: true,
-                                ),
-                                const SizedBox(height: 10),
-                                _ReviewRow(
-                                  label: 'Reported by',
-                                  value: reporterName,
-                                ),
-                                const SizedBox(height: 10),
-                                // _ReviewRow(label: 'Source', value: profile == null ? 'Demo fallback' : 'Firebase profile'),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (_supportingDocs.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppConstants.screenHorizontalPadding,
-                            ),
-                            child: Text(
-                              'Supporting Evidence (${_supportingDocs.length} file${_supportingDocs.length != 1 ? 's' : ''})',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: theme.colorScheme.onSurfaceVariant,
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppConstants.screenHorizontalPadding,
-                            ),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  for (final (index, doc)
-                                      in _supportingDocs.indexed) ...[
-                                    if (index > 0) const SizedBox(width: 8),
-                                    InkWell(
-                                      borderRadius: BorderRadius.circular(10),
-                                      onTap: () => _previewAttachment(doc),
-                                      child: Container(
-                                        width: 80,
-                                        height: 80,
-                                        decoration: BoxDecoration(
+                              const SizedBox(height: 8),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal:
+                                      AppConstants.screenHorizontalPadding,
+                                ),
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      for (final (index, doc)
+                                          in _supportingDocs.indexed) ...[
+                                        if (index > 0) const SizedBox(width: 8),
+                                        InkWell(
                                           borderRadius: BorderRadius.circular(
-                                            8,
+                                            10,
                                           ),
-                                          color: theme
-                                              .colorScheme
-                                              .surfaceContainerHigh,
-                                        ),
-                                        child: doc.isImage
-                                            ? ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                child: Image.memory(
-                                                  base64Decode(doc.base64Data),
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              )
-                                            : Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons
-                                                        .picture_as_pdf_rounded,
-                                                    size: 28,
-                                                    color: theme
-                                                        .colorScheme
-                                                        .primary,
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 4,
+                                          onTap: () => _previewAttachment(doc),
+                                          child: Container(
+                                            width: 80,
+                                            height: 80,
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              color: theme
+                                                  .colorScheme
+                                                  .surfaceContainerHigh,
+                                            ),
+                                            child: doc.isImage
+                                                ? ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
                                                         ),
-                                                    child: Text(
-                                                      'PDF',
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      style: theme
-                                                          .textTheme
-                                                          .labelSmall
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight.w700,
-                                                          ),
+                                                    child: Image.memory(
+                                                      base64Decode(
+                                                        doc.base64Data,
+                                                      ),
+                                                      fit: BoxFit.cover,
                                                     ),
+                                                  )
+                                                : Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons
+                                                            .picture_as_pdf_rounded,
+                                                        size: 28,
+                                                        color: theme
+                                                            .colorScheme
+                                                            .primary,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 4,
+                                                            ),
+                                                        child: Text(
+                                                          'PDF',
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          style: theme
+                                                              .textTheme
+                                                              .labelSmall
+                                                              ?.copyWith(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ],
-                                              ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.screenHorizontalPadding,
-                          ),
-                          child: Text(
-                            'Your report helps AI prioritize resource allocation fairly',
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 18),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppConstants.screenHorizontalPadding,
-                        ),
-                        child: Row(
-                          children: [
-                            if (_step > 0)
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: _isSubmitting
-                                      ? null
-                                      : () => setState(() => _step -= 1),
-                                  child: const Text('Back'),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            if (_step > 0) const SizedBox(width: 12),
-                            Expanded(
-                              flex: _step == 5 ? 2 : 1,
-                              child: FilledButton(
-                                onPressed: _isSubmitting
-                                    ? null
-                                    : _step == 5
-                                    ? () => _submitNeed(
-                                        context,
-                                        authService,
-                                        submissionService,
-                                        reporterName,
-                                        reporterEmail,
-                                      )
-                                    : () => _nextStep(context),
-                                child: _isSubmitting
-                                    ? const SizedBox(
-                                        height: 18,
-                                        width: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : Text(
-                                        _step == 5
-                                            ? 'Submit Report ->'
-                                            : 'Continue',
-                                      ),
+                            ],
+                            const SizedBox(height: 12),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal:
+                                    AppConstants.screenHorizontalPadding,
+                              ),
+                              child: Text(
+                                'Your report helps AI prioritize resource allocation fairly',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
                           ],
-                        ),
+                          const SizedBox(height: 18),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppConstants.screenHorizontalPadding,
+                            ),
+                            child: Row(
+                              children: [
+                                if (_step > 0)
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: _isSubmitting
+                                          ? null
+                                          : () => setState(() => _step -= 1),
+                                      child: const Text('Back'),
+                                    ),
+                                  ),
+                                if (_step > 0) const SizedBox(width: 12),
+                                Expanded(
+                                  flex: _step == 5 ? 2 : 1,
+                                  child: FilledButton(
+                                    onPressed: _isSubmitting
+                                        ? null
+                                        : _step == 5
+                                        ? () => _submitNeed(
+                                            context,
+                                            authService,
+                                            submissionService,
+                                            reporterName,
+                                            reporterEmail,
+                                          )
+                                        : () => _nextStep(context),
+                                    child: _isSubmitting
+                                        ? const SizedBox(
+                                            height: 18,
+                                            width: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(
+                                            _step == 5
+                                                ? 'Submit Report ->'
+                                                : 'Continue',
+                                          ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-              ),
-            ),
+          ),
           if (_dispatchAlert != null)
             CommandCenterDispatchAlert(
               volunteerName: _dispatchAlert!.volunteerName,
@@ -2052,7 +2094,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
             : _locationMode == _LocationMode.map
             ? _mapLongitude
             : null;
-        
+
         if (latitude != null && longitude != null) {
           final areaName = _locationMode == _LocationMode.current
               ? 'Current Location'
@@ -2061,7 +2103,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
               : _locationController.text.trim().isNotEmpty
               ? _locationController.text.trim()
               : 'Selected Area';
-          
+
           _showDispatchAlert(
             volunteerName: allocationResult.volunteerName!,
             crisisType: _selectedCategory.title,
@@ -2073,7 +2115,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         // Show fallback message for no volunteer available
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No matching volunteer available right now. Report is pending dispatch.'),
+            content: Text(
+              'No matching volunteer available right now. Report is pending dispatch.',
+            ),
             backgroundColor: Color(0xFFF59E0B),
           ),
         );
@@ -2914,7 +2958,8 @@ class CommandCenterDispatchAlert extends StatefulWidget {
   final VoidCallback onDismiss;
 
   @override
-  State<CommandCenterDispatchAlert> createState() => _CommandCenterDispatchAlertState();
+  State<CommandCenterDispatchAlert> createState() =>
+      _CommandCenterDispatchAlertState();
 }
 
 class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
@@ -2939,29 +2984,21 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
       vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -1.0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, -1.0), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
 
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.3,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
     _animationController.forward();
     _pulseController.repeat(reverse: true);
@@ -3090,7 +3127,7 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Title
                       const Text(
                         'Smart Allocation Center',
@@ -3102,7 +3139,7 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       // Body content
                       Text(
                         '${widget.volunteerName} has been notified for ${widget.crisisType} in ${widget.areaName}.',
@@ -3114,7 +3151,7 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       // Action button
                       SizedBox(
                         width: double.infinity,
@@ -3134,10 +3171,7 @@ class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          icon: const Icon(
-                            Icons.insights_rounded,
-                            size: 18,
-                          ),
+                          icon: const Icon(Icons.insights_rounded, size: 18),
                           label: const Text(
                             'OPEN SMART ALLOCATION PAGE',
                             style: TextStyle(

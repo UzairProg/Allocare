@@ -31,7 +31,7 @@ class ReportEntryHubPage extends StatelessWidget {
               final manualCard = _SplitCard(
                 height: cardHeight,
                 imageAsset: 'assets/manual_bg.png',
-                title: 'Structured Strategic Entry',
+                title: 'Structured Report Entry',
                 body:
                     'NGO-Verified Input. Transform field observations into precise, structured strategic data for high-stakes resource allocation.',
                 icon: const Icon(

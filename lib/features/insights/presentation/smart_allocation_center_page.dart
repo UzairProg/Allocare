@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -20,6 +21,8 @@ class _SmartAllocationCenterPageState extends State<SmartAllocationCenterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final canGoBack = Navigator.of(context).canPop();
+
     if (_currentNgoId.isEmpty) {
       return const Scaffold(
         backgroundColor: Color(0xFFF4F7FB),
@@ -44,6 +47,25 @@ class _SmartAllocationCenterPageState extends State<SmartAllocationCenterPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (kIsWeb && canGoBack) ...[
+                      OutlinedButton.icon(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                        label: const Text(
+                          'Back',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF1E3A8A),
+                          side: const BorderSide(color: Color(0xFFBFD2FF)),
+                          backgroundColor: const Color(0xFFEFF4FF),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     const Text(
                       'Smart Allocation Center',
                       style: TextStyle(

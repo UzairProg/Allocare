@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_constants.dart';
-import '../../../core/utils/custom_card.dart';
+import '../../insights/presentation/sentinel_strategic_hub_page.dart';
+import '../../insights/presentation/smart_allocation_center_page.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/user_profile_service.dart';
 import '../application/home_live_data_providers.dart';
+import '../../reports/presentation/report_entry_hub_page.dart';
+import 'widgets/micro_visualizations.dart';
+import 'widgets/sync_core_animation.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -17,13 +21,14 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  bool _showVolunteerDetails = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1200),
     )..forward();
   }
 
@@ -36,253 +41,569 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isWeb = kIsWeb;
     final authUser = ref.watch(authStateProvider).asData?.value;
     final profile = ref.watch(currentUserProfileProvider).asData?.value;
-    final needs = ref.watch(homeNeedsSummaryProvider).asData?.value ?? homeDemoNeeds;
-    final insight = ref.watch(homeTopInsightProvider).asData?.value;
-    final recent = ref.watch(homeRecentActivityProvider).asData?.value ?? homeDemoRecent;
+    final recent =
+        ref.watch(homeRecentActivityProvider).asData?.value ?? homeDemoRecent;
+    final needsSummary =
+        ref.watch(homeNeedsSummaryProvider).asData?.value ?? homeDemoNeeds;
 
-    final profileName = profile?.displayName.trim() ?? '';
-    final authName = authUser?.displayName?.trim() ?? '';
-    final emailName = authUser?.email?.split('@').first.trim() ?? '';
-    final userName = profileName.isNotEmpty
-        ? profileName
-        : authName.isNotEmpty
-            ? authName
-            : emailName.isNotEmpty
-                ? emailName
-                : 'Allocare User';
-    final initial = userName.substring(0, 1).toUpperCase();
+    final userName = profile?.displayName.trim().isNotEmpty == true
+        ? profile!.displayName
+        : (authUser?.displayName?.trim() ?? 'Aditi');
 
-    return ListView(
-      padding: const EdgeInsets.all(AppConstants.screenHorizontalPadding),
-      children: [
-        _Reveal(
-          controller: _controller,
-          interval: const Interval(0.0, 0.28, curve: Curves.easeOutCubic),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Good morning,',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+    final photoUrl = authUser?.photoURL;
+
+    return Scaffold(
+      backgroundColor: isWeb ? const Color(0xFFF2F5FA) : Colors.white,
+      body: SafeArea(
+        child: Container(
+          decoration: isWeb
+              ? const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFF9FBFF), Color(0xFFEFF3FA)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    userName,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1E2A2E),
-                    ),
-                  ),
-                ],
-              ),
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: theme.colorScheme.primary,
-                child: Text(
-                  initial,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
+                )
+              : null,
+          child: SingleChildScrollView(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWeb ? 1180 : double.infinity,
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
-        _Reveal(
-          controller: _controller,
-          interval: const Interval(0.16, 0.44, curve: Curves.easeOutCubic),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Active Needs',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              TextButton(
-                onPressed: () {},
-                child: const Text('See all'),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        _Reveal(
-          controller: _controller,
-          interval: const Interval(0.28, 0.58, curve: Curves.easeOutCubic),
-          child: SizedBox(
-            height: 172,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                for (int i = 0; i < needs.length; i++) ...[
-                  _NeedTile(
-                    icon: needs[i].icon,
-                    title: needs[i].total.toString(),
-                    subtitle: needs[i].category,
-                    urgency: '${needs[i].urgent} urgent',
-                    urgencyColor: needs[i].color,
-                  ),
-                  if (i != needs.length - 1) const SizedBox(width: 12),
-                ],
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        _Reveal(
-          controller: _controller,
-          interval: const Interval(0.42, 0.76, curve: Curves.easeOutCubic),
-          child: GestureDetector(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Report flow will be added in the next phase.'),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.colorScheme.primary,
-                    const Color(0xFF6C9FA0),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(26),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(Icons.assignment_outlined, color: Colors.white),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Report a Need',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Take 60 seconds to make a difference',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.94),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.arrow_forward, color: Colors.white),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 22),
-        _Reveal(
-          controller: _controller,
-          interval: const Interval(0.58, 1.0, curve: Curves.easeOutCubic),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF4E7D9),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFEACAAE)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Color(0xFFE28D38), size: 28),
-                const SizedBox(width: 12),
-                Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 28 : 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        insight?.title ?? homeDemoInsight.title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: const Color(0xFFDB5C50),
-                          fontWeight: FontWeight.w700,
+                      const SizedBox(height: 16),
+                      // 1. Personalized Header
+                      _Reveal(
+                        controller: _controller,
+                        interval: const Interval(
+                          0.0,
+                          0.2,
+                          curve: Curves.easeOutCubic,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Good morning, $userName!',
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1D2A30),
+                                        fontSize: isWeb ? 34 : null,
+                                      ),
+                                ),
+                                Text(
+                                  'Chhatrapati Sambhajinagar Operation Hub',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: isWeb ? 16 : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            CircleAvatar(
+                              radius: isWeb ? 28 : 22,
+                              backgroundImage: photoUrl != null
+                                  ? NetworkImage(photoUrl)
+                                  : const NetworkImage(
+                                      'https://i.pravatar.cc/150?u=aditi',
+                                    ),
+                              backgroundColor: const Color(0xFFF0F0F0),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 24),
+
+                      // 2. Workforce Deployment Hero
+                      _Reveal(
+                        controller: _controller,
+                        interval: const Interval(
+                          0.1,
+                          0.4,
+                          curve: Curves.easeOutCubic,
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compactWeb =
+                                isWeb && constraints.maxWidth < 940;
+
+                            if (compactWeb) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _AllocationProgressCard(
+                                    title: 'Volunteer Deployment',
+                                    total: 58,
+                                    assigned: 42,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const SmartAllocationCenterPage(),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _ResourceSynthesisCard(
+                                    title: 'Resource Intelligence',
+                                    header: 'Fragmented Field Intelligence',
+                                    value: '214',
+                                    supply: 140,
+                                    demand: 214,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const SentinelStrategicHubPage(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _AllocationProgressCard(
+                                    title: 'Volunteer Deployment',
+                                    total: 58,
+                                    assigned: 42,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const SmartAllocationCenterPage(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _ResourceSynthesisCard(
+                                    title: 'Resource Intelligence',
+                                    header: 'Fragmented Field Intelligence',
+                                    value: '214',
+                                    supply: 140,
+                                    demand: 214,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const SentinelStrategicHubPage(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 3. Priority Bridge Banner
+                      _Reveal(
+                        controller: _controller,
+                        interval: const Interval(
+                          0.2,
+                          0.5,
+                          curve: Curves.easeOutCubic,
+                        ),
+                        child: const _PriorityBridgeBanner(
+                          message:
+                              'Strategic Priority Alignment: Diverting Waluj Medical Team to Pundlik Nagar based on Active Cluster Detection.',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 3b. Report a Need Box (Emotional Hook)
+                      _Reveal(
+                        controller: _controller,
+                        interval: const Interval(
+                          0.25,
+                          0.55,
+                          curve: Curves.easeOutCubic,
+                        ),
+                        child: _ReportNeedBox(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ReportEntryHubPage(),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // 4. Active Needs (Emergency Focus)
+                      _Reveal(
+                        controller: _controller,
+                        interval: const Interval(
+                          0.3,
+                          0.6,
+                          curve: Curves.easeOutCubic,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Active Needs (Emergency Focus)',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1D2A30),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              height: isWeb ? 142 : 110,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: needsSummary.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 16),
+                                itemBuilder: (context, index) =>
+                                    _NeedSummaryCard(
+                                      summary: needsSummary[index],
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // 5. Hyper-Local Live Feed
+                      _Reveal(
+                        controller: _controller,
+                        interval: const Interval(
+                          0.5,
+                          0.8,
+                          curve: Curves.easeOutCubic,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Priority-Based Allocation',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1D2A30),
+                                  ),
+                                ),
+                                Text(
+                                  'LIVE FEED',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: recent.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, index) =>
+                                  _ActivityListTile(item: recent[index]),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AllocationProgressCard extends StatelessWidget {
+  const _AllocationProgressCard({
+    required this.title,
+    required this.total,
+    required this.assigned,
+    this.onTap,
+  });
+
+  final String title;
+  final int total;
+  final int assigned;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: isWeb ? 228 : 180,
+        padding: EdgeInsets.all(isWeb ? 20 : 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(isWeb ? 28 : 24),
+          border: Border.all(
+            color: isWeb ? const Color(0xFFE4ECF9) : const Color(0xFFF0F0F0),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isWeb ? 0.06 : 0.04),
+              blurRadius: isWeb ? 26 : 20,
+              offset: Offset(0, isWeb ? 10 : 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: isWeb ? 12 : 10,
+                color: Colors.grey,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Verified & Ready to Deploy: $total',
+              style: TextStyle(
+                fontSize: isWeb ? 13 : 11,
+                color: Colors.blueGrey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: isWeb ? 10 : 8),
+            Center(
+              child: SizedBox(
+                height: isWeb ? 80 : 60,
+                width: isWeb ? 132 : 100,
+                child: CustomPaint(
+                  painter: _SemiCircularProgressPainter(
+                    percentage: assigned / total,
+                    color: Colors.green,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 10),
                       Text(
-                        insight?.recommendation ?? homeDemoInsight.recommendation,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                        '$assigned',
+                        style: TextStyle(
+                          fontSize: isWeb ? 28 : 22,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1D2A30),
+                        ),
+                      ),
+                      Text(
+                        'Strategically\nPositioned',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: isWeb ? 9 : 6.5,
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const Text(
+                  'View Smart Allocation →',
+                  style: TextStyle(
+                    fontSize: kIsWeb ? 11 : 7.5,
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
-        const SizedBox(height: 22),
-        _Reveal(
-          controller: _controller,
-          interval: const Interval(0.72, 1.0, curve: Curves.easeOutCubic),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Recent Activity',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              TextButton(
-                onPressed: () {},
-                child: const Text('View all'),
-              ),
-            ],
+      ),
+    );
+  }
+}
+
+class _ResourceSynthesisCard extends StatelessWidget {
+  const _ResourceSynthesisCard({
+    required this.title,
+    required this.header,
+    required this.value,
+    required this.supply,
+    required this.demand,
+    this.onTap,
+  });
+
+  final String title;
+  final String header;
+  final String value;
+  final double supply;
+  final double demand;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: isWeb ? 228 : 180,
+        padding: EdgeInsets.all(isWeb ? 20 : 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(isWeb ? 28 : 24),
+          border: Border.all(
+            color: isWeb ? const Color(0xFFE4ECF9) : const Color(0xFFF0F0F0),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isWeb ? 0.06 : 0.04),
+              blurRadius: isWeb ? 26 : 20,
+              offset: Offset(0, isWeb ? 10 : 8),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        _Reveal(
-          controller: _controller,
-          interval: const Interval(0.78, 1.0, curve: Curves.easeOutCubic),
-          child: CustomCard(
-            child: Column(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: isWeb ? 12 : 10,
+                color: Colors.grey,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+            SizedBox(height: isWeb ? 10 : 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: isWeb ? 40 : 32,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF1D2A30),
+              ),
+            ),
+            Text(
+              header,
+              style: TextStyle(
+                fontSize: isWeb ? 11 : 9,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                for (int i = 0; i < recent.length; i++) ...[
-                  _RecentActivityTile(item: recent[i]),
-                  if (i != recent.length - 1)
-                    Divider(
-                      height: 20,
-                      color: theme.colorScheme.outlineVariant,
-                    ),
-                ],
+                _MiniBar(
+                  label: 'Resources',
+                  value: supply,
+                  maxValue: demand,
+                  color: Colors.blue,
+                ),
+                const SizedBox(width: 12),
+                _MiniBar(
+                  label: 'Field Priorities',
+                  value: demand,
+                  maxValue: demand,
+                  color: Colors.orange,
+                ),
+                const Spacer(),
+                const Text(
+                  'Insights →',
+                  style: TextStyle(
+                    fontSize: kIsWeb ? 11 : 8,
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniBar extends StatelessWidget {
+  const _MiniBar({
+    required this.label,
+    required this.value,
+    required this.maxValue,
+    required this.color,
+  });
+  final String label;
+  final double value;
+  final double maxValue;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
+    final maxBarHeight = isWeb ? 48.0 : 36.0;
+    final height = (value / maxValue) * maxBarHeight;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Container(
+          width: isWeb ? 28 : 24,
+          height: height.clamp(4, maxBarHeight),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: isWeb ? 56 : 42,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.visible,
+            style: TextStyle(
+              fontSize: isWeb ? 10.5 : 7.5,
+              color: Colors.grey,
+              fontWeight: FontWeight.bold,
+              height: 1.1,
             ),
           ),
         ),
@@ -291,71 +612,207 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 }
 
-class _NeedTile extends StatelessWidget {
-  const _NeedTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.urgency,
-    required this.urgencyColor,
-  });
+class _SemiCircularProgressPainter extends CustomPainter {
+  _SemiCircularProgressPainter({required this.percentage, required this.color});
+  final double percentage;
+  final Color color;
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String urgency;
-  final Color urgencyColor;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height);
+    final radius = size.width / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final bgPaint = Paint()
+      ..color = Colors.grey[100]!
+      ..strokeWidth = 10
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final progressPaint = Paint()
+      ..color = color
+      ..strokeWidth = 10
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(rect, 3.14, 3.14, false, bgPaint);
+    canvas.drawArc(rect, 3.14, 3.14 * percentage, false, progressPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _PriorityBridgeBanner extends StatelessWidget {
+  const _PriorityBridgeBanner({required this.message});
+  final String message;
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isWeb ? 20 : 16,
+        vertical: isWeb ? 14 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(isWeb ? 18 : 16),
+        border: Border.all(color: const Color(0xFFC8E6C9)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.lightbulb_outline,
+            color: Colors.green,
+            size: isWeb ? 24 : 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: isWeb ? 13 : 11,
+                color: Color(0xFF2E7D32),
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NeedSummaryCard extends StatelessWidget {
+  const _NeedSummaryCard({required this.summary});
+  final NeedCategorySummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
+
+    return Container(
+      width: isWeb ? 196 : 150,
+      padding: EdgeInsets.all(isWeb ? 14 : 12),
+      decoration: BoxDecoration(
+        color: summary.color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(isWeb ? 22 : 20),
+        border: Border.all(color: summary.color.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(summary.icon, color: summary.color, size: isWeb ? 28 : 22),
+          const Spacer(),
+          Text(
+            '${summary.category}: ${summary.total}',
+            style: TextStyle(
+              fontSize: isWeb ? 18 : 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1D2A30),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '[${summary.urgent} Urgent]',
+            style: TextStyle(
+              fontSize: isWeb ? 13 : 11,
+              color: Color(0xFFD32F2F),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActivityListTile extends StatelessWidget {
+  const _ActivityListTile({required this.item});
+  final RecentActivityItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = kIsWeb;
     final theme = Theme.of(context);
 
-    return SizedBox(
-      width: 136,
-      height: 168,
-      child: CustomCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF2F1EF),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+    return Container(
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
+        border: Border.all(color: const Color(0xFFF5F5F5)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(isWeb ? 12 : 10),
+            decoration: BoxDecoration(
+              color: item.accentColor.withOpacity(0.1),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+            child: Icon(
+              item.icon,
+              color: item.accentColor,
+              size: isWeb ? 22 : 18,
             ),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: urgencyColor.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                urgency,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: urgencyColor,
-                  fontWeight: FontWeight.w700,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1D2A30),
+                          fontSize: isWeb ? 16 : null,
+                        ),
+                      ),
+                    ),
+                    if (item.isHighPriority)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'HIGH PRIORITY',
+                          style: TextStyle(
+                            fontSize: kIsWeb ? 9 : 7,
+                            color: Color(0xFFD32F2F),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  '${item.subtitle} · ${item.timeAgo}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                    fontSize: isWeb ? 12 : 10,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          if (item.vizType != ActivityVizType.none)
+            MicroVisualization(type: item.vizType, color: item.accentColor),
+        ],
       ),
     );
   }
@@ -374,13 +831,19 @@ class _Reveal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      // Keep web sections always visible; animated opacity can stay at 0 when
+      // ticker mode is muted in nested navigation layouts.
+      return child;
+    }
+
     final curved = CurvedAnimation(parent: controller, curve: interval);
 
     return FadeTransition(
       opacity: curved,
       child: SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0, 0.06),
+          begin: const Offset(0, 0.04),
           end: Offset.zero,
         ).animate(curved),
         child: child,
@@ -389,56 +852,78 @@ class _Reveal extends StatelessWidget {
   }
 }
 
-class _RecentActivityTile extends StatelessWidget {
-  const _RecentActivityTile({required this.item});
-
-  final RecentActivityItem item;
+class _ReportNeedBox extends StatelessWidget {
+  const _ReportNeedBox({required this.onTap});
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isWeb = kIsWeb;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF2E9DA),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(item.icon, size: 18, color: theme.colorScheme.primary),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                item.subtitle,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(isWeb ? 24 : 20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF1A73E8),
+              const Color(0xFF1A73E8).withOpacity(0.8),
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.circular(isWeb ? 28 : 24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1A73E8).withOpacity(0.25),
+              blurRadius: isWeb ? 28 : 20,
+              offset: Offset(0, isWeb ? 12 : 10),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Text(
-          item.timeAgo,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Be the Bridge to Care',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: kIsWeb ? 22 : 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Report a need! Save a Life. Help us identify and realign resources to those in need.',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: isWeb ? 14 : 12,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Container(
+              padding: EdgeInsets.all(isWeb ? 14 : 12),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.add_rounded,
+                color: Color(0xFF1A73E8),
+                size: isWeb ? 32 : 28,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

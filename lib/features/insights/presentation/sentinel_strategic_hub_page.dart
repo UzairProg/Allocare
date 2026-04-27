@@ -12,7 +12,7 @@ class SentinelStrategicHubPage extends StatefulWidget {
 }
 
 class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage> {
-  int _selectedTabIndex = 0; // 0 for Waterborne, 1 for Airborne
+  int _selectedTabIndex = 0; // 0 for Wellness, 1 for Waterborne, 2 for Airborne
 
   void _onTabChanged(int index) {
     if (_selectedTabIndex != index) {
@@ -32,7 +32,7 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage> {
         foregroundColor: const Color(0xFF1E293B),
         centerTitle: true,
         title: const Text(
-          'Sentinel Strategic Hub',
+          'AI Insights Hub',
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
       ),
@@ -77,8 +77,10 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage> {
                   );
                 },
                 child: _selectedTabIndex == 0
-                    ? _buildWaterborneBriefing(key: const ValueKey('tab_0'))
-                    : _buildAirborneBriefing(key: const ValueKey('tab_1')),
+                    ? _buildMentalHealthBriefing(key: const ValueKey('tab_0'))
+                    : _selectedTabIndex == 1
+                    ? _buildWaterborneBriefing(key: const ValueKey('tab_1'))
+                    : _buildAirborneBriefing(key: const ValueKey('tab_2')),
               ),
               const SizedBox(height: 40),
             ],
@@ -97,79 +99,49 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage> {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _onTabChanged(0),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: _selectedTabIndex == 0
-                      ? Colors.white
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: _selectedTabIndex == 0
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                          ),
-                        ]
-                      : [],
-                ),
-                child: Center(
-                  child: Text(
-                    'WATERBORNE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: _selectedTabIndex == 0
-                          ? const Color(0xFF0284C7)
-                          : const Color(0xFF64748B),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _onTabChanged(1),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: _selectedTabIndex == 1
-                      ? Colors.white
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: _selectedTabIndex == 1
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                          ),
-                        ]
-                      : [],
-                ),
-                child: Center(
-                  child: Text(
-                    'AIRBORNE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: _selectedTabIndex == 1
-                          ? const Color(0xFF9333EA)
-                          : const Color(0xFF64748B),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          _buildNavItem(0, 'WELLNESS', const Color(0xFF0D9488)),
+          _buildNavItem(1, 'WATERBORNE', const Color(0xFF0284C7)),
+          _buildNavItem(2, 'AIRBORNE', const Color(0xFF9333EA)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, String label, Color activeColor) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onTabChanged(index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: _selectedTabIndex == index
+                ? Colors.white
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: _selectedTabIndex == index
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                    ),
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: _selectedTabIndex == index
+                    ? activeColor
+                    : const Color(0xFF64748B),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -425,6 +397,125 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage> {
     );
   }
 
+  Widget _buildMentalHealthBriefing({Key? key}) {
+    return Column(
+      key: key,
+      children: [
+        // Briefing Card
+        Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 8,
+                child: Container(
+                  decoration: const BoxDecoration(color: Color(0xFF0D9488)),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Animated Header Banner
+                  SizedBox(
+                    height: 110,
+                    child: Stack(
+                      children: [
+                        const Positioned(
+                          right: 24,
+                          top: 0,
+                          bottom: 0,
+                          child: _MentalHealthPulseVisualizer(),
+                        ),
+                        // Icon
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 24.0),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDFA),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF0D9488,
+                                    ).withOpacity(0.2),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.psychology_rounded,
+                                color: Color(0xFF0D9488),
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Text Content
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(24.0, 0, 24.0, 24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Predicted Wellness Demand (SDG 3)',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                            height: 1.3,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        const Text(
+                          'Aggregated sentiment reports indicating high stress-levels and support needs in Zone B.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF475569),
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Resource Readiness Score Card
+        _buildResourceReadinessCard(
+          score: 64,
+          color: const Color(0xFF0D9488),
+          title:
+              'Strategic Alignment: Mental Health counselor availability matches 64% of projected crisis support needs for Zone B.',
+          layerName: 'Mental Health',
+        ),
+      ],
+    );
+  }
+
   Widget _buildResourceReadinessCard({
     required int score,
     required Color color,
@@ -528,7 +619,7 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage> {
                 ),
               ),
               child: const Text(
-                'DEPLOY DRIVE',
+                'Deploy Support',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
@@ -604,7 +695,9 @@ class _GlowingMapButtonState extends State<_GlowingMapButton>
     final normalizedLayer = widget.layerName.trim().toLowerCase();
     final mapLayer = normalizedLayer.contains('airborne')
         ? MapLayerCategory.airborne
-        : MapLayerCategory.waterborne;
+        : normalizedLayer.contains('waterborne')
+        ? MapLayerCategory.waterborne
+        : MapLayerCategory.mentalHealth;
 
     final nav = MainNavigationScreen.of(context);
     if (nav != null) {
@@ -659,7 +752,7 @@ class _GlowingMapButtonState extends State<_GlowingMapButton>
                 ),
                 icon: const Icon(Icons.location_on_outlined, size: 20),
                 label: const Text(
-                  'VIEW STRATEGIC MAP',
+                  'View Priority Map',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.5,
@@ -875,7 +968,7 @@ class _ContinuousDataSynthesisCoreState
         ),
         const SizedBox(height: 20),
         const Text(
-          '214 fragmented inputs (field notes, logs, paper surveys) successfully unified into 2 strategic patterns.',
+          '214 fragmented inputs (field notes, logs, paper surveys) successfully unified into 3 strategic patterns.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14,
@@ -1121,6 +1214,107 @@ class _VectorFlowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _VectorFlowPainter oldDelegate) {
+    return oldDelegate.progress != progress;
+  }
+}
+
+class _MentalHealthPulseVisualizer extends StatefulWidget {
+  const _MentalHealthPulseVisualizer();
+
+  @override
+  State<_MentalHealthPulseVisualizer> createState() =>
+      _MentalHealthPulseVisualizerState();
+}
+
+class _MentalHealthPulseVisualizerState
+    extends State<_MentalHealthPulseVisualizer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          size: const Size(140, 110),
+          painter: _MentalHealthPulsePainter(progress: _controller.value),
+        );
+      },
+    );
+  }
+}
+
+class _MentalHealthPulsePainter extends CustomPainter {
+  final double progress;
+  _MentalHealthPulsePainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final centerY = size.height / 2;
+    final width = size.width;
+
+    for (int i = 0; i < 3; i++) {
+      final path = Path();
+      final lineProgress = (progress + (i * 0.33)) % 1.0;
+      final opacity = (1.0 - lineProgress).clamp(0.0, 0.6);
+
+      paint.color = const Color(0xFF0D9488).withOpacity(opacity);
+
+      for (double x = 0; x <= width; x += 2) {
+        // Brain-wave like multi-sine pattern
+        final y =
+            centerY +
+            math.sin((x / width * 4 * math.pi) + (progress * 2 * math.pi)) *
+                15 *
+                (1 - lineProgress) +
+            math.sin((x / width * 8 * math.pi) - (progress * 4 * math.pi)) *
+                8 *
+                lineProgress;
+
+        if (x == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+
+      // Add a glow shader
+      paint.shader = LinearGradient(
+        colors: [
+          const Color(0xFF0D9488).withOpacity(0),
+          const Color(0xFF0D9488).withOpacity(opacity),
+          const Color(0xFF5EEAD4).withOpacity(opacity),
+          const Color(0xFF0D9488).withOpacity(opacity),
+          const Color(0xFF0D9488).withOpacity(0),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, width, size.height));
+
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MentalHealthPulsePainter oldDelegate) {
     return oldDelegate.progress != progress;
   }
 }
