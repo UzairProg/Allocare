@@ -31,10 +31,115 @@ Using AI, it predicts airborne and waterborne risks, prioritizes neglected zones
   <img src="assets/allocare.gif" width="850"/>
 </p>
 
+---
+
+## 📱 Screen Showcase
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221737.png" width="250"/><br/>
+      <b>Sign In / Role Selection</b><br/>
+      <sub>Secure portal for NGOs and volunteers. Uses AI to personalize permissions, dashboards, and task flows based on user roles for efficient operations.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221759.png" width="250"/><br/>
+      <b>Home / Operations Dashboard</b><br/>
+      <sub>A real-time command center for workforce readiness and priority alerts. Features AI-driven resource shifts and urgent demand highlighting.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221815.png" width="250"/><br/>
+      <b>Need Category Selection</b><br/>
+      <sub>Allows users to classify help requirements, ensuring reports are structured for rapid AI grouping and routing.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221831.png" width="250"/><br/>
+      <b>Urgency Selection Screen</b><br/>
+      <sub>Captures situational severity, allowing response teams to prioritize critical cases and allocate limited resources efficiently.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221839.png" width="250"/><br/>
+      <b>Impact Details Screen</b><br/>
+      <sub>Collects data on affected individuals and issue descriptions to help AI estimate scale and coordinate the correct response.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221902.png" width="250"/><br/>
+      <b>Supporting Evidence Screen</b><br/>
+      <sub>Enables media and document uploads to validate reports, increasing trust and improving AI decision accuracy.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221907.png" width="250"/><br/>
+      <b>Crisis Map Screen</b><br/>
+      <sub>Visualizes geolocation signals, hotspot activity, and responder positions to guide navigation and speed up field actions.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221911.png" width="250"/><br/>
+      <b>Crisis Heatmap Filter Screen</b><br/>
+      <sub>Uses Gemini 2.5 Flash to convert fragmented reports into color-coded heat zones to detect emerging patterns and invisible crises.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221924.png" width="250"/><br/>
+      <b>Allocare Intelligence Screen</b><br/>
+      <sub>Synthesizes field reports and handwritten notes to generate insights and assign the most suitable responders instantly.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221930.png" width="250"/><br/>
+      <b>Active Force Screen</b><br/>
+      <sub>Monitors available volunteers based on skills, distance, and specialization for rapid real-time matching.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-221956.png" width="250"/><br/>
+      <b>Mission Dispatch Screen</b><br/>
+      <sub>Instantly assigns specialists with full mission details, affected counts, and optimized navigation data.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-222001.png" width="250"/><br/>
+      <b>Volunteer Assigned Screen</b><br/>
+      <sub>Confirms deployment with live location data and responder profiles, giving users visibility that help is on the way.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-222036.png" width="250"/><br/>
+      <b>Smart Allocation Center</b><br/>
+      <sub>Monitors live mission updates and responder status to optimize resources and improve operational coordination in real time.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-222045.png" width="250"/><br/>
+      <b>Multi-Mission Tracking</b><br/>
+      <sub>Manages parallel crisis responses, balancing workloads and reassigning support as priorities shift.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-222104.png" width="250"/><br/>
+      <b>Leaderboard Screen</b><br/>
+      <sub>Ranks top volunteers based on verified contributions and reliability, gamifying humanitarian impact.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screens/Screens/Screenshot_20260426-222120.png" width="250"/><br/>
+      <b>Profile / Resource Management</b><br/>
+      <sub>Central hub for verification, impact metrics, and inventory oversight to assess workforce capacity and trust.</sub>
+    </td>
+  </tr>
+</table>
+
+---
 
 ## 🧠 Core System Layers
 
 ### 1. Data & Visibility Layer
+
 - Collects data from multiple sources (manual input, uploads)
 - Converts unstructured data into structured format
 - Displays needs on a unified map
