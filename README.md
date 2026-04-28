@@ -141,16 +141,191 @@ Allocare is designed to move beyond static dashboards and become a **real-time d
 | **SDG 2 – Zero Hunger** | Smart food aid allocation during shortages and emergencies |
 | **SDG 3 – Good Health & Well-being** | Faster medical response and healthcare resource prioritization |
 | **SDG 10 – Reduced Inequalities** | Fair, unbiased distribution of help to underserved communities |
-## 📌 Status
-
-🚧 Active Development  
-- Auth completed  
-- App structure completed  
-- Core features under development  
 
 ---
 
-## 🤝 Team
+## 📌 Project Status
 
-Built as part of the Google Solution Challenge.
-Team: **TRIVERSAL**
+| Module | Status |
+|--------|--------|
+| Authentication (Google + Email) | ✅ Complete |
+| App Shell & Navigation | ✅ Complete |
+| Field Report Submission (Text) | ✅ Complete |
+| Field Report Submission (File / Image) | ✅ Complete |
+| Live Map with Risk Zones | ✅ Complete |
+| Volunteer Skill Matching | ✅ Complete |
+| Sentinel Strategic Hub (AI Insights) | ✅ Complete |
+| Smart Resource Allocation Engine | ✅ Complete |
+| Real-time Firestore Integration | ✅ Complete |
+| Airborne / Waterborne Risk Prediction | ✅ Complete |
+| Mental Health & Well-being Support | ✅ Complete |
+| Admin Verification Flow | ✅ Complete |
+
+---
+
+## 🚀 Getting Started
+
+> **Prerequisites:** Flutter SDK `^3.x`, Dart `^3.x`, Firebase project, Google Maps API key, and a Gemini API key.
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/UzairProg/Allocare.git
+cd Allocare/allocare_app
+```
+
+### 2. Configure Environment Variables
+
+Copy the example environment file and fill in your keys:
+
+```bash
+cp .env.json.example .env.json
+```
+
+Edit `.env.json`:
+
+```json
+{
+  "GEMINI_API_KEY": "your_gemini_api_key_here",
+  "GOOGLE_MAPS_API_KEY": "your_google_maps_api_key_here"
+}
+```
+
+### 3. Set Up Firebase
+
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com).
+2. Enable **Authentication** (Google Sign-In + Email/Password) and **Firestore**.
+3. Run `flutterfire configure` to generate `firebase_options.dart`.
+
+```bash
+dart pub global activate flutterfire_cli
+flutterfire configure
+```
+
+### 4. Install Dependencies
+
+```bash
+flutter pub get
+```
+
+### 5. Run the App
+
+```bash
+# Pass the Gemini key via dart-define (required for AI features)
+flutter run --dart-define=GEMINI_API_KEY=your_key_here
+```
+
+---
+
+## 🗂️ Project Structure
+
+```
+allocare_app/
+├── assets/                     # Images, GIFs, icons, SDG badges
+├── lib/
+│   ├── core/                   # App-wide theme, constants, utilities
+│   ├── features/
+│   │   ├── auth/               # Login, registration, Google Sign-In
+│   │   ├── home/               # Home shell, bottom navigation
+│   │   ├── needs/              # Incident / need submission & feed
+│   │   ├── reports/            # Field report parser (text & file)
+│   │   ├── map/                # Live map, risk zone overlays
+│   │   ├── allocation/         # Smart resource allocation engine
+│   │   ├── insights/           # Sentinel Strategic Hub (AI insights)
+│   │   └── profile/            # NGO profile, volunteer management
+│   ├── models/                 # Shared data models
+│   ├── services/               # GeminiService, Firebase helpers
+│   ├── firebase_options.dart   # Auto-generated Firebase config
+│   └── main.dart               # App entry point
+├── .env.json                   # Runtime secrets (gitignored)
+├── .env.json.example           # Template for .env.json
+└── pubspec.yaml
+```
+
+---
+
+## 🤖 AI Integration
+
+Allocare uses **Gemini 2.5 Flash** as its core intelligence layer via the `GeminiService`:
+
+| Capability | Detail |
+|-----------|--------|
+| **Structured Report Parsing** | Converts raw field text into validated JSON with location, urgency, category, and contact data |
+| **Binary File Analysis** | OCR-capable parsing of scanned PDFs and images to extract incident details |
+| **Multi-model Fallback** | Automatically retries with `gemma-3-27b-it → gemini-1.5-flash → gemini-1.5-pro` if primary model fails |
+| **Risk Prediction** | Synthesizes historical reports into airborne/waterborne risk briefings |
+| **Volunteer Matching** | Skill-based, location-aware responder assignment |
+
+Gemini is accessed securely via `--dart-define` at build time — **no API key is ever stored in source code**.
+
+---
+
+## 🗺️ Live Map Features
+
+- 📍 Real-time incident pins with category icons
+- 🔴 Airborne disease risk heatmap overlay
+- 💧 Waterborne disease risk heatmap overlay
+- 🎯 Deep-link navigation from AI briefing cards → filtered map view
+- 📡 Auto-centers on the operational zone (Chhatrapati Sambhaji Nagar)
+
+---
+
+## 👥 User Roles
+
+| Role | Capabilities |
+|------|-------------|
+| **NGO** | Submit field reports, view strategic insights, manage volunteers & inventory, coordinate resource allocation |
+| **Volunteer** | View assigned missions, accept/reject tasks, update execution status |
+| **Admin** | Verify NGO accounts (backend-only, no UI) |
+
+---
+
+## 🔐 Security & Privacy
+
+- All authentication handled via **Firebase Auth** (Google OAuth 2.0 + Email)
+- API keys injected at build time via `--dart-define` (never committed to source)
+- Firestore security rules enforce role-based access per collection
+- No personal volunteer data is exposed across NGO boundaries
+
+---
+
+## 🧪 Running Tests
+
+```bash
+flutter test
+```
+
+> Unit tests cover `GeminiService` JSON parsing, model serialization, and allocation logic. Integration tests are planned for the next milestone.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how to get started:
+
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/your-feature-name`
+3. **Commit** your changes: `git commit -m "feat: add your feature"`
+4. **Push** to the branch: `git push origin feature/your-feature-name`
+5. **Open** a Pull Request — please describe what you changed and why
+
+Please follow the existing code style (feature-based modules, Riverpod for state) and ensure `dart analyze` returns no errors before submitting.
+
+---
+
+## 👨‍💻 Team
+
+Built with ❤️ for the **Google Solution Challenge** by Team **TRIVERSAL**.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+<p align="center">
+  <b>Right Help. Right Place. Right Time.</b><br/>
+  <i>Made with ❤️ by Team TRIVERSAL</i>
+</p>
