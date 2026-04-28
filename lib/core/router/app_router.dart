@@ -6,10 +6,12 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/home/presentation/main_navigation_screen.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_profile_service.dart';
 import 'route_paths.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
+  final profileState = ref.watch(currentUserProfileProvider);
 
   return GoRouter(
     initialLocation: RoutePaths.login,
@@ -37,19 +39,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
     redirect: (context, state) {
       final user = authState.asData?.value;
+      final profile = profileState.asData?.value;
+      
       final isOnAuth =
           state.uri.path == RoutePaths.auth ||
           state.uri.path == RoutePaths.login ||
-          state.uri.path == RoutePaths.signup ||
           state.uri.path == RoutePaths.forgotPassword;
+          
+      final isOnSignup = state.uri.path == RoutePaths.signup;
       final isAuthenticated = user != null;
+      final hasProfile = profile != null;
 
-      if (!isAuthenticated && !isOnAuth) {
-        return RoutePaths.auth;
+      if (!isAuthenticated && !isOnAuth && !isOnSignup) {
+        return RoutePaths.login;
       }
 
-      if (isAuthenticated && isOnAuth) {
-        return RoutePaths.home;
+      if (isAuthenticated) {
+        if (!hasProfile && !isOnSignup) {
+          return RoutePaths.signup;
+        }
+        if (hasProfile && (isOnAuth || isOnSignup)) {
+          return RoutePaths.home;
+        }
       }
 
       return null;

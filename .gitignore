@@ -1,3 +1,7 @@
+# ----------------------------------------------------------------------------
+# Allocare Intelligence Hub - Global .gitignore
+# ----------------------------------------------------------------------------
+
 # Miscellaneous
 *.class
 *.log
@@ -12,33 +16,31 @@
 .swiftpm/
 migrate_working_dir/
 
-# Local env/config
+# Local Environment & Config
 .env
 .env.*
+.env.json
 !.env.json.example
 .fvm/
 .firebase/
 firebase_options.dart
 
-# Firebase Flutter config files can be generated per developer machine.
+# Firebase Flutter config files (Machine-specific)
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
 
-# IntelliJ related
+# IDE Related
 *.iml
 *.ipr
 *.iws
 .idea/
-
-# VS Code workspace state
 .vscode/
+.history/
+*.sublime-project
+*.sublime-workspace
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
+# Flutter/Dart/Pub Related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -50,23 +52,40 @@ ios/Runner/GoogleService-Info.plist
 /coverage/
 .packages
 
-# Symbolication related
-app.*.symbols
+# Web Related
+build/web/
+.dart_tool/build/
 
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
+# Android Studio artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/local.properties
+/android/.gradle/
+android/app/src/main/res/values/google-services.xml
 
 # iOS/Xcode artifacts
 **/DerivedData/
 **/*.xcuserstate
 **/*.xcworkspace/xcuserdata/
 **/*.xcodeproj/xcuserdata/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
 
-# Android local artifacts
-android/local.properties
-android/.gradle/
+# Symbolication & Obfuscation
+app.*.symbols
+app.*.map.json
+
+# Tool-specific (Antigravity & AI)
+.antigravity/
+.gemini/
+*.temp
+*.tmp
+node_modules/
+package-lock.json
+
+# ----------------------------------------------------------------------------
+# End of .gitignore
+# ----------------------------------------------------------------------------

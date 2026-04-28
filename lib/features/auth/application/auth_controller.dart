@@ -19,7 +19,7 @@ class AuthController extends AutoDisposeAsyncNotifier<void> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await ref.watch(authServiceProvider).signInWithEmail(
+      await ref.read(authServiceProvider).signInWithEmail(
             email: email.trim(),
             password: password,
           );
@@ -35,7 +35,7 @@ class AuthController extends AutoDisposeAsyncNotifier<void> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final credential = await ref.watch(authServiceProvider).signUpWithEmail(
+      final credential = await ref.read(authServiceProvider).signUpWithEmail(
             email: email.trim(),
             password: password,
             displayName: displayName,
@@ -49,11 +49,11 @@ class AuthController extends AutoDisposeAsyncNotifier<void> {
         );
       }
 
-      await ref.watch(userProfileServiceProvider).provisionFromAuthUser(
+      await ref.read(userProfileServiceProvider).provisionFromAuthUser(
             authUser,
             requestedRole: role,
             fallbackDisplayName: displayName,
-        fallbackPhoneNumber: phoneNumber,
+            fallbackPhoneNumber: phoneNumber,
           );
     });
   }
@@ -63,7 +63,7 @@ class AuthController extends AutoDisposeAsyncNotifier<void> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final credential = await ref.watch(authServiceProvider).signInWithGoogle();
+      final credential = await ref.read(authServiceProvider).signInWithGoogle();
       final authUser = credential.user;
       if (authUser == null) {
         throw FirebaseAuthException(
@@ -85,7 +85,76 @@ class AuthController extends AutoDisposeAsyncNotifier<void> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await ref.watch(authServiceProvider).sendPasswordResetEmail(email: email);
+      await ref.read(authServiceProvider).sendPasswordResetEmail(email: email);
+    });
+  }
+
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) onCodeSent,
+    required void Function(FirebaseAuthException e) onVerificationFailed,
+    required void Function(PhoneAuthCredential credential) onVerificationCompleted,
+  }) async {
+    state = const AsyncLoading();
+    await ref.read(authServiceProvider).verifyPhoneNumber(
+          phoneNumber: phoneNumber,
+          verificationCompleted: (credential) {
+            state = const AsyncData(null);
+            onVerificationCompleted(credential);
+          },
+          verificationFailed: (e) {
+            state = AsyncError(e, StackTrace.current);
+            onVerificationFailed(e);
+          },
+          codeSent: (verificationId, resendToken) {
+            state = const AsyncData(null);
+            onCodeSent(verificationId, resendToken);
+          },
+          codeAutoRetrievalTimeout: (verificationId) {
+            state = const AsyncData(null);
+          },
+        );
+  }
+
+  Future<void> signInWithPhoneNumber({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(authServiceProvider).signInWithPhoneNumber(
+            verificationId: verificationId,
+            smsCode: smsCode,
+          );
+    });
+  }
+
+  Future<void> completeProfile({
+    required String displayName,
+    required AppUserRole role,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final user = ref.read(authServiceProvider).currentUser;
+      if (user == null) {
+        throw FirebaseAuthException(
+          code: 'user-missing',
+          message: 'No authenticated user found.',
+        );
+      }
+
+      await ref.read(userProfileServiceProvider).provisionFromAuthUser(
+            user,
+            requestedRole: role,
+            fallbackDisplayName: displayName,
+          );
+    });
+  }
+
+  Future<void> signOut() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(authServiceProvider).signOut();
     });
   }
 }

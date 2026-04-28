@@ -26,6 +26,12 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
   MapLayerCategory _mapLaunchLayer = MapLayerCategory.medical;
   int _mapLaunchNonce = 0;
 
+  void setIndex(int index) {
+    setState(() {
+      _index = index;
+    });
+  }
+
   void openStrategicMap({required MapLayerCategory layer}) {
     setState(() {
       _mapLaunchLayer = layer;
