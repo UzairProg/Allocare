@@ -21,7 +21,7 @@ import '../../../services/smart_allocation_service.dart';
 import '../../../services/user_profile_service.dart';
 import '../application/need_submission_service.dart';
 import '../../map/presentation/map_screen.dart';
-import '../../insights/presentation/smart_allocation_center_page.dart';
+
 
 enum _LocationMode { current, search, map }
 
@@ -180,8 +180,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   bool _isUploadingFile = false;
   bool _isCurrentLocationFetched = false;
 
-  // Command Center Dispatch Alert state
-  CommandCenterDispatchData? _dispatchAlert;
+
 
   @override
   void dispose() {
@@ -206,35 +205,34 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
     });
   }
 
-  void _showDispatchAlert({
+  void _showAllocationBottomSheet({
     required String volunteerName,
     required String crisisType,
     required String areaName,
     required LatLng reportPosition,
+    required String categoryKey,
   }) {
-    setState(() {
-      _dispatchAlert = CommandCenterDispatchData(
+    MapLayerCategory layer;
+    switch (categoryKey) {
+      case 'food': layer = MapLayerCategory.food; break;
+      case 'airborne': layer = MapLayerCategory.airborne; break;
+      case 'waterborne':
+      case 'water': layer = MapLayerCategory.waterborne; break;
+      case 'mental_health':
+      case 'mental': layer = MapLayerCategory.mentalHealth; break;
+      default: layer = MapLayerCategory.medical;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => _AllocationResultSheet(
         volunteerName: volunteerName,
         crisisType: crisisType,
         areaName: areaName,
+        layer: layer,
         reportPosition: reportPosition,
-      );
-    });
-  }
-
-  void _hideDispatchAlert() {
-    setState(() {
-      _dispatchAlert = null;
-    });
-  }
-
-  void _onViewDispatchOnMap() {
-    if (_dispatchAlert == null) return;
-
-    // Navigate to smart allocation center page
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const SmartAllocationCenterPage(),
       ),
     );
   }
@@ -1326,15 +1324,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
               ],
             ),
           ),
-          if (_dispatchAlert != null)
-            CommandCenterDispatchAlert(
-              volunteerName: _dispatchAlert!.volunteerName,
-              crisisType: _dispatchAlert!.crisisType,
-              areaName: _dispatchAlert!.areaName,
-              reportPosition: _dispatchAlert!.reportPosition,
-              onViewOnMap: _onViewDispatchOnMap,
-              onDismiss: _hideDispatchAlert,
-            ),
+          // no dispatch overlay — using bottom sheet now
         ],
       ),
     );
@@ -2104,11 +2094,12 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
               ? _locationController.text.trim()
               : 'Selected Area';
 
-          _showDispatchAlert(
+          _showAllocationBottomSheet(
             volunteerName: allocationResult.volunteerName!,
             crisisType: _selectedCategory.title,
             areaName: areaName,
             reportPosition: LatLng(latitude, longitude),
+            categoryKey: _categoryKey,
           );
         }
       } else {
@@ -2925,269 +2916,224 @@ class _DocumentUploadCard extends StatelessWidget {
   }
 }
 
-class CommandCenterDispatchData {
-  const CommandCenterDispatchData({
+class _AllocationResultSheet extends StatelessWidget {
+  const _AllocationResultSheet({
     required this.volunteerName,
     required this.crisisType,
     required this.areaName,
+    required this.layer,
     required this.reportPosition,
   });
 
   final String volunteerName;
   final String crisisType;
   final String areaName;
+  final MapLayerCategory layer;
   final LatLng reportPosition;
-}
-
-class CommandCenterDispatchAlert extends StatefulWidget {
-  const CommandCenterDispatchAlert({
-    super.key,
-    required this.volunteerName,
-    required this.crisisType,
-    required this.areaName,
-    required this.reportPosition,
-    required this.onViewOnMap,
-    required this.onDismiss,
-  });
-
-  final String volunteerName;
-  final String crisisType;
-  final String areaName;
-  final LatLng reportPosition;
-  final VoidCallback onViewOnMap;
-  final VoidCallback onDismiss;
-
-  @override
-  State<CommandCenterDispatchAlert> createState() =>
-      _CommandCenterDispatchAlertState();
-}
-
-class _CommandCenterDispatchAlertState extends State<CommandCenterDispatchAlert>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late AnimationController _pulseController;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _pulseAnimation;
-  Timer? _dismissTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, -1.0), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
-
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    _animationController.forward();
-    _pulseController.repeat(reverse: true);
-    _startAutoDismissTimer();
-  }
-
-  void _startAutoDismissTimer() {
-    _dismissTimer = Timer(const Duration(seconds: 10), () {
-      if (mounted) {
-        _dismiss();
-      }
-    });
-  }
-
-  void _dismiss() {
-    _dismissTimer?.cancel();
-    _animationController.reverse().then((_) {
-      if (mounted) {
-        widget.onDismiss();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _dismissTimer?.cancel();
-    _animationController.dispose();
-    _pulseController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: 0,
-      left: 16,
-      right: 16,
-      child: SafeArea(
-        bottom: false,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Material(
-              color: Colors.transparent,
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFD1FAE5), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withOpacity(0.12),
+            blurRadius: 40,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
               child: Container(
-                constraints: const BoxConstraints(maxWidth: 600),
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Status badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'VOLUNTEER ASSIGNED',
+                    style: TextStyle(
+                      color: Color(0xFF065F46),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Volunteer Profile
+            Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0D9488), Color(0xFF1E40AF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0D9488).withOpacity(0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      volunteerName.isNotEmpty ? volunteerName[0].toUpperCase() : 'V',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header with Active Mission badge
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8F5E8),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedBuilder(
-                                  animation: _pulseAnimation,
-                                  builder: (context, child) {
-                                    return Transform.scale(
-                                      scale: _pulseAnimation.value,
-                                      child: Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFF34C759),
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Active Mission',
-                                  style: TextStyle(
-                                    color: Color(0xFF34C759),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          GestureDetector(
-                            onTap: _dismiss,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              child: const Icon(
-                                Icons.close,
-                                color: Color(0xFF8E8E93),
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Title
-                      const Text(
-                        'Smart Allocation Center',
-                        style: TextStyle(
-                          color: Color(0xFF1C1C1E),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Body content
                       Text(
-                        '${widget.volunteerName} has been notified for ${widget.crisisType} in ${widget.areaName}.',
+                        volunteerName,
                         style: const TextStyle(
-                          color: Color(0xFF3C3C43),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          height: 1.4,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 20),
-
-                      // Action button
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton.icon(
-                          onPressed: () {
-                            _dismiss();
-                            widget.onViewOnMap();
-                          },
-                          style: TextButton.styleFrom(
-                            backgroundColor: const Color(0xFF007AFF),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 14,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          icon: const Icon(Icons.insights_rounded, size: 18),
-                          label: const Text(
-                            'OPEN SMART ALLOCATION PAGE',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Deployed to $crisisType · $areaName',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w500,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
+                const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 28),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Smart match chip
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.auto_awesome_rounded, size: 16, color: Color(0xFF6366F1)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Matched via skill profile · Closest $crisisType specialist in range · En route now.',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF374151),
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
+            const SizedBox(height: 20),
+
+            // View on Map button
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MapScreen(
+                        initialLayer: layer,
+                        initialFocus: reportPosition,
+                        initialZoom: 15.5,
+                        lockInitialFocus: true,
+                      ),
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.map_outlined, size: 20),
+                label: const Text(
+                  'VIEW ON MAP',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 1.0),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Dismiss link
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(
+                  'Dismiss',
+                  style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
+import '../../map/presentation/map_screen.dart';
 
 class SmartAllocationCenterPage extends StatefulWidget {
   const SmartAllocationCenterPage({super.key});
@@ -416,6 +418,53 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
     }
   }
 
+  MapLayerCategory _crisisTypeToLayer(String crisisType) {
+    final cat = crisisType.toLowerCase();
+    if (cat.contains('food') || cat.contains('ration') || cat.contains('nutrition')) {
+      return MapLayerCategory.food;
+    }
+    if (cat.contains('air') || cat.contains('respiratory') || cat.contains('smoke')) {
+      return MapLayerCategory.airborne;
+    }
+    if (cat.contains('water') || cat.contains('flood') || cat.contains('sanitation')) {
+      return MapLayerCategory.waterborne;
+    }
+    if (cat.contains('mental') || cat.contains('psycho') || cat.contains('counsel')) {
+      return MapLayerCategory.mentalHealth;
+    }
+    return MapLayerCategory.medical;
+  }
+
+  double? _extractLatFromData(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    final loc = data['location'];
+    if (loc is GeoPoint) return loc.latitude;
+    final coords = data['coordinates'];
+    if (coords is GeoPoint) return coords.latitude;
+    if (coords is Map) {
+      final v = coords['latitude'] ?? coords['lat'];
+      if (v is num) return v.toDouble();
+    }
+    final v = data['latitude'] ?? data['lat'];
+    if (v is num) return v.toDouble();
+    return null;
+  }
+
+  double? _extractLngFromData(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    final loc = data['location'];
+    if (loc is GeoPoint) return loc.longitude;
+    final coords = data['coordinates'];
+    if (coords is GeoPoint) return coords.longitude;
+    if (coords is Map) {
+      final v = coords['longitude'] ?? coords['lng'];
+      if (v is num) return v.toDouble();
+    }
+    final v = data['longitude'] ?? data['lng'];
+    if (v is num) return v.toDouble();
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final vName = widget.volunteerData['name']?.toString() ?? 'Volunteer';
@@ -748,24 +797,54 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                                 ],
                               ),
                             ),
-                            if (vContact.isNotEmpty)
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Action Buttons Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                final lat = _extractLatFromData(reportData);
+                                final lng = _extractLngFromData(reportData);
+                                final layer = _crisisTypeToLayer(crisisType);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => MapScreen(
+                                      initialLayer: layer,
+                                      initialFocus: (lat != null && lng != null)
+                                          ? LatLng(lat, lng)
+                                          : null,
+                                      initialZoom: 15.5,
+                                      lockInitialFocus: lat != null,
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF2563EB),
+                                side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              icon: const Icon(Icons.map_outlined, size: 16),
+                              label: const Text('View on Map', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                            ),
+                            if (vContact.isNotEmpty) ...[
+                              const SizedBox(width: 8),
                               FilledButton.icon(
                                 onPressed: () => _callContact(vContact),
                                 style: FilledButton.styleFrom(
                                   backgroundColor: const Color(0xFF0F172A),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                                icon: const Icon(
-                                  Icons.headset_mic_rounded,
-                                  size: 16,
-                                ),
-                                label: const Text(
-                                  'Comms',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
+                                icon: const Icon(Icons.headset_mic_rounded, size: 16),
+                                label: const Text('Comms', style: TextStyle(fontWeight: FontWeight.w700)),
                               ),
+                            ],
                           ],
                         ),
 
