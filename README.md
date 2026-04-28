@@ -33,109 +33,6 @@ Using AI, it predicts airborne and waterborne risks, prioritizes neglected zones
 
 ---
 
-## 📱 Screen Showcase
-
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221737.png" width="250"/><br/>
-      <b>Sign In / Role Selection</b><br/>
-      <sub>Secure portal for NGOs and volunteers. Uses AI to personalize permissions, dashboards, and task flows based on user roles for efficient operations.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221759.png" width="250"/><br/>
-      <b>Home / Operations Dashboard</b><br/>
-      <sub>A real-time command center for workforce readiness and priority alerts. Features AI-driven resource shifts and urgent demand highlighting.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221815.png" width="250"/><br/>
-      <b>Need Category Selection</b><br/>
-      <sub>Allows users to classify help requirements, ensuring reports are structured for rapid AI grouping and routing.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221831.png" width="250"/><br/>
-      <b>Urgency Selection Screen</b><br/>
-      <sub>Captures situational severity, allowing response teams to prioritize critical cases and allocate limited resources efficiently.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221839.png" width="250"/><br/>
-      <b>Impact Details Screen</b><br/>
-      <sub>Collects data on affected individuals and issue descriptions to help AI estimate scale and coordinate the correct response.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221902.png" width="250"/><br/>
-      <b>Supporting Evidence Screen</b><br/>
-      <sub>Enables media and document uploads to validate reports, increasing trust and improving AI decision accuracy.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221907.png" width="250"/><br/>
-      <b>Crisis Map Screen</b><br/>
-      <sub>Visualizes geolocation signals, hotspot activity, and responder positions to guide navigation and speed up field actions.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221911.png" width="250"/><br/>
-      <b>Crisis Heatmap Filter Screen</b><br/>
-      <sub>Uses Gemini 2.5 Flash to convert fragmented reports into color-coded heat zones to detect emerging patterns and invisible crises.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221924.png" width="250"/><br/>
-      <b>Allocare Intelligence Screen</b><br/>
-      <sub>Synthesizes field reports and handwritten notes to generate insights and assign the most suitable responders instantly.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221930.png" width="250"/><br/>
-      <b>Active Force Screen</b><br/>
-      <sub>Monitors available volunteers based on skills, distance, and specialization for rapid real-time matching.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-221956.png" width="250"/><br/>
-      <b>Mission Dispatch Screen</b><br/>
-      <sub>Instantly assigns specialists with full mission details, affected counts, and optimized navigation data.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-222001.png" width="250"/><br/>
-      <b>Volunteer Assigned Screen</b><br/>
-      <sub>Confirms deployment with live location data and responder profiles, giving users visibility that help is on the way.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-222036.png" width="250"/><br/>
-      <b>Smart Allocation Center</b><br/>
-      <sub>Monitors live mission updates and responder status to optimize resources and improve operational coordination in real time.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-222045.png" width="250"/><br/>
-      <b>Multi-Mission Tracking</b><br/>
-      <sub>Manages parallel crisis responses, balancing workloads and reassigning support as priorities shift.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-222104.png" width="250"/><br/>
-      <b>Leaderboard Screen</b><br/>
-      <sub>Ranks top volunteers based on verified contributions and reliability, gamifying humanitarian impact.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="assets/screens/Screens/Screenshot_20260426-222120.png" width="250"/><br/>
-      <b>Profile / Resource Management</b><br/>
-      <sub>Central hub for verification, impact metrics, and inventory oversight to assess workforce capacity and trust.</sub>
-    </td>
-  </tr>
-</table>
-
----
-
 ## 🧠 Core System Layers
 
 ### 1. Data & Visibility Layer
@@ -183,6 +80,49 @@ Updates system in real-time
 | **Real-Time NGO Dashboard**     | Shows live reports, alerts, resources, and volunteer status                |
 | **Unified Care Planning**       | Combines food, healthcare, and mental support in one relief plan           |
 
+---
+
+## 📱 Screen Showcase
+
+<p align="center">
+  <img src="assets/screens/Screens/Screenshot_20260426-221737.png" width="120" title="Sign In / Role Selection"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-221759.png" width="120" title="Home / Operations Dashboard"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-221815.png" width="120" title="Need Category Selection"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-221831.png" width="120" title="Urgency Selection"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-221839.png" width="120" title="Impact Details"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-221902.png" width="120" title="Supporting Evidence"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-221907.png" width="120" title="Crisis Map"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-221911.png" width="120" title="Crisis Heatmap Filter"/>
+</p>
+<p align="center">
+  <img src="assets/screens/Screens/Screenshot_20260426-221924.png" width="120" title="Allocare Intelligence"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-221930.png" width="120" title="Active Force"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-221956.png" width="120" title="Mission Dispatch"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-222001.png" width="120" title="Volunteer Assigned"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-222036.png" width="120" title="Smart Allocation Center"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-222045.png" width="120" title="Multi-Mission Tracking"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-222104.png" width="120" title="Leaderboard"/>
+  <img src="assets/screens/Screens/Screenshot_20260426-222120.png" width="120" title="Profile / Resource Management"/>
+</p>
+
+| Screen | Description |
+|--------|-------------|
+| **Sign In / Role Selection** | Secure portal for NGOs and volunteers. AI personalizes permissions and task flows per role. |
+| **Home / Operations Dashboard** | Real-time command center with AI-driven resource shifts and priority alerts. |
+| **Need Category Selection** | Classify help requirements for rapid AI grouping and routing. |
+| **Urgency Selection** | Capture situational severity so response teams prioritize critical cases first. |
+| **Impact Details** | Collect affected-people data to help AI estimate scale and coordinate response. |
+| **Supporting Evidence** | Upload media and documents to validate reports and improve AI accuracy. |
+| **Crisis Map** | Visualize geolocation signals, hotspots, and responder positions in real time. |
+| **Crisis Heatmap Filter** | Gemini 2.5 Flash converts fragmented reports into color-coded risk heat zones. |
+| **Allocare Intelligence** | Synthesizes field reports into insights and instantly assigns best-fit responders. |
+| **Active Force** | Monitor volunteers by skill, distance, and specialization for real-time matching. |
+| **Mission Dispatch** | Assign specialists with full mission details and optimized navigation data. |
+| **Volunteer Assigned** | Confirm deployment with live location and responder profile visibility. |
+| **Smart Allocation Center** | Track live missions and responder status to optimize resource coordination. |
+| **Multi-Mission Tracking** | Manage parallel crises, balance workloads, and reassign support as priorities shift. |
+| **Leaderboard** | Rank volunteers by verified contributions, gamifying humanitarian impact. |
+| **Profile / Resource Management** | Hub for verification, impact metrics, and inventory to assess workforce capacity. |
 
 ---
 
