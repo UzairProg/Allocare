@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/router/route_paths.dart';
 import '../../../models/app_user.dart';
@@ -8,8 +10,6 @@ import '../application/auth_controller.dart';
 import 'widgets/auth_page_shell.dart';
 import 'widgets/auth_primary_button.dart';
 import 'widgets/auth_role_selector.dart';
-import 'widgets/auth_text_field.dart';
-import 'widgets/brand_icons.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -21,22 +21,17 @@ class SignupScreen extends ConsumerStatefulWidget {
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
-  final _phoneNumberController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-
+  
   AppUserRole _selectedRole = AppUserRole.volunteer;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _fullNameController.dispose();
-    _phoneNumberController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -46,203 +41,178 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final isBusy = authState.isLoading;
 
     ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
-      if (!next.hasError) {
-        return;
+      if (next is AsyncError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error.toString()),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
       }
-
-      final message = _friendlyError(next.error);
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(message)));
     });
 
     return AuthPageShell(
       title: 'Join Allocare',
-      subtitle: 'Connect with real needs and make meaningful impact',
-      form: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AuthRoleSelector(
-              value: _selectedRole,
-              enabled: !isBusy,
-              onChanged: (value) {
-                setState(() {
-                  _selectedRole = value;
-                });
-              },
+      subtitle: 'Create your account to start making an impact',
+      form: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Role Selection
+          Text(
+            'I am a',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF64748B),
             ),
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: isBusy
-                  ? null
-                  : () async {
-                      await ref.read(authControllerProvider.notifier).signInWithGoogle(role: _selectedRole);
-                    },
-              icon: const GoogleBrandIcon(size: 18),
-              label: const Text('Sign in with Google'),
+          ),
+          const SizedBox(height: 10),
+          AuthRoleSelector(
+            value: _selectedRole,
+            enabled: !isBusy,
+            onChanged: (role) => setState(() => _selectedRole = role),
+          ),
+          const SizedBox(height: 32),
+
+          // Google Signup
+          OutlinedButton.icon(
+            onPressed: isBusy ? null : () => ref.read(authControllerProvider.notifier).signInWithGoogle(role: _selectedRole),
+            icon: SvgPicture.asset('lib/assets/icons/google_logo.svg', width: 20, height: 20),
+            label: Text(
+              'Sign up with Google',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF1E293B),
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Text(
-                    'OR',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: const Color(0xFF64748B),
-                          fontWeight: FontWeight.w600,
-                        ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
+              backgroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          Row(
+            children: [
+              const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'OR REGISTER MANUALLY',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF94A3B8),
+                    letterSpacing: 1,
                   ),
                 ),
-                const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+              ),
+              const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _fullNameController,
+                  enabled: !isBusy,
+                  style: GoogleFonts.inter(color: const Color(0xFF0F172A), fontSize: 15),
+                  decoration: _inputDecoration('Full Name', Icons.person_outline),
+                  validator: (v) => (v?.isEmpty ?? true) ? 'Please enter your name' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _emailController,
+                  enabled: !isBusy,
+                  style: GoogleFonts.inter(color: const Color(0xFF0F172A), fontSize: 15),
+                  decoration: _inputDecoration('Email Address', Icons.email_outlined),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) => (v?.contains('@') ?? false) ? null : 'Enter a valid email',
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  enabled: !isBusy,
+                  obscureText: _obscurePassword,
+                  style: GoogleFonts.inter(color: const Color(0xFF0F172A), fontSize: 15),
+                  decoration: _inputDecoration('Password', Icons.lock_outline).copyWith(
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF64748B), size: 20),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
+                  validator: (v) => (v?.length ?? 0) >= 6 ? null : 'Password must be at least 6 chars',
+                ),
               ],
             ),
-            const SizedBox(height: 14),
-            AuthTextField(
-              controller: _fullNameController,
-              label: 'Full Name',
-              enabled: !isBusy,
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                final name = value?.trim() ?? '';
-                if (name.length < 2) {
-                  return 'Enter your full name.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-            AuthTextField(
-              controller: _phoneNumberController,
-              label: 'Phone Number',
-              enabled: !isBusy,
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                final phone = value?.trim() ?? '';
-                if (phone.length < 6) {
-                  return 'Enter a valid phone number.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-            AuthTextField(
-              controller: _emailController,
-              label: 'Email',
-              enabled: !isBusy,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                final email = value?.trim() ?? '';
-                if (email.isEmpty || !email.contains('@')) {
-                  return 'Enter a valid email address.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-            AuthTextField(
-              controller: _passwordController,
-              label: 'Password',
-              enabled: !isBusy,
-              obscureText: _obscurePassword,
-              textInputAction: TextInputAction.next,
-              suffixIcon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-              onSuffixPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
-              },
-              validator: (value) {
-                final password = value ?? '';
-                if (password.length < 6) {
-                  return 'Password should be at least 6 characters.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-            AuthTextField(
-              controller: _confirmPasswordController,
-              label: 'Confirm Password',
-              enabled: !isBusy,
-              obscureText: _obscureConfirmPassword,
-              textInputAction: TextInputAction.done,
-              suffixIcon: Icon(_obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-              onSuffixPressed: () {
-                setState(() {
-                  _obscureConfirmPassword = !_obscureConfirmPassword;
-                });
-              },
-              validator: (value) {
-                if ((value ?? '') != _passwordController.text) {
-                  return 'Passwords do not match.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 18),
-            AuthPrimaryButton(
-              label: 'Get Started',
-              isLoading: isBusy,
-              onPressed: _submit,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 32),
+          AuthPrimaryButton(
+            label: 'Create Account',
+            isLoading: isBusy,
+            onPressed: () {
+              if (_formKey.currentState!.validate()) {
+                ref.read(authControllerProvider.notifier).signUpWithEmail(
+                  email: _emailController.text,
+                  password: _passwordController.text,
+                  displayName: _fullNameController.text,
+                  phoneNumber: '', // Will be updated later or handled via PNV if needed
+                  role: _selectedRole,
+                );
+              }
+            },
+          ),
+        ],
       ),
       footer: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Already a member? ',
-            style: Theme.of(context).textTheme.bodyMedium,
+            "Already have an account? ",
+            style: GoogleFonts.inter(color: const Color(0xFF64748B)),
           ),
           TextButton(
             onPressed: isBusy ? null : () => context.go(RoutePaths.login),
-            child: const Text('Log in'),
+            child: Text(
+              'Sign In',
+              style: GoogleFonts.inter(
+                color: const Color(0xFF4285F4),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    await ref.read(authControllerProvider.notifier).signUpWithEmail(
-          email: _emailController.text,
-          password: _passwordController.text,
-          displayName: _fullNameController.text,
-          phoneNumber: _phoneNumberController.text,
-          role: _selectedRole,
-        );
-  }
-
-  String _friendlyError(Object? error) {
-    if (error is! Exception) {
-      return 'Something went wrong. Please try again.';
-    }
-
-    final raw = error.toString().toLowerCase();
-
-    if (raw.contains('email-already-in-use')) {
-      return 'This email is already registered.';
-    }
-
-    if (raw.contains('invalid-credential') || raw.contains('wrong-password') || raw.contains('user-not-found')) {
-      return 'Invalid email or password.';
-    }
-
-    if (raw.contains('network-request-failed')) {
-      return 'Network error. Check your connection and try again.';
-    }
-
-    return 'Authentication failed. Please try again.';
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      hintText: label,
+      prefixIcon: Icon(icon, color: const Color(0xFF64748B), size: 20),
+      hintStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8)),
+      filled: true,
+      fillColor: const Color(0xFFF1F5F9),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFF4285F4), width: 1.5),
+      ),
+    );
   }
 }

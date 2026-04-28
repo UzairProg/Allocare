@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:ui';
 
 import '../../insights/presentation/sentinel_strategic_hub_page.dart';
 import '../../insights/presentation/smart_allocation_center_page.dart';
@@ -8,6 +9,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/user_profile_service.dart';
 import '../application/home_live_data_providers.dart';
 import '../../reports/presentation/report_entry_hub_page.dart';
+import 'main_navigation_screen.dart';
 import 'widgets/micro_visualizations.dart';
 import 'widgets/sync_core_animation.dart';
 
@@ -113,14 +115,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 ),
                               ],
                             ),
-                            CircleAvatar(
-                              radius: isWeb ? 28 : 22,
-                              backgroundImage: photoUrl != null
-                                  ? NetworkImage(photoUrl)
-                                  : const NetworkImage(
-                                      'https://i.pravatar.cc/150?u=aditi',
-                                    ),
-                              backgroundColor: const Color(0xFFF0F0F0),
+                            GestureDetector(
+                              onTap: () => MainNavigationScreen.of(context)
+                                  ?.setIndex(4),
+                              child: CircleAvatar(
+                                radius: isWeb ? 28 : 22,
+                                backgroundImage: photoUrl != null
+                                    ? NetworkImage(photoUrl)
+                                    : const NetworkImage(
+                                        'https://i.pravatar.cc/150?u=aditi',
+                                      ),
+                                backgroundColor: const Color(0xFFF0F0F0),
+                              ),
                             ),
                           ],
                         ),
@@ -327,6 +333,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   const SizedBox(height: 12),
                               itemBuilder: (context, index) =>
                                   _ActivityListTile(item: recent[index]),
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => _MissionLogPage(activities: recent)),
+                                  );
+                                },
+                                icon: const Icon(Icons.terminal_rounded, size: 16),
+                                label: const Text('VIEW FULL TACTICAL LOG'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  side: const BorderSide(color: Color(0xFFE4ECF9)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -730,88 +756,363 @@ class _NeedSummaryCard extends StatelessWidget {
   }
 }
 
-class _ActivityListTile extends StatelessWidget {
+class _ActivityListTile extends StatefulWidget {
   const _ActivityListTile({required this.item});
   final RecentActivityItem item;
+
+  @override
+  State<_ActivityListTile> createState() => _ActivityListTileState();
+}
+
+class _ActivityListTileState extends State<_ActivityListTile> {
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
     final isWeb = kIsWeb;
     final theme = Theme.of(context);
+    final item = widget.item;
 
     return Container(
-      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
         border: Border.all(color: const Color(0xFFF5F5F5)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(isWeb ? 12 : 10),
-            decoration: BoxDecoration(
+        boxShadow: [
+          if (_isExpanded)
+            BoxShadow(
               color: item.accentColor.withOpacity(0.1),
-              shape: BoxShape.circle,
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
-            child: Icon(
-              item.icon,
-              color: item.accentColor,
-              size: isWeb ? 22 : 18,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(isWeb ? 16 : 12),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.title,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1D2A30),
-                          fontSize: isWeb ? 16 : null,
-                        ),
-                      ),
-                    ),
-                    if (item.isHighPriority)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEBEE),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'HIGH PRIORITY',
-                          style: TextStyle(
-                            fontSize: kIsWeb ? 9 : 7,
-                            color: Color(0xFFD32F2F),
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                  ],
+                Container(
+                  padding: EdgeInsets.all(isWeb ? 12 : 10),
+                  decoration: BoxDecoration(
+                    color: item.accentColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    item.icon,
+                    color: item.accentColor,
+                    size: isWeb ? 22 : 18,
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${item.subtitle} · ${item.timeAgo}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                    fontSize: isWeb ? 12 : 10,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.title,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1D2A30),
+                                fontSize: isWeb ? 16 : null,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildUrgencyBadge(item),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            '${item.subtitle} · ${item.timeAgo}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                              fontSize: isWeb ? 12 : 10,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildSourceTray(item),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _buildAllocationStatus(item),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
+          if (_isExpanded)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  color: item.accentColor.withOpacity(0.05),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.psychology_rounded, size: 16, color: item.accentColor),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Gemini Reasoning: ${item.aiReasoning}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: item.accentColor.withOpacity(0.8),
+                            fontWeight: FontWeight.w600,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUrgencyBadge(RecentActivityItem item) {
+    return GestureDetector(
+      onTap: () => setState(() => _isExpanded = !_isExpanded),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: item.accentColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: item.accentColor.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              item.urgencyScore.toStringAsFixed(1),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: item.accentColor,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              _isExpanded ? Icons.auto_awesome : Icons.auto_awesome_outlined,
+              size: 12,
+              color: item.accentColor,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourceTray(RecentActivityItem item) {
+    return Row(
+      children: item.dataSources.map((icon) => Padding(
+        padding: const EdgeInsets.only(right: 4),
+        child: Icon(icon, size: 12, color: Colors.grey.withOpacity(0.4)),
+      )).toList(),
+    );
+  }
+
+  Widget _buildAllocationStatus(RecentActivityItem item) {
+    if (item.assignedVolunteer != null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFDCFCE7)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.verified_rounded, size: 12, color: Color(0xFF16A34A)),
+            const SizedBox(width: 6),
+            Text(
+              'STRATEGIC MATCH: ${item.assignedVolunteer}',
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF16A34A),
+              ),
+            ),
+            if (item.proximity != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  item.proximity!,
+                  style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
+                ),
+              ),
+            ],
+            if (item.volunteerRank != null) ...[
+              const SizedBox(width: 6),
+              Text(
+                '· ${item.volunteerRank}',
+                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: const Color(0xFF16A34A).withOpacity(0.7)),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        Icon(Icons.auto_awesome_rounded, size: 12, color: item.accentColor.withOpacity(0.5)),
+        const SizedBox(width: 8),
+        Text(
+          'OPTIMIZING HUMANITY FORCE RESPONSE...',
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            color: item.accentColor.withOpacity(0.8),
+            letterSpacing: 0.8,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PulsingDot extends StatefulWidget {
+  final Color color;
+  const _PulsingDot({required this.color});
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(
+          color: widget.color,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+class _MissionLogPage extends StatelessWidget {
+  final List<RecentActivityItem> activities;
+  const _MissionLogPage({required this.activities});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('TACTICAL MISSION LOG', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.white)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(24),
+        itemCount: activities.length + 4,
+        itemBuilder: (context, index) {
+          if (index < activities.length) {
+            final item = activities[index];
+            return _buildLogEntry(
+              time: item.timeAgo,
+              msg: '${item.title} -> ${item.aiReasoning}',
+              type: 'report',
+              color: item.accentColor,
+            );
+          }
+          
+          final extraIndex = index - activities.length;
+          final extras = [
+            {'time': 'SYSTEM', 'msg': 'Syncing with Global Sentinel Inventory...', 'type': 'system'},
+            {'time': 'AI', 'msg': 'Density clusters updated in Kranti Chowk. Re-routing unassigned guardians.', 'type': 'ai'},
+            {'time': 'IOT', 'msg': 'Water Quality sensors in CIDCO Sector 4 reporting improvement.', 'type': 'iot'},
+            {'time': 'MATCH', 'msg': 'Optimizing 12 pending reports for 100% strategic coverage.', 'type': 'match'},
+          ];
+          final e = extras[extraIndex];
+          return _buildLogEntry(
+            time: e['time']!,
+            msg: e['msg']!,
+            type: e['type']!,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLogEntry({required String time, required String msg, required String type, Color? color}) {
+    Color msgColor = Colors.white70;
+    if (type == 'ai') msgColor = const Color(0xFF3B82F6);
+    if (type == 'report') msgColor = color ?? Colors.white;
+    if (type == 'match') msgColor = const Color(0xFF10B981);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 70,
+            child: Text(
+              '[$time]',
+              style: const TextStyle(color: Color(0xFF64748B), fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ),
           const SizedBox(width: 12),
-          if (item.vizType != ActivityVizType.none)
-            MicroVisualization(type: item.vizType, color: item.accentColor),
+          Expanded(
+            child: Text(
+              msg,
+              style: TextStyle(
+                color: msgColor,
+                fontFamily: 'monospace',
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
         ],
       ),
     );

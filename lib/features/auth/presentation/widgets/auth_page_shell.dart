@@ -1,6 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-
-import '../../../../core/constants/app_constants.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AuthPageShell extends StatelessWidget {
   const AuthPageShell({
@@ -10,8 +10,7 @@ class AuthPageShell extends StatelessWidget {
     required this.form,
     required this.footer,
     this.cardMaxWidth = 460,
-    this.cardPadding = const EdgeInsets.all(24),
-    this.formTopSpacing = 20,
+    this.cardPadding = const EdgeInsets.all(32),
   });
 
   final String title;
@@ -20,156 +19,156 @@ class AuthPageShell extends StatelessWidget {
   final Widget footer;
   final double cardMaxWidth;
   final EdgeInsets cardPadding;
-  final double formTopSpacing;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
-              decoration: const BoxDecoration(
-                color: Color(0xFF2563EB),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned(
-                    top: -26,
-                    right: -10,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Stack(
+        children: [
+          Positioned(
+            top: -size.height * 0.1,
+            right: -size.width * 0.1,
+            child: _GlowCircle(
+              color: const Color(0xFF4285F4).withOpacity(0.08),
+              size: size.width * 0.7,
+            ),
+          ),
+          Positioned(
+            bottom: -size.height * 0.15,
+            left: -size.width * 0.15,
+            child: _GlowCircle(
+              color: const Color(0xFF34A853).withOpacity(0.06),
+              size: size.width * 0.8,
+            ),
+          ),
+          
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Hero(
+                      tag: 'app_logo',
+                      child: Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/allocare_icon.jpg',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: -40,
-                    left: -26,
-                    child: Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.09),
-                        shape: BoxShape.circle,
+                    const SizedBox(height: 16),
+                    Text(
+                      'Allocare',
+                      style: GoogleFonts.poppins(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1E293B),
+                        letterSpacing: -0.5,
                       ),
                     ),
-                  ),
-                  Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.17),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.hub_outlined,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'An intelligence that really cares',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF64748B),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    Container(
+                      width: double.infinity,
+                      constraints: BoxConstraints(maxWidth: cardMaxWidth),
+                      padding: cardPadding,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: const Color(0xFFE2E8F0),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF64748B).withOpacity(0.08),
+                            blurRadius: 30,
+                            offset: const Offset(0, 15),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Allocare',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Right help. Right place. Right time.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.92),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final insets = MediaQuery.of(context).viewInsets.bottom;
-
-                  return SingleChildScrollView(
-                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(
-                      AppConstants.screenHorizontalPadding,
-                      AppConstants.screenHorizontalPadding,
-                      AppConstants.screenHorizontalPadding,
-                      AppConstants.screenHorizontalPadding + insets,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight - (AppConstants.screenHorizontalPadding * 2),
-                      ),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: cardMaxWidth),
-                          child: Container(
-                            width: double.infinity,
-                            padding: cardPadding,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: theme.colorScheme.outline),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text(
-                                  title,
-                                  style: theme.textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  subtitle,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                SizedBox(height: formTopSpacing),
-                                form,
-                                const SizedBox(height: 16),
-                                footer,
-                              ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF0F172A),
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          Text(
+                            subtitle,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: const Color(0xFF64748B),
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          form,
+                        ],
                       ),
                     ),
-                  );
-                },
+                    const SizedBox(height: 24),
+                    footer,
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GlowCircle extends StatelessWidget {
+  const _GlowCircle({required this.color, required this.size});
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, color.withOpacity(0)],
+          stops: const [0.4, 1.0],
         ),
       ),
     );

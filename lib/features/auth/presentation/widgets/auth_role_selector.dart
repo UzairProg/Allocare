@@ -20,7 +20,6 @@ class AuthRoleSelector extends StatelessWidget {
     final options = [
       (AppUserRole.ngo, 'NGO'),
       (AppUserRole.volunteer, 'Volunteer'),
-      (AppUserRole.admin, 'Admin'),
     ];
 
     return Container(
