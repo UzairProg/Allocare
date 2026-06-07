@@ -4,13 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/router/route_paths.dart';
 import '../../../models/app_user.dart';
+import '../../../services/auth_service.dart';
+import '../../home/presentation/main_navigation_screen.dart';
+import '../../volunteer/presentation/screens/volunteer_main_shell.dart';
 import '../application/auth_controller.dart';
 import 'widgets/auth_page_shell.dart';
 import 'widgets/auth_primary_button.dart';
 import 'widgets/auth_role_selector.dart';
+
+typedef NgoMainDashboardShell = MainNavigationScreen;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -29,11 +35,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _isPnvLoading = false;
 
+  bool get _isNgoSelected => _selectedRole == AppUserRole.ngo;
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handlePostAuthRouting() async {
+    final authUser = ref.read(authServiceProvider).currentUser;
+    if (authUser != null) {
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(authUser.uid)
+            .get();
+
+        if (!mounted) return;
+
+        if (userDoc.exists) {
+          final data = userDoc.data();
+          final source = (data?['ngoProfile'] as Map?)?.cast<String, dynamic>() ?? data;
+          final role = source?['role'] as String?;
+
+          if (role == 'ngo') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const NgoMainDashboardShell(),
+              ),
+            );
+          } else if (role == 'volunteer') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const VolunteerMainShell(),
+              ),
+            );
+          } else {
+            debugPrint('Error: Malformed role "$role" detected for user ${authUser.uid}.');
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const VolunteerMainShell(),
+              ),
+            );
+          }
+        } else {
+          debugPrint('Error: User document ${authUser.uid} not found in Firestore.');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const VolunteerMainShell(),
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error fetching user document: $e');
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const VolunteerMainShell(),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _handlePNV() async {
@@ -56,6 +125,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+        await _handlePostAuthRouting();
       }
     } on PlatformException catch (e) {
       if (!mounted) return;
@@ -108,7 +178,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
           // Google Login
           OutlinedButton.icon(
-            onPressed: isBusy ? null : () => ref.read(authControllerProvider.notifier).signInWithGoogle(role: _selectedRole),
+            onPressed: isBusy
+                ? null
+                : () async {
+                    await ref
+                        .read(authControllerProvider.notifier)
+                        .signInWithGoogle(role: _selectedRole);
+                    await _handlePostAuthRouting();
+                  },
             icon: SvgPicture.asset('lib/assets/icons/google_logo.svg', width: 20, height: 20),
             label: Text(
               'Continue with Google',
@@ -132,7 +209,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             label: _isPnvLoading ? 'Detecting...' : 'Instant PNV Login',
             isLoading: _isPnvLoading,
             icon: SvgPicture.asset('lib/assets/icons/firebase_logo.svg', width: 22, height: 22),
-            onPressed: isBusy ? null : _handlePNV,
+            onPressed: isBusy
+                ? null
+                : () async {
+                    await _handlePNV();
+                  },
             color: const Color(0xFF0F172A),
           ),
           const SizedBox(height: 12),
@@ -188,11 +269,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           AuthPrimaryButton(
             label: 'Sign In',
             isLoading: isBusy,
-            onPressed: () {
-              ref.read(authControllerProvider.notifier).signInWithEmail(
+            onPressed: () async {
+              await ref.read(authControllerProvider.notifier).signInWithEmail(
                 email: _emailController.text,
                 password: _passwordController.text,
               );
+              await _handlePostAuthRouting();
             },
             color: const Color(0xFF4285F4), // Simple Google Blue
           ),

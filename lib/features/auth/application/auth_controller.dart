@@ -72,7 +72,7 @@ class AuthController extends AutoDisposeAsyncNotifier<void> {
         );
       }
 
-      await ref.watch(userProfileServiceProvider).provisionFromAuthUser(
+      await ref.read(userProfileServiceProvider).provisionFromAuthUser(
             authUser,
             requestedRole: role,
             fallbackDisplayName: authUser.displayName,

@@ -5,6 +5,8 @@ import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/home/presentation/main_navigation_screen.dart';
+import '../../features/volunteer/presentation/screens/volunteer_main_shell.dart';
+import '../../models/app_user.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_profile_service.dart';
 import 'route_paths.dart';
@@ -36,6 +38,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.home,
         builder: (context, state) => const MainNavigationScreen(),
       ),
+      GoRoute(
+        path: RoutePaths.volunteerHome,
+        builder: (context, state) => const VolunteerMainShell(),
+      ),
     ],
     redirect: (context, state) {
       final user = authState.asData?.value;
@@ -49,7 +55,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isOnSignup = state.uri.path == RoutePaths.signup;
       final isAuthenticated = user != null;
       final hasProfile = profile != null;
-
       if (!isAuthenticated && !isOnAuth && !isOnSignup) {
         return RoutePaths.login;
       }
@@ -58,8 +63,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         if (!hasProfile && !isOnSignup) {
           return RoutePaths.signup;
         }
-        if (hasProfile && (isOnAuth || isOnSignup)) {
-          return RoutePaths.home;
+        if (hasProfile) {
+          final isVolunteer = profile.role == AppUserRole.volunteer;
+          
+          if (isOnAuth || isOnSignup) {
+            return isVolunteer ? RoutePaths.volunteerHome : RoutePaths.home;
+          }
+          
+          // Role-based route guard & redirect
+          if (state.uri.path == RoutePaths.home && isVolunteer) {
+            return RoutePaths.volunteerHome;
+          }
+          if (state.uri.path == RoutePaths.volunteerHome && !isVolunteer) {
+            return RoutePaths.home;
+          }
         }
       }
 
@@ -67,3 +84,4 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
   );
 });
+
