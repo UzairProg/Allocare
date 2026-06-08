@@ -13,6 +13,7 @@ class AppUser {
     required this.role,
     required this.createdAt,
     required this.updatedAt,
+    this.ngoId,
     this.inventoryItems = const [],
   });
 
@@ -23,6 +24,10 @@ class AppUser {
   final AppUserRole role;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Reference to `ngos/{ngoId}` — not embedded NGO data.
+  final String? ngoId;
+
   final List<NgoInventoryItem> inventoryItems;
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) {
@@ -36,6 +41,9 @@ class AppUser {
       role: _roleFromString((source['role'] as String?) ?? 'volunteer'),
       createdAt: _asDateTime(source['createdAt']) ?? DateTime.now(),
       updatedAt: _asDateTime(source['updatedAt']) ?? DateTime.now(),
+      ngoId: (map['ngoId'] as String?)?.trim().isNotEmpty == true
+          ? (map['ngoId'] as String).trim()
+          : null,
       inventoryItems: (source['inventoryItems'] as List<dynamic>?)
               ?.map((entry) {
                 final entryMap = (entry as Map).cast<String, dynamic>();
@@ -51,8 +59,31 @@ class AppUser {
     );
   }
 
+  AppUser copyWith({
+    String? email,
+    String? displayName,
+    String? phoneNumber,
+    AppUserRole? role,
+    DateTime? updatedAt,
+    String? ngoId,
+    List<NgoInventoryItem>? inventoryItems,
+  }) {
+    return AppUser(
+      id: id,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      role: role ?? this.role,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      ngoId: ngoId ?? this.ngoId,
+      inventoryItems: inventoryItems ?? this.inventoryItems,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
+      if (ngoId != null) 'ngoId': ngoId,
       'ngoProfile': {
         'email': email,
         'displayName': displayName,

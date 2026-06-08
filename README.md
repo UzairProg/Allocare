@@ -25,11 +25,11 @@ Using AI, it predicts airborne and waterborne risks, prioritizes neglected zones
 > From fragmented data → verified insights → fair allocation → real-world action.
 ---
 
-<!-- ## 🎥 Exclusive Preview
+## 🎥 Exclusive Preview
 
 <p align="center">
   <img src="assets/allocare.gif" width="850"/>
-</p> -->
+</p>
 
 ---
 
@@ -82,7 +82,7 @@ Updates system in real-time
 
 ---
 
-<!-- ## 📱 Screen Showcase
+## 📱 Screen Showcase
 
 <p align="center">
   <img src="assets/screens/Screens/Screenshot_20260426-221737.png" width="120" title="Sign In / Role Selection"/>
@@ -103,7 +103,7 @@ Updates system in real-time
   <img src="assets/screens/Screens/Screenshot_20260426-222045.png" width="120" title="Multi-Mission Tracking"/>
   <img src="assets/screens/Screens/Screenshot_20260426-222104.png" width="120" title="Leaderboard"/>
   <img src="assets/screens/Screens/Screenshot_20260426-222120.png" width="120" title="Profile / Resource Management"/>
-</p> -->
+</p>
 
 | Screen | Description |
 |--------|-------------|

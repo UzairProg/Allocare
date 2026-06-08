@@ -11,6 +11,7 @@ class NeedModel {
     required this.location,
     required this.locationMode,
     required this.reportedBy,
+    this.ngoId,
     required this.peopleAffected,
     required this.status,
     this.latitude,
@@ -31,6 +32,7 @@ class NeedModel {
   final String location;
   final String locationMode;
   final String reportedBy;
+  final String? ngoId;
   final int peopleAffected;
   final String status;
   final double? latitude;
@@ -52,6 +54,9 @@ class NeedModel {
       location: (map['location'] as String?) ?? 'Unknown',
       locationMode: (map['locationMode'] as String?) ?? 'manual',
       reportedBy: (map['reportedBy'] as String?) ?? '',
+      ngoId:
+          _readOptionalString(map, 'ngoId') ??
+          _readOptionalString(map, 'ngo_id'),
       peopleAffected: _toInt(map['peopleAffected']),
       status: (map['status'] as String?) ?? 'open',
       latitude: _toDouble(map['latitude']),
@@ -69,21 +74,27 @@ class NeedModel {
     return {
       'title': title,
       'category': category,
-      if (subcategory != null && subcategory!.trim().isNotEmpty) 'subcategory': subcategory,
+      if (subcategory != null && subcategory!.trim().isNotEmpty)
+        'subcategory': subcategory,
       'urgency': urgency,
       'description': description,
       'location': location,
       'locationMode': locationMode,
       'reportedBy': reportedBy,
+      if (ngoId != null && ngoId!.trim().isNotEmpty) 'ngoId': ngoId,
       'peopleAffected': peopleAffected,
       'status': status,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
-      if (contactName != null && contactName!.trim().isNotEmpty) 'contactName': contactName,
-      if (contactPhone != null && contactPhone!.trim().isNotEmpty) 'contactPhone': contactPhone,
+      if (contactName != null && contactName!.trim().isNotEmpty)
+        'contactName': contactName,
+      if (contactPhone != null && contactPhone!.trim().isNotEmpty)
+        'contactPhone': contactPhone,
       if (supportingDocsMetadata != null && supportingDocsMetadata!.isNotEmpty)
         'supportingDocsMetadata': supportingDocsMetadata,
-      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : Timestamp.now(),
+      'createdAt': createdAt != null
+          ? Timestamp.fromDate(createdAt!)
+          : Timestamp.now(),
       'updatedAt': Timestamp.now(),
     };
   }
@@ -96,6 +107,15 @@ class NeedModel {
       return value.toInt();
     }
     return 0;
+  }
+
+  static String? _readOptionalString(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return null;
   }
 
   static double? _toDouble(Object? value) {

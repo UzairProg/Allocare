@@ -4,19 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/router/route_paths.dart';
 import '../../../models/app_user.dart';
-import '../../../services/auth_service.dart';
-import '../../home/presentation/main_navigation_screen.dart';
-import '../../volunteer/presentation/screens/volunteer_main_shell.dart';
 import '../application/auth_controller.dart';
 import 'widgets/auth_page_shell.dart';
 import 'widgets/auth_primary_button.dart';
 import 'widgets/auth_role_selector.dart';
-
-typedef NgoMainDashboardShell = MainNavigationScreen;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -26,16 +20,15 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  static const MethodChannel _pnvChannel = MethodChannel('com.example.allocare_app/pnv');
+  static const MethodChannel _pnvChannel =
+      MethodChannel('com.example.allocare_app/pnv');
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   AppUserRole _selectedRole = AppUserRole.volunteer;
   bool _obscurePassword = true;
   bool _isPnvLoading = false;
-
-  bool get _isNgoSelected => _selectedRole == AppUserRole.ngo;
 
   @override
   void dispose() {
@@ -44,71 +37,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handlePostAuthRouting() async {
-    final authUser = ref.read(authServiceProvider).currentUser;
-    if (authUser != null) {
-      try {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(authUser.uid)
-            .get();
-
-        if (!mounted) return;
-
-        if (userDoc.exists) {
-          final data = userDoc.data();
-          final source = (data?['ngoProfile'] as Map?)?.cast<String, dynamic>() ?? data;
-          final role = source?['role'] as String?;
-
-          if (role == 'ngo') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const NgoMainDashboardShell(),
-              ),
-            );
-          } else if (role == 'volunteer') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const VolunteerMainShell(),
-              ),
-            );
-          } else {
-            debugPrint('Error: Malformed role "$role" detected for user ${authUser.uid}.');
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const VolunteerMainShell(),
-              ),
-            );
-          }
-        } else {
-          debugPrint('Error: User document ${authUser.uid} not found in Firestore.');
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const VolunteerMainShell(),
-            ),
-          );
-        }
-      } catch (e) {
-        debugPrint('Error fetching user document: $e');
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const VolunteerMainShell(),
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _handlePNV() async {
     setState(() => _isPnvLoading = true);
     try {
-      final response = await _pnvChannel.invokeMethod<Map<dynamic, dynamic>>('getVerifiedPhone');
+      final response =
+          await _pnvChannel.invokeMethod<Map<dynamic, dynamic>>('getVerifiedPhone');
       final phone = response?['phoneNumber'] as String?;
 
       if (phone != null && phone.isNotEmpty) {
@@ -117,7 +50,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           SnackBar(
             content: Row(
               children: [
-                SvgPicture.asset('lib/assets/icons/firebase_logo.svg', width: 20, height: 20),
+                SvgPicture.asset(
+                  'lib/assets/icons/firebase_logo.svg',
+                  width: 20,
+                  height: 20,
+                ),
                 const SizedBox(width: 10),
                 Text('Verified via Firebase PNV: $phone'),
               ],
@@ -125,12 +62,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        await _handlePostAuthRouting();
       }
     } on PlatformException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Firebase PNV detection unavailable: ${e.message}')),
+        SnackBar(
+          content: Text('Firebase PNV detection unavailable: ${e.message}'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isPnvLoading = false);
@@ -156,7 +94,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return AuthPageShell(
       title: 'Sign In',
-      subtitle: 'Unifying fragmented crisis data into priority-based smart intelligence.',
+      subtitle:
+          'Unifying fragmented crisis data into priority-based smart intelligence.',
       form: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -175,8 +114,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onChanged: (role) => setState(() => _selectedRole = role),
           ),
           const SizedBox(height: 32),
-
-          // Google Login
           OutlinedButton.icon(
             onPressed: isBusy
                 ? null
@@ -184,9 +121,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     await ref
                         .read(authControllerProvider.notifier)
                         .signInWithGoogle(role: _selectedRole);
-                    await _handlePostAuthRouting();
                   },
-            icon: SvgPicture.asset('lib/assets/icons/google_logo.svg', width: 20, height: 20),
+            icon: SvgPicture.asset(
+              'lib/assets/icons/google_logo.svg',
+              width: 20,
+              height: 20,
+            ),
             label: Text(
               'Continue with Google',
               style: GoogleFonts.poppins(
@@ -197,34 +137,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               side: const BorderSide(color: Color(0xFFE2E8F0)),
               backgroundColor: Colors.white,
             ),
           ),
           const SizedBox(height: 16),
-
-          // Firebase PNV Login
           AuthPrimaryButton(
             label: _isPnvLoading ? 'Detecting...' : 'Instant PNV Login',
             isLoading: _isPnvLoading,
-            icon: SvgPicture.asset('lib/assets/icons/firebase_logo.svg', width: 22, height: 22),
-            onPressed: isBusy
-                ? null
-                : () async {
-                    await _handlePNV();
-                  },
+            icon: SvgPicture.asset(
+              'lib/assets/icons/firebase_logo.svg',
+              width: 22,
+              height: 22,
+            ),
+            onPressed: isBusy ? null : _handlePNV,
             color: const Color(0xFF0F172A),
           ),
           const SizedBox(height: 12),
           Center(
             child: Text(
               'Verified via Firebase Phone Number Verification',
-              style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           const SizedBox(height: 32),
-
           Row(
             children: [
               const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
@@ -244,11 +187,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ],
           ),
           const SizedBox(height: 24),
-
           TextFormField(
             controller: _emailController,
             enabled: !isBusy,
-            style: GoogleFonts.inter(color: const Color(0xFF0F172A), fontSize: 15),
+            style: GoogleFonts.inter(
+              color: const Color(0xFF0F172A),
+              fontSize: 15,
+            ),
             decoration: _inputDecoration('Email Address', Icons.email_outlined),
             keyboardType: TextInputType.emailAddress,
           ),
@@ -257,11 +202,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             controller: _passwordController,
             enabled: !isBusy,
             obscureText: _obscurePassword,
-            style: GoogleFonts.inter(color: const Color(0xFF0F172A), fontSize: 15),
+            style: GoogleFonts.inter(
+              color: const Color(0xFF0F172A),
+              fontSize: 15,
+            ),
             decoration: _inputDecoration('Password', Icons.lock_outline).copyWith(
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF64748B), size: 20),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: const Color(0xFF64748B),
+                  size: 20,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
           ),
@@ -271,12 +224,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             isLoading: isBusy,
             onPressed: () async {
               await ref.read(authControllerProvider.notifier).signInWithEmail(
-                email: _emailController.text,
-                password: _passwordController.text,
-              );
-              await _handlePostAuthRouting();
+                    email: _emailController.text,
+                    password: _passwordController.text,
+                  );
             },
-            color: const Color(0xFF4285F4), // Simple Google Blue
+            color: const Color(0xFF4285F4),
           ),
         ],
       ),
@@ -284,7 +236,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            "New to Allocare? ",
+            'New to Allocare? ',
             style: GoogleFonts.inter(color: const Color(0xFF64748B)),
           ),
           TextButton(

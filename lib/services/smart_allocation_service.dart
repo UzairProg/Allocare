@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/volunteer_model.dart';
 
 class AllocationResult {
   final bool success;
@@ -16,85 +17,124 @@ class AllocationResult {
 class SmartAllocationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  String _canonicalKey(String raw) {
-    final value = raw.trim().toLowerCase();
-    switch (value) {
-      case 'medical':
-      case 'health':
-      case 'medicine':
-        return 'medical';
-      case 'food':
-      case 'food_nutrition':
-      case 'nutrition':
-        return 'food';
-      case 'logistics':
-      case 'shelter_essentials':
-      case 'shelter':
-      case 'infrastructure':
-        return 'logistics';
-      case 'airborne':
-        return 'airborne';
-      case 'waterborne':
-        return 'waterborne';
-      case 'natural_disaster':
-      case 'natural':
-      case 'accident':
-      case 'fire':
-      case 'police':
-        return value;
-      default:
-        return value;
-    }
-  }
-
   bool _specialityMatches(String category, String speciality) {
-    final c = _canonicalKey(category);
-    final s = _canonicalKey(speciality);
-    if (c == s) {
+    final c = category.trim().toLowerCase();
+    final s = speciality.trim().toLowerCase();
+    
+    // 1. Exact contains or equal
+    if (c == s || c.contains(s) || s.contains(c)) {
       return true;
     }
-
-    // Allow broader resource fallback for certain categories.
-    if ((c == 'fire' || c == 'accident' || c == 'natural_disaster') &&
-        s == 'logistics') {
+    
+    // 2. Medical Group
+    final isMedicalCat = c.contains('medical') || c.contains('health') || c.contains('medicine');
+    final isMedicalSpec = s.contains('medical') || s.contains('health') || s.contains('medicine');
+    if (isMedicalCat && isMedicalSpec) return true;
+    
+    // 3. Food Group
+    final isFoodCat = c.contains('food') || c.contains('nutrition') || c.contains('meal');
+    final isFoodSpec = s.contains('food') || s.contains('nutrition') || s.contains('meal');
+    if (isFoodCat && isFoodSpec) return true;
+    
+    // 4. Water Group
+    final isWaterCat = c.contains('water') || c.contains('sanitation') || c.contains('waterborne');
+    final isWaterSpec = s.contains('water') || s.contains('sanitation') || s.contains('waterborne');
+    if (isWaterCat && isWaterSpec) return true;
+    
+    // 5. Logistics/Shelter/Infrastructure Group
+    final isLogisticsCat = c.contains('logistics') || c.contains('shelter') || c.contains('infrastructure') || c.contains('supply');
+    final isLogisticsSpec = s.contains('logistics') || s.contains('shelter') || s.contains('infrastructure') || s.contains('supply');
+    if (isLogisticsCat && isLogisticsSpec) return true;
+    
+    // 6. Rescue/Fire/Disaster/Police Group
+    final isRescueCat = c.contains('fire') || c.contains('accident') || c.contains('natural') || c.contains('disaster') || c.contains('police') || c.contains('rescue');
+    final isRescueSpec = s.contains('fire') || s.contains('accident') || s.contains('natural') || s.contains('disaster') || s.contains('police') || s.contains('rescue');
+    if (isRescueCat && isRescueSpec) return true;
+    
+    // Fallback: Logistics specialist can assist in Rescue/Disaster scenarios
+    if (isRescueCat && isLogisticsSpec) {
       return true;
     }
-
+    
     return false;
   }
 
   Future<AllocationResult> dispatchVolunteer(
     String reportId,
-    String category,
-  ) async {
+    String category, {
+    List<String>? excludeVolunteers,
+  }) async {
     try {
       final normalizedCategory = category.trim();
 
-      // 1. Selection Logic: pull available volunteers and match speciality locally.
-      // This avoids index requirements and supports canonical category matching.
-      final volunteersSnapshot = await _firestore
-          .collection('volunteers')
-          .where('status', isEqualTo: 'available')
-          .limit(100)
-          .get();
-
-      QueryDocumentSnapshot<Map<String, dynamic>>? volunteerDoc;
-      for (final doc in volunteersSnapshot.docs) {
-        final data = doc.data();
-        final speciality = (data['speciality'] as String? ?? '').trim();
-        if (_specialityMatches(normalizedCategory, speciality)) {
-          volunteerDoc = doc;
-          break;
+      // Fetch the need to get its ngoId if it exists
+      final needDoc = await _firestore.collection('needs').doc(reportId).get();
+      String? needNgoId;
+      if (needDoc.exists) {
+        final data = needDoc.data();
+        if (data != null) {
+          needNgoId = data['ngoId'] as String? ?? data['ngo_id'] as String?;
         }
       }
 
-      if (volunteerDoc == null) {
-        // 4. Edge Case: No matching volunteer available.
-        // Keep urgency untouched and mark report as Pending.
-        await _firestore.collection('reports').doc(reportId).set({
-          'status': 'Pending',
-        }, SetOptions(merge: true));
+      // 1. Selection Logic: pull volunteers and filter in memory to match specializations
+      final volunteersSnapshot = await _firestore
+          .collection('volunteers')
+          .get();
 
+      final docs = volunteersSnapshot.docs.map((doc) {
+        return VolunteerModel.fromMap(doc.id, doc.data());
+      }).toList();
+
+      final matchedVolunteers = docs.where((v) {
+        if (excludeVolunteers != null && excludeVolunteers.contains(v.uid)) {
+          return false;
+        }
+
+        // Filter by NGO if need has ngoId
+        if (needNgoId != null && needNgoId.isNotEmpty && v.ngoId != needNgoId) {
+          return false;
+        }
+
+        // 1. Approved Volunteers
+        if (v.verificationStatus != VolunteerVerificationStatus.approved) {
+          return false;
+        }
+
+        // 2. Active On Field
+        if (!v.isActiveOnField) {
+          return false;
+        }
+
+        // 3. Not Currently Assigned (currentMissionId is null/empty or status is not 'assigned')
+        final isNotAssigned = (v.currentMissionId == null || v.currentMissionId!.isEmpty || v.status != 'assigned');
+        if (!isNotAssigned) {
+          return false;
+        }
+
+        // 4. Category Match
+        final normCategory = normalizedCategory.trim().toLowerCase();
+        final matchesCategory = v.specializations.contains(normCategory);
+        if (!matchesCategory) {
+          return false;
+        }
+
+        return true;
+      }).toList();
+
+      // Sort in-memory by missionsCompleted (Highest Reliability) descending
+      matchedVolunteers.sort((a, b) => b.missionsCompleted.compareTo(a.missionsCompleted));
+
+      if (matchedVolunteers.isEmpty) {
+        // No matching volunteer available.
+        final reportUpdate = <String, dynamic>{
+          'status': 'open',
+          'assignmentStatus': 'open',
+        };
+        await _firestore.collection('reports').doc(reportId).set(reportUpdate, SetOptions(merge: true));
+        await _firestore.collection('needs').doc(reportId).set(reportUpdate, SetOptions(merge: true));
+
+        print('Volunteer selected: None');
         return AllocationResult(
           success: false,
           message:
@@ -102,19 +142,14 @@ class SmartAllocationService {
         );
       }
 
-      final volunteerId = volunteerDoc.id;
-      final volunteerData = volunteerDoc.data();
-      final volunteerName =
-          volunteerData['name'] as String? ?? 'Unknown Volunteer';
-      final volunteerContact =
-          (volunteerData['contact'] as String?) ??
-          (volunteerData['phone'] as String?) ??
-          (volunteerData['mobile'] as String?) ??
-          '';
+      final selectedVolunteer = matchedVolunteers.first;
+      final volunteerId = selectedVolunteer.uid;
+      final volunteerName = selectedVolunteer.displayName;
 
       // 2. Atomic Update (The Handshake)
       await _firestore.runTransaction((transaction) async {
         final reportRef = _firestore.collection('reports').doc(reportId);
+        final needRef = _firestore.collection('needs').doc(reportId);
         final volunteerRef = _firestore
             .collection('volunteers')
             .doc(volunteerId);
@@ -131,14 +166,14 @@ class SmartAllocationService {
         }
 
         final liveVolunteerData = volunteerSnapshot.data() ?? {};
-        final liveStatus = (liveVolunteerData['status'] as String? ?? '')
-            .trim()
-            .toLowerCase();
-        final liveSpeciality =
-            (liveVolunteerData['speciality'] as String? ?? '').trim();
+        final liveVolunteer = VolunteerModel.fromMap(volunteerId, liveVolunteerData);
+        
+        final isStillAvailable = liveVolunteer.verificationStatus == VolunteerVerificationStatus.approved &&
+            liveVolunteer.isActiveOnField &&
+            (liveVolunteer.currentMissionId == null || liveVolunteer.currentMissionId!.isEmpty || liveVolunteer.status != 'assigned') &&
+            liveVolunteer.specializations.contains(normalizedCategory.trim().toLowerCase());
 
-        if (liveStatus != 'available' ||
-            !_specialityMatches(normalizedCategory, liveSpeciality)) {
+        if (!isStillAvailable) {
           throw Exception(
             'Volunteer is no longer available for this category. Try dispatch again.',
           );
@@ -180,17 +215,19 @@ class SmartAllocationService {
 
         // Write updates
         transaction.update(volunteerRef, {
-          'status': 'on_mission',
+          'status': 'pending_response',
+          'currentMissionId': reportId,
           'current_report_id': reportId,
         });
 
         final reportUpdate = <String, dynamic>{
-          'assigned_volunteer_id': volunteerId,
-          'assigned_volunteer_name': volunteerName,
-          'assigned_volunteer_contact': volunteerContact,
-          'assigned_volunteer_speciality': normalizedCategory,
-          'assigned_at': FieldValue.serverTimestamp(),
-          'status': 'assigned',
+          'matchedVolunteerId': volunteerId,
+          'matchedVolunteerName': volunteerName,
+          'matched_volunteer_id': volunteerId,
+          'matched_volunteer_name': volunteerName,
+          'assignmentStatus': 'pending',
+          'status': 'pending_acceptance',
+          'assignmentRequestedAt': FieldValue.serverTimestamp(),
         };
 
         if (newUrgency != null) {
@@ -198,19 +235,207 @@ class SmartAllocationService {
         }
 
         transaction.update(reportRef, reportUpdate);
+        transaction.update(needRef, reportUpdate);
+
+        print('Volunteer selected');
+        print('Need matched');
+        print('--- DISPATCH TRANSITION ---');
+        print('Volunteer ($volunteerId) Status Before: ${liveVolunteer.status}');
+        print('Volunteer ($volunteerId) Status After: pending_response');
+        print('Need ($reportId) Status Before: ${reportData['status']}');
+        print('Need ($reportId) Status After: pending_acceptance');
+        print('Need ($reportId) AssignmentStatus Before: ${reportData['assignmentStatus']}');
+        print('Need ($reportId) AssignmentStatus After: pending');
       });
 
       // 3. UI Feedback
       return AllocationResult(
         success: true,
         volunteerName: volunteerName,
-        message: 'Successfully dispatched $volunteerName',
+        message: 'Successfully matched $volunteerName. Pending volunteer confirmation.',
       );
     } catch (e) {
       return AllocationResult(
         success: false,
         message: 'Error during allocation: $e',
       );
+    }
+  }
+
+  Future<bool> acceptMission({
+    required String needId,
+    required String volunteerId,
+    required String volunteerName,
+  }) async {
+    try {
+      final needSnapshot = await _firestore.collection('needs').doc(needId).get();
+      final needData = needSnapshot.data() ?? {};
+      final volunteerSnapshot = await _firestore.collection('volunteers').doc(volunteerId).get();
+      final volunteerData = volunteerSnapshot.data() ?? {};
+
+      final batch = _firestore.batch();
+      
+      final needRef = _firestore.collection('needs').doc(needId);
+      final reportRef = _firestore.collection('reports').doc(needId);
+      final volunteerRef = _firestore.collection('volunteers').doc(volunteerId);
+      
+      final now = FieldValue.serverTimestamp();
+      
+      final needUpdate = {
+        'status': 'assigned',
+        'assignmentStatus': 'accepted',
+        'assignedVolunteerId': volunteerId,
+        'assignedVolunteerName': volunteerName,
+        'assigned_volunteer_id': volunteerId,
+        'assigned_volunteer_name': volunteerName,
+        'assignedAt': now,
+        'assigned_at': now,
+      };
+      
+      batch.update(needRef, needUpdate);
+      batch.update(reportRef, needUpdate);
+      
+      batch.update(volunteerRef, {
+        'status': 'on_mission',
+        'currentMissionId': needId,
+        'current_report_id': needId,
+      });
+      
+      await batch.commit();
+
+      print('Need accepted');
+      print('--- ACCEPT TRANSITION ---');
+      print('Volunteer ($volunteerId) Status Before: ${volunteerData['status']}');
+      print('Volunteer ($volunteerId) Status After: on_mission');
+      print('Need ($needId) Status Before: ${needData['status']}');
+      print('Need ($needId) Status After: assigned');
+      print('Need ($needId) AssignmentStatus Before: ${needData['assignmentStatus']}');
+      print('Need ($needId) AssignmentStatus After: accepted');
+
+      return true;
+    } catch (e) {
+      print('Error accepting mission: $e');
+      return false;
+    }
+  }
+
+  Future<bool> declineMission({
+    required String needId,
+    required String volunteerId,
+  }) async {
+    try {
+      // 1. Fetch need to get category and existing declined volunteers
+      final needSnapshot = await _firestore.collection('needs').doc(needId).get();
+      if (!needSnapshot.exists) {
+        throw Exception('Need not found');
+      }
+      final data = needSnapshot.data() ?? {};
+      final category = data['category'] as String? ?? data['crisis_type'] as String? ?? '';
+      
+      final volunteerSnapshot = await _firestore.collection('volunteers').doc(volunteerId).get();
+      final volunteerData = volunteerSnapshot.data() ?? {};
+      
+      final declinedVolunteers = List<String>.from(data['declinedVolunteers'] ?? []);
+      if (!declinedVolunteers.contains(volunteerId)) {
+        declinedVolunteers.add(volunteerId);
+      }
+
+      // 2. Database update
+      final batch = _firestore.batch();
+      final needRef = _firestore.collection('needs').doc(needId);
+      final reportRef = _firestore.collection('reports').doc(needId);
+      final volunteerRef = _firestore.collection('volunteers').doc(volunteerId);
+      
+      final needUpdate = {
+        'status': 'open',
+        'assignmentStatus': 'declined',
+        'matchedVolunteerId': FieldValue.delete(),
+        'matchedVolunteerName': FieldValue.delete(),
+        'matched_volunteer_id': FieldValue.delete(),
+        'matched_volunteer_name': FieldValue.delete(),
+        'declinedVolunteers': declinedVolunteers,
+      };
+      
+      batch.update(needRef, needUpdate);
+      batch.update(reportRef, needUpdate);
+      
+      batch.update(volunteerRef, {
+        'status': 'available',
+        'currentMissionId': FieldValue.delete(),
+        'current_report_id': FieldValue.delete(),
+      });
+      
+      await batch.commit();
+
+      print('Need declined');
+      print('--- DECLINE TRANSITION ---');
+      print('Volunteer ($volunteerId) Status Before: ${volunteerData['status']}');
+      print('Volunteer ($volunteerId) Status After: available');
+      print('Need ($needId) Status Before: ${data['status']}');
+      print('Need ($needId) Status After: open');
+      print('Need ($needId) AssignmentStatus Before: ${data['assignmentStatus']}');
+      print('Need ($needId) AssignmentStatus After: declined');
+      
+      // 3. Rerun matching automatically (next-best match)
+      if (category.isNotEmpty) {
+        await dispatchVolunteer(needId, category, excludeVolunteers: declinedVolunteers);
+      }
+      
+      return true;
+    } catch (e) {
+      print('Error declining mission: $e');
+      return false;
+    }
+  }
+
+  Future<bool> completeMission({
+    required String needId,
+    required String volunteerId,
+  }) async {
+    try {
+      final needSnapshot = await _firestore.collection('needs').doc(needId).get();
+      final needData = needSnapshot.data() ?? {};
+      final volunteerSnapshot = await _firestore.collection('volunteers').doc(volunteerId).get();
+      final volunteerData = volunteerSnapshot.data() ?? {};
+
+      final batch = _firestore.batch();
+      
+      final needRef = _firestore.collection('needs').doc(needId);
+      final reportRef = _firestore.collection('reports').doc(needId);
+      final volunteerRef = _firestore.collection('volunteers').doc(volunteerId);
+      
+      final now = FieldValue.serverTimestamp();
+      
+      final needUpdate = {
+        'status': 'completed',
+        'completedAt': now,
+        'completed_at': now,
+      };
+      
+      batch.update(needRef, needUpdate);
+      batch.update(reportRef, needUpdate);
+      
+      batch.update(volunteerRef, {
+        'status': 'available',
+        'currentMissionId': FieldValue.delete(),
+        'current_report_id': FieldValue.delete(),
+        'missionsCompleted': FieldValue.increment(1),
+        'totalCompletedMissions': FieldValue.increment(1),
+      });
+      
+      await batch.commit();
+
+      print('Mission completed');
+      print('--- COMPLETE TRANSITION ---');
+      print('Volunteer ($volunteerId) Status Before: ${volunteerData['status']}');
+      print('Volunteer ($volunteerId) Status After: available');
+      print('Need ($needId) Status Before: ${needData['status']}');
+      print('Need ($needId) Status After: completed');
+
+      return true;
+    } catch (e) {
+      print('Error completing mission: $e');
+      return false;
     }
   }
 }

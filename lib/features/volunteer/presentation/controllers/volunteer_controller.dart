@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../services/volunteer_service.dart';
+
 // Model for Volunteer State
 class VolunteerState {
   final bool isOnDuty;
@@ -27,10 +29,18 @@ class VolunteerState {
 
 // Controller for managing Volunteer-specific UI states
 class VolunteerController extends StateNotifier<VolunteerState> {
-  VolunteerController() : super(const VolunteerState());
+  VolunteerController(this._ref) : super(const VolunteerState());
 
-  void toggleDutyStatus() {
-    state = state.copyWith(isOnDuty: !state.isOnDuty);
+  final Ref _ref;
+
+  Future<void> toggleDutyStatus() async {
+    final volunteer = _ref.read(currentVolunteerProvider).asData?.value;
+    if (volunteer != null) {
+      final newStatus = !volunteer.isActiveOnField;
+      await _ref.read(volunteerServiceProvider).toggleActiveOnField(volunteer.uid, newStatus);
+    } else {
+      state = state.copyWith(isOnDuty: !state.isOnDuty);
+    }
   }
 
   void acceptTask(String taskId) {
@@ -52,7 +62,7 @@ class VolunteerController extends StateNotifier<VolunteerState> {
 }
 
 final volunteerControllerProvider = StateNotifierProvider<VolunteerController, VolunteerState>((ref) {
-  return VolunteerController();
+  return VolunteerController(ref);
 });
 
 final volunteerTabControllerProvider = StateProvider<int>((ref) => 0);

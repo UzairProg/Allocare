@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -21,7 +22,6 @@ import '../../../services/smart_allocation_service.dart';
 import '../../../services/user_profile_service.dart';
 import '../application/need_submission_service.dart';
 import '../../map/presentation/map_screen.dart';
-
 
 enum _LocationMode { current, search, map }
 
@@ -180,8 +180,6 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   bool _isUploadingFile = false;
   bool _isCurrentLocationFetched = false;
 
-
-
   @override
   void dispose() {
     _titleController.dispose();
@@ -214,13 +212,22 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   }) {
     MapLayerCategory layer;
     switch (categoryKey) {
-      case 'food': layer = MapLayerCategory.food; break;
-      case 'airborne': layer = MapLayerCategory.airborne; break;
+      case 'food':
+        layer = MapLayerCategory.food;
+        break;
+      case 'airborne':
+        layer = MapLayerCategory.airborne;
+        break;
       case 'waterborne':
-      case 'water': layer = MapLayerCategory.waterborne; break;
+      case 'water':
+        layer = MapLayerCategory.waterborne;
+        break;
       case 'mental_health':
-      case 'mental': layer = MapLayerCategory.mentalHealth; break;
-      default: layer = MapLayerCategory.medical;
+      case 'mental':
+        layer = MapLayerCategory.mentalHealth;
+        break;
+      default:
+        layer = MapLayerCategory.medical;
     }
 
     showModalBottomSheet<void>(
@@ -1292,6 +1299,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
                                             context,
                                             authService,
                                             submissionService,
+                                            profile?.ngoId,
                                             reporterName,
                                             reporterEmail,
                                           )
@@ -1905,13 +1913,18 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
   }) async {
     final existingPath = attachment.localPath;
     if (existingPath != null && existingPath.trim().isNotEmpty) {
-      final file = File(existingPath);
-      if (await file.exists()) {
-        return existingPath;
+      if (!kIsWeb) {
+        final file = File(existingPath);
+        if (await file.exists()) {
+          return existingPath;
+        }
       }
     }
 
     try {
+      if (kIsWeb) {
+        return 'data:${attachment.fileType};base64,${attachment.base64Data}';
+      }
       final directory = await getTemporaryDirectory();
       final safeName = attachment.fileName.trim().isNotEmpty
           ? attachment.fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')
@@ -2002,6 +2015,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
     BuildContext context,
     AuthService authService,
     NeedSubmissionService submissionService,
+    String? ngoId,
     String reporterName,
     String reporterEmail,
   ) async {
@@ -2020,7 +2034,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       final contactName = _contactNameController.text.trim();
       final contactPhone = _contactPhoneController.text.trim();
       final currentUser = authService.currentUser;
-      final imageFile = await _resolvePrimaryImageFile();
+      final imageData = await _resolvePrimaryImageData();
 
       final need = NeedModel(
         id: '',
@@ -2032,6 +2046,7 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
         location: _resolvedLocation,
         locationMode: _locationMode.name,
         reportedBy: currentUser?.uid ?? reporterEmail,
+        ngoId: ngoId,
         peopleAffected: parsedPeopleAffected,
         status: 'open',
         latitude: _locationMode == _LocationMode.current
@@ -2057,10 +2072,11 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
 
       final reportId = await submissionService.submitReport(
         need,
-        imageFile: imageFile,
+        imageBytes: imageData?['bytes'] as List<int>?,
+        imageName: imageData?['name'] as String?,
       );
       if (reportId.isEmpty) {
-        throw Exception('Image upload failed. Report was not saved.');
+        throw Exception('Report was not saved.');
       }
 
       final allocationService = ref.read(smartAllocationServiceProvider);
@@ -2152,34 +2168,19 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
     }
   }
 
-  Future<File?> _resolvePrimaryImageFile() async {
+  Future<Map<String, dynamic>?> _resolvePrimaryImageData() async {
     for (final doc in _supportingDocs) {
       if (!doc.isImage) {
         continue;
       }
 
-      final localPath = doc.localPath;
-      if (localPath != null && localPath.trim().isNotEmpty) {
-        final file = File(localPath);
-        if (await file.exists()) {
-          return file;
-        }
-      }
-
       if (doc.base64Data.trim().isNotEmpty) {
         try {
           final bytes = base64Decode(doc.base64Data);
-          final extension = _normalizedExtension(
-            _extensionFromNameOrPath(doc.fileName, doc.localPath),
-          );
-          final suffix = extension == null || extension.isEmpty
-              ? 'jpg'
-              : extension;
-          final tempPath =
-              '${Directory.systemTemp.path}${Platform.pathSeparator}allocare_report_${DateTime.now().microsecondsSinceEpoch}.$suffix';
-          final tempFile = File(tempPath);
-          await tempFile.writeAsBytes(bytes, flush: true);
-          return tempFile;
+          return {
+            'bytes': bytes,
+            'name': doc.fileName,
+          };
         } catch (_) {
           continue;
         }
@@ -2948,7 +2949,12 @@ class _AllocationResultSheet extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3023,7 +3029,9 @@ class _AllocationResultSheet extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      volunteerName.isNotEmpty ? volunteerName[0].toUpperCase() : 'V',
+                      volunteerName.isNotEmpty
+                          ? volunteerName[0].toUpperCase()
+                          : 'V',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
@@ -3059,7 +3067,11 @@ class _AllocationResultSheet extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 28),
+                const Icon(
+                  Icons.verified_rounded,
+                  color: Color(0xFF10B981),
+                  size: 28,
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -3074,7 +3086,11 @@ class _AllocationResultSheet extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.auto_awesome_rounded, size: 16, color: Color(0xFF6366F1)),
+                  const Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 16,
+                    color: Color(0xFF6366F1),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -3112,12 +3128,18 @@ class _AllocationResultSheet extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF0F172A),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 icon: const Icon(Icons.map_outlined, size: 20),
                 label: const Text(
                   'VIEW ON MAP',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 1.0),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.0,
+                  ),
                 ),
               ),
             ),
@@ -3129,7 +3151,10 @@ class _AllocationResultSheet extends StatelessWidget {
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text(
                   'Dismiss',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),

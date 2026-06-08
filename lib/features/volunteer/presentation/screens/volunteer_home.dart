@@ -4,9 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../services/auth_service.dart';
 import '../../../../services/user_profile_service.dart';
+import '../../../../services/volunteer_service.dart';
+import '../../../../models/volunteer_model.dart';
+import '../../../../services/smart_allocation_service.dart';
 import '../controllers/volunteer_controller.dart';
 
 // ==========================================
@@ -131,18 +135,53 @@ final volunteerProfileProvider = Provider<VolunteerProfileModel>((ref) {
   final profile = ref.watch(currentUserProfileProvider).asData?.value;
   final authUser = ref.watch(authStateProvider).asData?.value;
   final volunteerState = ref.watch(volunteerControllerProvider);
+  final volunteerDb = ref.watch(currentVolunteerProvider).asData?.value;
 
-  // Volunteer-specific fields (region, skillTags, isGemmaVerified) will map
-  // from Firestore once volunteerProfile sub-doc fields are available.
+  final skills =
+      (volunteerDb?.specializations ?? volunteerDb?.skills ?? const ['medical'])
+          .map((s) {
+            switch (s) {
+              case 'medical':
+                return '🩺 Medical';
+              case 'food_nutrition':
+                return '🍲 Food & Nutrition';
+              case 'shelter_essentials':
+                return '⛺ Shelter & Essentials';
+              case 'disaster_emergency':
+                return '🚨 Disaster & Emergency';
+              case 'mental_wellbeing':
+                return '🧠 Mental Health';
+              case 'education_child_support':
+                return '📚 Education';
+              case 'elderly_special_care':
+                return '👴 Elderly Care';
+              case 'livelihood_financial_support':
+                return '💼 Livelihood';
+              case 'women_safety':
+                return '🛡️ Women\'s Safety';
+              case 'others':
+                return '🤝 General Support';
+              default:
+                return s;
+            }
+          })
+          .toList();
+
   return VolunteerProfileModel(
-    name: profile?.displayName.trim().isNotEmpty == true
-        ? profile!.displayName
-        : (authUser?.displayName?.trim() ?? 'Uzair'),
-    region: 'Chhatrapati Sambhajinagar',
-    photoUrl: authUser?.photoURL,
-    skillTags: const ['Certified Medic', 'First Responder', 'Community Leader'],
-    isOnDuty: volunteerState.isOnDuty,
-    isGemmaVerified: true,
+    name:
+        volunteerDb?.displayName ??
+        profile?.displayName ??
+        authUser?.displayName ??
+        'Uzair',
+    region: volunteerDb != null
+        ? '${volunteerDb.city}, ${volunteerDb.state}'
+        : 'Chhatrapati Sambhajinagar',
+    photoUrl: volunteerDb?.photoUrl ?? authUser?.photoURL,
+    skillTags: skills.isNotEmpty ? skills : const ['🩺 Certified Medic'],
+    isOnDuty: volunteerDb?.isActiveOnField ?? volunteerState.isOnDuty,
+    isGemmaVerified: volunteerDb != null
+        ? volunteerDb.verificationStatus.isApproved
+        : true,
   );
 });
 
@@ -265,8 +304,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
   Widget build(BuildContext context) {
     // Watch dynamic telemetry models
     final profileData = ref.watch(volunteerProfileProvider);
-    final hasIncomingTask = ref.watch(hasIncomingTaskProvider);
-    final dispatchData = ref.watch(geminiDispatchProvider);
+    final volunteerDb = ref.watch(currentVolunteerProvider).asData?.value;
     final scanFeedData = ref.watch(geminiScanFeedProvider);
     final validationData = ref.watch(validationMetricsProvider);
     final impactData = ref.watch(impactMetricsProvider);
@@ -295,66 +333,214 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                 ),
                 const SizedBox(height: 20),
 
-                // Dispatch Section Title with simulator button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'GEMINI HANDOFF ENGINE',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF1E3A8A),
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    TextButton.icon(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () {
-                        ref.read(hasIncomingTaskProvider.notifier).state =
-                            !hasIncomingTask;
-                      },
-                      icon: Icon(
-                        hasIncomingTask
-                            ? Icons.radar_rounded
-                            : Icons.warning_amber_rounded,
-                        size: 14,
-                        color: const Color(0xFF0284C7),
-                      ),
-                      label: Text(
-                        hasIncomingTask ? 'Back to Scanning' : 'Simulate Match',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF0284C7),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
+                 volunteerDb == null
+                     ? Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           Row(
+                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                             children: [
+                               Text(
+                                 'GEMINI HANDOFF ENGINE',
+                                 style: GoogleFonts.inter(
+                                   fontSize: 11,
+                                   fontWeight: FontWeight.w800,
+                                   color: const Color(0xFF1E3A8A),
+                                   letterSpacing: 1.2,
+                                 ),
+                               ),
+                             ],
+                           ),
+                           const SizedBox(height: 8),
+                           _buildStandbyScannerCard(
+                             context,
+                             impactData,
+                             scanFeedData,
+                           ),
+                         ],
+                       )
+                     : StreamBuilder<QuerySnapshot>(
+                         stream: FirebaseFirestore.instance
+                             .collection('needs')
+                             .where('matchedVolunteerId', isEqualTo: volunteerDb.uid)
+                             .where('status', isEqualTo: 'pending_acceptance')
+                             .limit(1)
+                             .snapshots(),
+                         builder: (context, pendingSnapshot) {
+                           final hasPending = pendingSnapshot.hasData &&
+                               pendingSnapshot.data!.docs.isNotEmpty;
+                           final hasActive = volunteerDb.currentMissionId != null;
+                           final showReset = hasActive || hasPending;
 
-                // 2. Refined Field Dispatch Center (Fixed-Size, Premium States)
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 450),
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                  child: hasIncomingTask
-                      ? _buildActiveDispatchCard(context, dispatchData)
-                      : _buildStandbyScannerCard(
-                          context,
-                          impactData,
-                          scanFeedData,
-                        ),
-                ),
+                           return Column(
+                             crossAxisAlignment: CrossAxisAlignment.start,
+                             children: [
+                               Row(
+                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                 children: [
+                                   Text(
+                                     'GEMINI HANDOFF ENGINE',
+                                     style: GoogleFonts.inter(
+                                       fontSize: 11,
+                                       fontWeight: FontWeight.w800,
+                                       color: const Color(0xFF1E3A8A),
+                                       letterSpacing: 1.2,
+                                     ),
+                                   ),
+                                   TextButton.icon(
+                                     style: TextButton.styleFrom(
+                                       padding: const EdgeInsets.symmetric(
+                                         horizontal: 10,
+                                         vertical: 4,
+                                       ),
+                                       minimumSize: Size.zero,
+                                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                     ),
+                                     onPressed: () async {
+                                       final vId = volunteerDb.uid;
+                                       if (hasActive) {
+                                         await ref
+                                             .read(smartAllocationServiceProvider)
+                                             .declineMission(
+                                               needId: volunteerDb.currentMissionId!,
+                                               volunteerId: vId,
+                                             );
+                                       } else if (hasPending) {
+                                         final pendingDocId =
+                                             pendingSnapshot.data!.docs.first.id;
+                                         await ref
+                                             .read(smartAllocationServiceProvider)
+                                             .declineMission(
+                                               needId: pendingDocId,
+                                               volunteerId: vId,
+                                             );
+                                       } else {
+                                         // Simulate match by writing directly to Firestore
+                                         final needDoc = FirebaseFirestore.instance
+                                             .collection('needs')
+                                             .doc();
+                                         final now = Timestamp.now();
+                                         final mockNeed = {
+                                           'title': 'Suspected Waterborne Risk',
+                                           'category': 'water',
+                                           'subcategory': 'waterborne',
+                                           'urgency': 'critical',
+                                           'description':
+                                               'Mahananda Colony Sector 4 water contamination reported. 150 people affected.',
+                                           'location': 'Mahananda Colony, Sector 4',
+                                           'locationMode': 'manual',
+                                           'reportedBy': 'AI Agent',
+                                           'peopleAffected': 150,
+                                           'status': 'pending_acceptance',
+                                           'assignmentStatus': 'pending',
+                                           'matchedVolunteerId': vId,
+                                           'matchedVolunteerName': volunteerDb.displayName,
+                                           'assignmentRequestedAt': now,
+                                           'createdAt': now,
+                                           'updatedAt': now,
+                                         };
+
+                                         final batch = FirebaseFirestore.instance.batch();
+                                         batch.set(needDoc, mockNeed);
+                                         batch.set(
+                                           FirebaseFirestore.instance
+                                               .collection('reports')
+                                               .doc(needDoc.id),
+                                           mockNeed,
+                                         );
+                                         // CRITICAL: We do NOT update the volunteer profile document with currentMissionId.
+                                         // That will only happen when the volunteer explicitly approves the match by clicking ACCEPT.
+                                         await batch.commit();
+                                       }
+                                     },
+                                     icon: Icon(
+                                       showReset
+                                           ? Icons.radar_rounded
+                                           : Icons.warning_amber_rounded,
+                                       size: 14,
+                                       color: const Color(0xFF0284C7),
+                                     ),
+                                     label: Text(
+                                       showReset ? 'Reset Simulator' : 'Simulate Match',
+                                       style: GoogleFonts.inter(
+                                         fontSize: 10,
+                                         fontWeight: FontWeight.bold,
+                                         color: const Color(0xFF0284C7),
+                                       ),
+                                     ),
+                                   ),
+                                 ],
+                               ),
+                               const SizedBox(height: 8),
+
+                               // 2. Refined Field Dispatch Center (Fixed-Size, Premium States)
+                               AnimatedSwitcher(
+                                 duration: const Duration(milliseconds: 450),
+                                 transitionBuilder: (child, animation) {
+                                   return FadeTransition(
+                                       opacity: animation, child: child);
+                                 },
+                                 child: hasActive
+                                     ? StreamBuilder<DocumentSnapshot>(
+                                         key: ValueKey(
+                                             'active_${volunteerDb.currentMissionId}'),
+                                         stream: FirebaseFirestore.instance
+                                             .collection('needs')
+                                             .doc(volunteerDb.currentMissionId)
+                                             .snapshots(),
+                                         builder: (context, activeSnapshot) {
+                                           if (activeSnapshot.connectionState ==
+                                               ConnectionState.waiting) {
+                                             return const SizedBox(
+                                               height: 200,
+                                               child: Center(
+                                                 child:
+                                                     CircularProgressIndicator(
+                                                   color: Color(0xFF0284C7),
+                                                 ),
+                                               ),
+                                             );
+                                           }
+                                           if (!activeSnapshot.hasData ||
+                                               !activeSnapshot.data!.exists) {
+                                             return _buildStandbyScannerCard(
+                                               context,
+                                               impactData,
+                                               scanFeedData,
+                                             );
+                                           }
+                                           final needData = activeSnapshot.data!.data()
+                                               as Map<String, dynamic>;
+                                           return _buildRealDispatchCard(
+                                             context,
+                                             needId: volunteerDb.currentMissionId!,
+                                             needData: needData,
+                                             volunteerStatus: volunteerDb.status,
+                                             volunteerDb: volunteerDb,
+                                           );
+                                         },
+                                       )
+                                     : hasPending
+                                         ? _buildRealDispatchCard(
+                                             context,
+                                             needId: pendingSnapshot
+                                                 .data!.docs.first.id,
+                                             needData: pendingSnapshot
+                                                 .data!.docs.first
+                                                 .data() as Map<String, dynamic>,
+                                             volunteerStatus: 'pending_response',
+                                             volunteerDb: volunteerDb,
+                                           )
+                                         : _buildStandbyScannerCard(
+                                             context,
+                                             impactData,
+                                             scanFeedData,
+                                           ),
+                               ),
+                             ],
+                           );
+                         },
+                       ),
                 const SizedBox(height: 20),
 
                 // 3. Gemma Validation & Impact Section
@@ -926,22 +1112,65 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
     );
   }
 
-  // 2. HERO FIELD DISPATCH CENTER - STATE B: CRITICAL DISPATCH / MISSION BRIEFING
-  Widget _buildActiveDispatchCard(
-    BuildContext context,
-    GeminiDispatchDataModel dispatch,
-  ) {
+  Widget _buildRealDispatchCard(
+    BuildContext context, {
+    required String needId,
+    required Map<String, dynamic> needData,
+    required String volunteerStatus,
+    required VolunteerModel volunteerDb,
+  }) {
+    final title =
+        needData['title'] ?? needData['category'] ?? 'Emergency Incident';
+    final urgency = (needData['urgency'] ?? 'medium').toString().toUpperCase();
+    final location = needData['location'] ?? 'Unknown Area';
+    final peopleAffected = needData['peopleAffected'] ?? 0;
+
+    final category = needData['category']?.toString() ?? 'emergency';
+    final recommendedAction =
+        needData['recommendedAction'] ??
+        needData['recommended_action'] ??
+        (category.toLowerCase().contains('water')
+            ? 'Deploy Water Purification Support'
+            : category.toLowerCase().contains('medical')
+            ? 'Deploy Medical First Aid Support'
+            : category.toLowerCase().contains('food')
+            ? 'Deploy Food & Nutrition Delivery Support'
+            : 'Deploy Emergency Response Support');
+
+    final reasons = List<String>.from(
+      needData['assignmentReasons'] ??
+          needData['assignment_reasons'] ??
+          [
+            'Approved Specialty Profile',
+            'Active On Field Duty Status',
+            'Closest responder in geographical range',
+          ],
+    );
+
+    final isPending = volunteerStatus == 'pending_response';
+
+    // Background and border colors based on status
+    final cardBg = isPending
+        ? const Color(0xFFFFF7ED)
+        : const Color(0xFFEFF6FF);
+    final cardBorder = isPending
+        ? const Color(0xFFFED7AA)
+        : const Color(0xFFBFDBFE);
+    final cardShadowColor = isPending
+        ? const Color(0xFFEA580C)
+        : const Color(0xFF1D4ED8);
+
     return Container(
-      key: const ValueKey('active_dispatch_state'),
+      key: ValueKey(needId),
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F2),
+        color: cardBg,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.5),
+        border: Border.all(color: cardBorder, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFEF4444).withOpacity(0.14),
+            color: cardShadowColor.withOpacity(0.08),
             blurRadius: 28,
             offset: const Offset(0, 10),
           ),
@@ -954,19 +1183,35 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildMissionBadge(
-                icon: Icons.campaign_rounded,
-                label: 'CRITICAL MATCH FOUND',
-                bg: const Color(0xFFFEE2E2),
-                border: const Color(0xFFFECACA),
-                fg: const Color(0xFFDC2626),
+                icon: isPending
+                    ? Icons.campaign_rounded
+                    : Icons.verified_user_rounded,
+                label: isPending
+                    ? 'MISSION REQUEST RECEIVED'
+                    : 'MISSION ASSIGNED & ACTIVE',
+                bg: isPending
+                    ? const Color(0xFFFFEDD5)
+                    : const Color(0xFFDBEAFE),
+                border: isPending
+                    ? const Color(0xFFFED7AA)
+                    : const Color(0xFFBFDBFE),
+                fg: isPending
+                    ? const Color(0xFFEA580C)
+                    : const Color(0xFF1E40AF),
               ),
               _buildMissionBadge(
                 icon: null,
-                label: 'Urgent Dispatch',
-                bg: const Color(0xFFFFF1F2),
-                border: const Color(0xFFFECACA),
-                fg: const Color(0xFFDC2626),
-                showPulse: true,
+                label: isPending ? 'Reviewing Request' : 'Active Mission',
+                bg: isPending
+                    ? const Color(0xFFFFF7ED)
+                    : const Color(0xFFEFF6FF),
+                border: isPending
+                    ? const Color(0xFFFED7AA)
+                    : const Color(0xFFBFDBFE),
+                fg: isPending
+                    ? const Color(0xFFEA580C)
+                    : const Color(0xFF1E40AF),
+                showPulse: isPending,
               ),
             ],
           ),
@@ -978,24 +1223,36 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                 width: 58,
                 height: 58,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
+                  color: isPending
+                      ? const Color(0xFFFFEDD5)
+                      : const Color(0xFFDBEAFE),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFECACA)),
+                  border: Border.all(
+                    color: isPending
+                        ? const Color(0xFFFED7AA)
+                        : const Color(0xFFBFDBFE),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Color(0xFFDC2626),
+                child: Icon(
+                  isPending
+                      ? Icons.warning_amber_rounded
+                      : Icons.shield_rounded,
+                  color: isPending
+                      ? const Color(0xFFEA580C)
+                      : const Color(0xFF1E40AF),
                   size: 34,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  '⚠ ${dispatch.hazardType}',
+                  '⚠ $title',
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: const Color(0xFFB91C1C),
+                    color: isPending
+                        ? const Color(0xFFC2410C)
+                        : const Color(0xFF1E3A8A),
                     height: 1.15,
                     letterSpacing: -0.4,
                   ),
@@ -1020,7 +1277,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFFECACA)),
+              border: Border.all(color: cardBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1031,21 +1288,21 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                     Expanded(
                       child: _buildMissionDetailItem(
                         icon: Icons.grid_view_rounded,
-                        label: dispatch.sector,
-                        sublabel: dispatch.location,
+                        label: urgency,
+                        sublabel: location,
                       ),
                     ),
                     Container(
                       width: 1,
                       height: 44,
-                      color: const Color(0xFFFECACA),
+                      color: cardBorder,
                       margin: const EdgeInsets.symmetric(horizontal: 12),
                     ),
                     Expanded(
                       child: _buildMissionDetailItem(
                         icon: Icons.verified_outlined,
-                        label: '${dispatch.reportsVerified} reports',
-                        sublabel: 'verified',
+                        label: '$peopleAffected affected',
+                        sublabel: 'Estimated Impact',
                       ),
                     ),
                   ],
@@ -1072,7 +1329,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                     ),
                     const Spacer(),
                     Text(
-                      dispatch.estImpact,
+                      '$peopleAffected People',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -1129,7 +1386,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        dispatch.recommendedAction,
+                        recommendedAction,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
@@ -1154,7 +1411,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
             ),
           ),
           const SizedBox(height: 8),
-          ...dispatch.assignmentReasons.map(
+          ...reasons.map(
             (reason) => Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(
@@ -1181,11 +1438,126 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
             ),
           ),
           const SizedBox(height: 16),
-          _LaunchMissionButton(
-            onTap: () {
-              ref.read(volunteerTabControllerProvider.notifier).state = 3;
-            },
-          ),
+          if (isPending)
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      await ref
+                          .read(smartAllocationServiceProvider)
+                          .declineMission(
+                            needId: needId,
+                            volunteerId: volunteerDb.uid,
+                          );
+                    },
+                    child: Container(
+                      height: 52,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(
+                          color: const Color(0xFFFCA5A5),
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        'DECLINE',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: const Color(0xFFB91C1C),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      await ref
+                          .read(smartAllocationServiceProvider)
+                          .acceptMission(
+                            needId: needId,
+                            volunteerId: volunteerDb.uid,
+                            volunteerName: volunteerDb.displayName,
+                          );
+                    },
+                    child: Container(
+                      height: 52,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFEF4444).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'ACCEPT',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: Colors.white,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else ...[
+            _LaunchMissionButton(
+              onTap: () {
+                ref.read(volunteerTabControllerProvider.notifier).state = 3;
+              },
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () async {
+                await ref
+                    .read(smartAllocationServiceProvider)
+                    .completeMission(
+                      needId: needId,
+                      volunteerId: volunteerDb.uid,
+                    );
+              },
+              child: Container(
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF10B981).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'COMPLETE MISSION',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    color: Colors.white,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

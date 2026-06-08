@@ -65,6 +65,7 @@ class UserProfileService {
       role: requestedRole,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
+      ngoId: existing?.ngoId,
       inventoryItems: existing?.inventoryItems ?? const [],
     );
 

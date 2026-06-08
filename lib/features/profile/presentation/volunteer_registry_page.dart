@@ -1,22 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui';
 
-class VolunteerRegistryPage extends StatefulWidget {
-  const VolunteerRegistryPage({super.key});
+import '../../../models/volunteer_model.dart';
+import '../../../services/ngo_service.dart';
+
+class VolunteerRegistryPage extends ConsumerStatefulWidget {
+  final int initialTabIndex;
+  const VolunteerRegistryPage({super.key, this.initialTabIndex = 0});
 
   @override
-  State<VolunteerRegistryPage> createState() => _VolunteerRegistryPageState();
+  ConsumerState<VolunteerRegistryPage> createState() =>
+      _VolunteerRegistryPageState();
 }
 
-class _VolunteerRegistryPageState extends State<VolunteerRegistryPage>
+class _VolunteerRegistryPageState extends ConsumerState<VolunteerRegistryPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
   }
 
   @override
@@ -154,7 +164,7 @@ class _VolunteerRegistryPageState extends State<VolunteerRegistryPage>
           dividerColor: Colors.transparent,
           indicatorSize: TabBarIndicatorSize.tab,
           tabs: const [
-            Tab(text: 'ACTIVE FORCE'),
+            Tab(text: 'ALL HEROES'),
             Tab(text: 'LEADERBOARD'),
           ],
         ),
@@ -163,13 +173,19 @@ class _VolunteerRegistryPageState extends State<VolunteerRegistryPage>
   }
 }
 
-class _ActiveForcePanel extends StatelessWidget {
+class _ActiveForcePanel extends ConsumerWidget {
   const _ActiveForcePanel();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ngoId = ref.watch(effectiveNgoIdProvider) ?? '';
+
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('volunteers').snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('volunteers')
+          .where('ngoId', isEqualTo: ngoId)
+          .where('verificationStatus', isEqualTo: 'approved')
+          .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(
@@ -178,14 +194,22 @@ class _ActiveForcePanel extends StatelessWidget {
         }
 
         final docs = snapshot.data!.docs;
+        if (docs.isEmpty) {
+          return const Center(
+            child: Text('No active force volunteers found for this NGO.'),
+          );
+        }
 
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           physics: const BouncingScrollPhysics(),
           itemCount: docs.length,
           itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
-            return _ImpactGuardianCard(data: data, index: index);
+            final volunteer = VolunteerModel.fromMap(
+              docs[index].id,
+              docs[index].data() as Map<String, dynamic>,
+            );
+            return _ImpactGuardianCard(volunteer: volunteer, index: index);
           },
         );
       },
@@ -194,36 +218,22 @@ class _ActiveForcePanel extends StatelessWidget {
 }
 
 class _ImpactGuardianCard extends StatelessWidget {
-  final Map<String, dynamic> data;
+  final VolunteerModel volunteer;
   final int index;
 
-  const _ImpactGuardianCard({required this.data, required this.index});
+  const _ImpactGuardianCard({required this.volunteer, required this.index});
 
   @override
   Widget build(BuildContext context) {
-    final name = data['name'] ?? 'Guardian';
-    final speciality = data['speciality'] ?? 'Specialist';
-    final proximity = (1.1 + (index * 0.7) % 3.5).toStringAsFixed(1);
+    final name = volunteer.displayName;
+    final speciality = volunteer.formattedSpecializations.isNotEmpty
+        ? volunteer.formattedSpecializations.join(', ')
+        : 'Specialist';
 
-    // Varied Skills Logic
-    final skillPool = [
-      'First Aid',
-      'Mental Health',
-      'Water Quality',
-      'Logistics',
-      'Rescue',
-      'Nursing',
-      'Counseling',
-      'Data Analytics',
-      'Shelter Mgmt',
-    ];
-    final skills =
-        (data['skills'] as List?)?.cast<String>() ??
-        [
-          skillPool[index % skillPool.length],
-          skillPool[(index + 3) % skillPool.length],
-          skillPool[(index + 5) % skillPool.length],
-        ];
+    final isOnline = volunteer.isActiveOnField;
+    final statusText = isOnline ? 'Active Force' : 'Standby Mode';
+
+    final skills = volunteer.skills;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -246,7 +256,11 @@ class _ImpactGuardianCard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                _HeroAvatar(name: name, index: index),
+                _HeroAvatar(
+                  name: name,
+                  index: index,
+                  photoUrl: volunteer.photoUrl,
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -266,14 +280,16 @@ class _ImpactGuardianCard extends StatelessWidget {
                           Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF10B981),
+                            decoration: BoxDecoration(
+                              color: isOnline
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF94A3B8),
                               shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 2),
                           Text(
-                            'Active Force • $proximity km',
+                            statusText,
                             style: const TextStyle(
                               color: Color(0xFF6B7280),
                               fontSize: 12,
@@ -292,10 +308,39 @@ class _ImpactGuardianCard extends StatelessWidget {
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: skills.map((s) => _SkillChip(label: s)).toList(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (skills.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: skills.map((s) => _SkillChip(label: s)).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Impacted Lives: ${volunteer.missionsCompleted}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A5F7A),
+                      ),
+                    ),
+                    Text(
+                      'Reports: ${volunteer.reportsSubmitted}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -304,15 +349,18 @@ class _ImpactGuardianCard extends StatelessWidget {
   }
 }
 
-class _StrategicLeaderboardPanel extends StatelessWidget {
+class _StrategicLeaderboardPanel extends ConsumerWidget {
   const _StrategicLeaderboardPanel();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ngoId = ref.watch(effectiveNgoIdProvider) ?? '';
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('volunteers')
-          .limit(5)
+          .where('ngoId', isEqualTo: ngoId)
+          .where('verificationStatus', isEqualTo: 'approved')
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -326,14 +374,25 @@ class _StrategicLeaderboardPanel extends StatelessWidget {
           return const Center(child: Text('No impact data available yet.'));
         }
 
+        // Parse and sort by livesImpacted descending in memory
+        final volunteers = docs
+            .map(
+              (doc) => VolunteerModel.fromMap(
+                doc.id,
+                doc.data() as Map<String, dynamic>,
+              ),
+            )
+            .toList();
+        volunteers.sort((a, b) => b.livesImpacted.compareTo(a.livesImpacted));
+
+        final displayList = volunteers.take(5).toList();
+
         return ListView.builder(
           padding: const EdgeInsets.all(24),
           physics: const BouncingScrollPhysics(),
-          itemCount: docs.length,
+          itemCount: displayList.length,
           itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
-            final name = data['name'] ?? 'Guardian';
-
+            final volunteer = displayList[index];
             final rank = index + 1;
             final Color accent = rank == 1
                 ? const Color(0xFFF59E0B)
@@ -342,7 +401,7 @@ class _StrategicLeaderboardPanel extends StatelessWidget {
                 : const Color(0xFFD97706);
 
             return _LeaderboardHeroCard(
-              name: name,
+              volunteer: volunteer,
               rank: rank,
               accent: accent,
               index: index,
@@ -355,13 +414,13 @@ class _StrategicLeaderboardPanel extends StatelessWidget {
 }
 
 class _LeaderboardHeroCard extends StatelessWidget {
-  final String name;
+  final VolunteerModel volunteer;
   final int rank;
   final Color accent;
   final int index;
 
   const _LeaderboardHeroCard({
-    required this.name,
+    required this.volunteer,
     required this.rank,
     required this.accent,
     required this.index,
@@ -369,17 +428,18 @@ class _LeaderboardHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Storytelling metrics
-    final impactScore = (25000 - (index * 4200)).toString().replaceAllMapped(
+    final name = volunteer.displayName;
+    final impactScore = volunteer.livesImpacted.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (Match m) => '${m[1]},',
     );
-    final missions = 30 - (index * 4);
+    final missions = volunteer.missionsCompleted;
+
     final metricText = index == 0
-        ? 'Verified 1,200 N95 mask inventory data points.'
+        ? 'Verified ${volunteer.reportsVerified * 12} mask and water inventory points.'
         : index == 1
-        ? 'Provided 42 local air quality intersects.'
-        : 'Cataloged 850 emergency shelter capacities.';
+        ? 'Provided ${volunteer.reportsSubmitted} local air quality intersects.'
+        : 'Cataloged ${volunteer.reportsSubmitted * 4} emergency shelter capacities.';
     final aiSnippet = index == 0
         ? 'Data fed directly into the Sentinel strategic model to update airborne cluster density, improving allocation accuracy by 14%.'
         : 'Cross-referenced with sensor telemetry to isolate secondary waterborne risks.';
@@ -530,7 +590,8 @@ class _LeaderboardHeroCard extends StatelessWidget {
 class _HeroAvatar extends StatelessWidget {
   final String name;
   final int index;
-  const _HeroAvatar({required this.name, required this.index});
+  final String? photoUrl;
+  const _HeroAvatar({required this.name, required this.index, this.photoUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -549,16 +610,34 @@ class _HeroAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: color.withOpacity(0.2), width: 2),
       ),
-      child: Center(
-        child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w900,
-            fontSize: 18,
-          ),
-        ),
-      ),
+      child: photoUrl != null && photoUrl!.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Image.network(
+                photoUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, _, __) => Center(
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : Center(
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
+              ),
+            ),
     );
   }
 }

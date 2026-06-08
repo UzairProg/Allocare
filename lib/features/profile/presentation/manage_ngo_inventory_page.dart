@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ManageNgoInventoryPage extends StatefulWidget {
+import '../../../core/firestore/firestore_paths.dart';
+import '../../../services/ngo_service.dart';
+
+class ManageNgoInventoryPage extends ConsumerStatefulWidget {
   const ManageNgoInventoryPage({super.key});
 
   @override
-  State<ManageNgoInventoryPage> createState() => _ManageNgoInventoryPageState();
+  ConsumerState<ManageNgoInventoryPage> createState() =>
+      _ManageNgoInventoryPageState();
 }
 
-class _ManageNgoInventoryPageState extends State<ManageNgoInventoryPage> {
+class _ManageNgoInventoryPageState extends ConsumerState<ManageNgoInventoryPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  String get _currentNgoId => _auth.currentUser?.uid ?? '';
-
-  void _showAddInventorySheet() {
+  void _showAddInventorySheet(String ngoId) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -23,13 +24,15 @@ class _ManageNgoInventoryPageState extends State<ManageNgoInventoryPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => _AddInventorySheet(ngoId: _currentNgoId),
+      builder: (context) => _AddInventorySheet(ngoId: ngoId),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentNgoId.isEmpty) {
+    final ngoId = ref.watch(effectiveNgoIdProvider) ?? '';
+
+    if (ngoId.isEmpty) {
       return const Scaffold(
         body: Center(child: Text('User not authenticated.')),
       );
@@ -47,7 +50,7 @@ class _ManageNgoInventoryPageState extends State<ManageNgoInventoryPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddInventorySheet,
+        onPressed: () => _showAddInventorySheet(ngoId),
         backgroundColor: const Color(0xFF1A5F7A),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_box_rounded),
@@ -55,8 +58,8 @@ class _ManageNgoInventoryPageState extends State<ManageNgoInventoryPage> {
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
-            .collection('inventory')
-            .where('ngo_id', isEqualTo: _currentNgoId)
+            .collection(FirestorePaths.inventory)
+            .where('ngo_id', isEqualTo: ngoId)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
