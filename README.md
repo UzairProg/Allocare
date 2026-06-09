@@ -1,6 +1,6 @@
 # Allocare
 
-Allocare is a data-driven resource allocation system designed to help NGOs convert fragmented, unstructured data into actionable decisions and real-world impact.
+ALLOCARE transforms fragmented community data into real-time intelligence, enabling early risk detection, targeted awareness, and smarter resource allocation for faster humanitarian response.
 
 <p align="center">
   <img src="assets/ALLOCARE.png" alt="Allocare Logo" width="120"/>
@@ -13,14 +13,16 @@ Allocare is a data-driven resource allocation system designed to help NGOs conve
 
 ##  Problem
 
-Fragmented and unstructured data in healthcare, food, and mental support leads to inefficient and unfair resource allocation, where some areas receive repeated assistance while vulnerable communities remain underserved.
-
+Communities across India frequently face heatwaves, floods, disease outbreaks, water contamination, and resource shortages. However, critical information collected by NGOs and volunteers often remains fragmented across reports, spreadsheets, messaging platforms, and disconnected systems. This fragmented data leads to delayed responses, duplicate aid, underserved communities, and missed opportunities for early intervention.
 ---
 
 ##  Solution
 
-AlloCare transforms fragmented crisis reports into verified, structured, and actionable insights.  
-Using AI, it predicts airborne and waterborne risks, prioritizes neglected zones, prevents over-allocation, and connects the right resources and volunteers to the right communities in real time.
+We asked ourselves a simple question:
+
+What if every volunteer observation could become an early warning signal?
+
+This inspired us to build Allocare—an intelligent humanitarian coordination platform that transforms community reports into real-time intelligence, enabling early risk detection, targeted awareness, prioritized resource allocation, and faster humanitarian action.
 
 > From fragmented data → verified insights → fair allocation → real-world action.
 ---
