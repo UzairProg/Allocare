@@ -228,6 +228,12 @@ class SmartAllocationService {
           'assignmentStatus': 'pending',
           'status': 'pending_acceptance',
           'assignmentRequestedAt': FieldValue.serverTimestamp(),
+          'missionHistory': [
+            {
+              'status': 'assigned',
+              'timestamp': DateTime.now().toIso8601String(),
+            }
+          ],
         };
 
         if (newUrgency != null) {
@@ -236,6 +242,11 @@ class SmartAllocationService {
 
         transaction.update(reportRef, reportUpdate);
         transaction.update(needRef, reportUpdate);
+        
+        final missionRef = _firestore.collection('missions').doc(reportId);
+        final fullMissionData = Map<String, dynamic>.from(reportData);
+        fullMissionData.addAll(reportUpdate);
+        transaction.set(missionRef, fullMissionData, SetOptions(merge: true));
 
         print('Volunteer selected');
         print('Need matched');
@@ -248,7 +259,16 @@ class SmartAllocationService {
         print('Need ($reportId) AssignmentStatus After: pending');
       });
 
-      // 3. UI Feedback
+      // 3. Log event
+      await _logMissionUpdate(
+        missionId: reportId,
+        ngoId: needNgoId,
+        volunteerId: volunteerId,
+        eventType: 'mission_assigned',
+        message: 'Mission assigned to volunteer: $volunteerName.',
+      );
+
+      // 4. UI Feedback
       return AllocationResult(
         success: true,
         volunteerName: volunteerName,
@@ -259,6 +279,89 @@ class SmartAllocationService {
         success: false,
         message: 'Error during allocation: $e',
       );
+    }
+  }
+
+  Future<void> _logMissionUpdate({
+    required String missionId,
+    required String? ngoId,
+    required String volunteerId,
+    required String eventType,
+    required String message,
+  }) async {
+    try {
+      final now = FieldValue.serverTimestamp();
+      final data = {
+        'id': missionId, // Use missionId as document identifier or generate one? Let's generate a unique doc ID for the update!
+        'missionId': missionId,
+        'ngoId': ngoId ?? '',
+        'volunteerId': volunteerId,
+        'eventType': eventType,
+        'message': message,
+        'createdAt': now,
+      };
+
+      // Generate a unique update ID
+      final updateNeedRef = _firestore
+          .collection('needs')
+          .doc(missionId)
+          .collection('updates')
+          .doc();
+      data['id'] = updateNeedRef.id;
+
+      await updateNeedRef.set(data);
+
+      await _firestore
+          .collection('reports')
+          .doc(missionId)
+          .collection('updates')
+          .doc(updateNeedRef.id)
+          .set(data);
+    } catch (e) {
+      print('Error logging mission update: $e');
+    }
+  }
+
+  Future<void> startNavigationEvent({
+    required String needId,
+    required String volunteerId,
+  }) async {
+    try {
+      final needDoc = await _firestore.collection('needs').doc(needId).get();
+      final needData = needDoc.data() ?? {};
+      final ngoId = needData['ngoId'] ?? needData['ngo_id'] ?? '';
+      
+      final batch = _firestore.batch();
+      final now = FieldValue.serverTimestamp();
+      
+      final updateData = {
+        'enRouteAt': now,
+        'en_route_at': now,
+        'navigationStartedAt': now,
+        'navigation_started_at': now,
+        'updatedAt': now,
+        'missionHistory': FieldValue.arrayUnion([
+          {
+            'status': 'en_route',
+            'timestamp': DateTime.now().toIso8601String(),
+          }
+        ]),
+      };
+
+      batch.set(_firestore.collection('needs').doc(needId), updateData, SetOptions(merge: true));
+      batch.set(_firestore.collection('reports').doc(needId), updateData, SetOptions(merge: true));
+      batch.set(_firestore.collection('missions').doc(needId), updateData, SetOptions(merge: true));
+      await batch.commit();
+
+      await _logMissionUpdate(
+        missionId: needId,
+        ngoId: ngoId,
+        volunteerId: volunteerId,
+        eventType: 'navigation_started',
+        message: 'Volunteer started turn-by-turn navigation to site.',
+      );
+    } catch (e) {
+      print('Error starting navigation event: $e');
     }
   }
 
@@ -277,12 +380,13 @@ class SmartAllocationService {
       
       final needRef = _firestore.collection('needs').doc(needId);
       final reportRef = _firestore.collection('reports').doc(needId);
+      final missionRef = _firestore.collection('missions').doc(needId);
       final volunteerRef = _firestore.collection('volunteers').doc(volunteerId);
       
       final now = FieldValue.serverTimestamp();
       
       final needUpdate = {
-        'status': 'assigned',
+        'status': 'accepted',
         'assignmentStatus': 'accepted',
         'assignedVolunteerId': volunteerId,
         'assignedVolunteerName': volunteerName,
@@ -290,10 +394,20 @@ class SmartAllocationService {
         'assigned_volunteer_name': volunteerName,
         'assignedAt': now,
         'assigned_at': now,
+        'acceptedAt': now,
+        'accepted_at': now,
+        'updatedAt': now,
+        'missionHistory': FieldValue.arrayUnion([
+          {
+            'status': 'accepted',
+            'timestamp': DateTime.now().toIso8601String(),
+          }
+        ]),
       };
       
-      batch.update(needRef, needUpdate);
-      batch.update(reportRef, needUpdate);
+      batch.set(needRef, needUpdate, SetOptions(merge: true));
+      batch.set(reportRef, needUpdate, SetOptions(merge: true));
+      batch.set(missionRef, needUpdate, SetOptions(merge: true));
       
       batch.update(volunteerRef, {
         'status': 'on_mission',
@@ -308,13 +422,118 @@ class SmartAllocationService {
       print('Volunteer ($volunteerId) Status Before: ${volunteerData['status']}');
       print('Volunteer ($volunteerId) Status After: on_mission');
       print('Need ($needId) Status Before: ${needData['status']}');
-      print('Need ($needId) Status After: assigned');
+      print('Need ($needId) Status After: accepted');
       print('Need ($needId) AssignmentStatus Before: ${needData['assignmentStatus']}');
       print('Need ($needId) AssignmentStatus After: accepted');
+
+      // Log event
+      final ngoId = needData['ngoId'] ?? needData['ngo_id'] ?? '';
+      await _logMissionUpdate(
+        missionId: needId,
+        ngoId: ngoId,
+        volunteerId: volunteerId,
+        eventType: 'mission_accepted',
+        message: 'Volunteer accepted the mission and is en route.',
+      );
 
       return true;
     } catch (e) {
       print('Error accepting mission: $e');
+      return false;
+    }
+  }
+
+  Future<bool> markArrivedOnSite({
+    required String needId,
+    required String volunteerId,
+  }) async {
+    try {
+      final needDoc = await _firestore.collection('needs').doc(needId).get();
+      final needData = needDoc.data() ?? {};
+      final ngoId = needData['ngoId'] ?? needData['ngo_id'] ?? '';
+
+      final batch = _firestore.batch();
+      final needRef = _firestore.collection('needs').doc(needId);
+      final reportRef = _firestore.collection('reports').doc(needId);
+      final missionRef = _firestore.collection('missions').doc(needId);
+      
+      final now = FieldValue.serverTimestamp();
+      final updateData = {
+        'status': 'on_site',
+        'arrivedAt': now,
+        'arrived_at': now,
+        'updatedAt': now,
+        'missionHistory': FieldValue.arrayUnion([
+          {
+            'status': 'arrived',
+            'timestamp': DateTime.now().toIso8601String(),
+          }
+        ]),
+      };
+      
+      batch.set(needRef, updateData, SetOptions(merge: true));
+      batch.set(reportRef, updateData, SetOptions(merge: true));
+      batch.set(missionRef, updateData, SetOptions(merge: true));
+      
+      await batch.commit();
+      print('Need status set to on_site');
+
+      // Log event
+      await _logMissionUpdate(
+        missionId: needId,
+        ngoId: ngoId,
+        volunteerId: volunteerId,
+        eventType: 'arrived_on_site',
+        message: 'Volunteer arrived on site.',
+      );
+
+      return true;
+    } catch (e) {
+      print('Error setting on_site status: $e');
+      return false;
+    }
+  }
+
+  Future<bool> beginFieldOperations({
+    required String needId,
+    required String volunteerId,
+  }) async {
+    try {
+      final needDoc = await _firestore.collection('needs').doc(needId).get();
+      final needData = needDoc.data() ?? {};
+      final ngoId = needData['ngoId'] ?? needData['ngo_id'] ?? '';
+
+      final batch = _firestore.batch();
+      final needRef = _firestore.collection('needs').doc(needId);
+      final reportRef = _firestore.collection('reports').doc(needId);
+      
+      final now = FieldValue.serverTimestamp();
+      final updateData = {
+        'status': 'field_active',
+        'fieldOpsStartedAt': now,
+        'field_ops_started_at': now,
+        'operationsStartedAt': now,
+        'operations_started_at': now,
+      };
+      
+      batch.update(needRef, updateData);
+      batch.update(reportRef, updateData);
+      
+      await batch.commit();
+      print('Need status set to field_active');
+
+      // Log event
+      await _logMissionUpdate(
+        missionId: needId,
+        ngoId: ngoId,
+        volunteerId: volunteerId,
+        eventType: 'field_operations_started',
+        message: 'Field operations are now active.',
+      );
+
+      return true;
+    } catch (e) {
+      print('Error setting field_active status: $e');
       return false;
     }
   }
@@ -344,8 +563,10 @@ class SmartAllocationService {
       final batch = _firestore.batch();
       final needRef = _firestore.collection('needs').doc(needId);
       final reportRef = _firestore.collection('reports').doc(needId);
+      final missionRef = _firestore.collection('missions').doc(needId);
       final volunteerRef = _firestore.collection('volunteers').doc(volunteerId);
       
+      final now = FieldValue.serverTimestamp();
       final needUpdate = {
         'status': 'open',
         'assignmentStatus': 'declined',
@@ -354,10 +575,18 @@ class SmartAllocationService {
         'matched_volunteer_id': FieldValue.delete(),
         'matched_volunteer_name': FieldValue.delete(),
         'declinedVolunteers': declinedVolunteers,
+        'updatedAt': now,
+        'missionHistory': FieldValue.arrayUnion([
+          {
+            'status': 'declined',
+            'timestamp': DateTime.now().toIso8601String(),
+          }
+        ]),
       };
       
-      batch.update(needRef, needUpdate);
-      batch.update(reportRef, needUpdate);
+      batch.set(needRef, needUpdate, SetOptions(merge: true));
+      batch.set(reportRef, needUpdate, SetOptions(merge: true));
+      batch.set(missionRef, needUpdate, SetOptions(merge: true));
       
       batch.update(volunteerRef, {
         'status': 'available',
@@ -375,6 +604,16 @@ class SmartAllocationService {
       print('Need ($needId) Status After: open');
       print('Need ($needId) AssignmentStatus Before: ${data['assignmentStatus']}');
       print('Need ($needId) AssignmentStatus After: declined');
+
+      // Log event
+      final ngoId = data['ngoId'] ?? data['ngo_id'] ?? '';
+      await _logMissionUpdate(
+        missionId: needId,
+        ngoId: ngoId,
+        volunteerId: volunteerId,
+        eventType: 'mission_declined',
+        message: 'Volunteer declined the mission match.',
+      );
       
       // 3. Rerun matching automatically (next-best match)
       if (category.isNotEmpty) {
@@ -402,6 +641,7 @@ class SmartAllocationService {
       
       final needRef = _firestore.collection('needs').doc(needId);
       final reportRef = _firestore.collection('reports').doc(needId);
+      final missionRef = _firestore.collection('missions').doc(needId);
       final volunteerRef = _firestore.collection('volunteers').doc(volunteerId);
       
       final now = FieldValue.serverTimestamp();
@@ -410,15 +650,26 @@ class SmartAllocationService {
         'status': 'completed',
         'completedAt': now,
         'completed_at': now,
+        'resolvedAt': now,
+        'resolved_at': now,
+        'updatedAt': now,
+        'missionHistory': FieldValue.arrayUnion([
+          {
+            'status': 'resolved',
+            'timestamp': DateTime.now().toIso8601String(),
+          }
+        ]),
       };
       
-      batch.update(needRef, needUpdate);
-      batch.update(reportRef, needUpdate);
+      batch.set(needRef, needUpdate, SetOptions(merge: true));
+      batch.set(reportRef, needUpdate, SetOptions(merge: true));
+      batch.set(missionRef, needUpdate, SetOptions(merge: true));
       
       batch.update(volunteerRef, {
         'status': 'available',
-        'currentMissionId': FieldValue.delete(),
-        'current_report_id': FieldValue.delete(),
+        'currentMissionId': null,
+        'current_report_id': null,
+        'isActiveOnField': false, // Turn active duty status off when completed
         'missionsCompleted': FieldValue.increment(1),
         'totalCompletedMissions': FieldValue.increment(1),
       });
@@ -431,6 +682,16 @@ class SmartAllocationService {
       print('Volunteer ($volunteerId) Status After: available');
       print('Need ($needId) Status Before: ${needData['status']}');
       print('Need ($needId) Status After: completed');
+
+      // Log event
+      final ngoId = needData['ngoId'] ?? needData['ngo_id'] ?? '';
+      await _logMissionUpdate(
+        missionId: needId,
+        ngoId: ngoId,
+        volunteerId: volunteerId,
+        eventType: 'mission_completed',
+        message: 'Mission completed successfully.',
+      );
 
       return true;
     } catch (e) {

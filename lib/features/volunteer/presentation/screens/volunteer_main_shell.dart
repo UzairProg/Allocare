@@ -88,12 +88,12 @@ class _VolunteerMainShellState extends ConsumerState<VolunteerMainShell> {
               ),
               // Spacer for the center FAB
               const SizedBox(width: 48),
-              // Reports Tab (maps to Tasks / Reports view)
+              // Tasks Tab (maps to Tasks / Reports view)
               _buildNavItem(
                 index: 1,
-                icon: Icons.assignment_outlined,
-                activeIcon: Icons.assignment_turned_in_rounded,
-                label: 'Reports',
+                icon: Icons.task_outlined,
+                activeIcon: Icons.task_alt_rounded,
+                label: 'Mission Workspace',
                 primaryColor: const Color(0xFF0284C7),
                 currentIndex: currentIndex,
               ),

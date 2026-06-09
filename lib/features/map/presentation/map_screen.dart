@@ -15,6 +15,12 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/firestore/firestore_paths.dart';
 import '../../reports/presentation/report_detail_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../volunteer/presentation/screens/volunteer_mission_detail_screen.dart';
+import '../../volunteer/presentation/controllers/volunteer_controller.dart';
+import '../../../services/volunteer_service.dart';
+import '../../../models/volunteer_model.dart';
 
 Color _colorForUrgency(double score) {
   if (score >= 4.5) return const Color(0xFFD32F2F);
@@ -23,9 +29,9 @@ Color _colorForUrgency(double score) {
   return const Color(0xFF388E3C);
 }
 
-enum MapLayerCategory { medical, food, airborne, waterborne, mentalHealth }
+enum MapLayerCategory { myMission, medical, food, airborne, waterborne, mentalHealth }
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends ConsumerWidget {
   const MapScreen({
     super.key,
     this.initialLayer = MapLayerCategory.medical,
@@ -33,6 +39,7 @@ class MapScreen extends StatelessWidget {
     this.initialZoom = 13.0,
     this.lockInitialFocus = false,
     this.initialReportId,
+    this.isVolunteer = false,
   });
 
   final MapLayerCategory initialLayer;
@@ -40,20 +47,22 @@ class MapScreen extends StatelessWidget {
   final double initialZoom;
   final bool lockInitialFocus;
   final String? initialReportId;
+  final bool isVolunteer;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MapPage(
       initialLayer: initialLayer,
       initialFocus: initialFocus,
       initialZoom: initialZoom,
       lockInitialFocus: lockInitialFocus,
       initialReportId: initialReportId,
+      isVolunteer: isVolunteer,
     );
   }
 }
 
-class MapPage extends StatefulWidget {
+class MapPage extends ConsumerStatefulWidget {
   const MapPage({
     super.key,
     this.initialLayer = MapLayerCategory.medical,
@@ -61,6 +70,7 @@ class MapPage extends StatefulWidget {
     this.initialZoom = 13.0,
     this.lockInitialFocus = false,
     this.initialReportId,
+    this.isVolunteer = false,
   });
 
   final MapLayerCategory initialLayer;
@@ -68,12 +78,13 @@ class MapPage extends StatefulWidget {
   final double initialZoom;
   final bool lockInitialFocus;
   final String? initialReportId;
+  final bool isVolunteer;
 
   @override
-  State<MapPage> createState() => _MapPageState();
+  ConsumerState<MapPage> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> {
+class _MapPageState extends ConsumerState<MapPage> {
   static const LatLng _sambhajinagar = LatLng(19.8762, 75.3433);
   static const CameraPosition _initialCameraPosition = CameraPosition(
     target: _sambhajinagar,
@@ -146,6 +157,8 @@ class _MapPageState extends State<MapPage> {
 
   BitmapDescriptor _glowMarkerIcon = BitmapDescriptor.defaultMarker;
   BitmapDescriptor _responderMarkerIcon = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _myMissionMarkerIcon = BitmapDescriptor.defaultMarker;
+  String? _autoCenteredMissionId;
   _LayerCategory _selectedCategory = _LayerCategory.medical;
   final Set<String> _announcedAssignmentKeys = <String>{};
   _MissionDispatchAlert? _missionDispatchAlert;
@@ -166,7 +179,7 @@ class _MapPageState extends State<MapPage> {
   @override
   void initState() {
     super.initState();
-    _selectedCategory = _fromMapLayer(widget.initialLayer);
+    _selectedCategory = widget.isVolunteer ? _LayerCategory.myMission : _fromMapLayer(widget.initialLayer);
     unawaited(_resolveLocationPermission());
     unawaited(_loadMarkerIcons());
     _reportsSubscription = _reportsStream.listen(
@@ -478,15 +491,17 @@ class _MapPageState extends State<MapPage> {
   Future<void> _loadMarkerIcons() async {
     try {
       final icons = await Future.wait([
-        _buildCreativePinIcon(assigned: false),
-        _buildCreativePinIcon(assigned: true),
+        _buildCreativePinIcon(assigned: false, isMyMission: false),
+        _buildCreativePinIcon(assigned: true, isMyMission: false),
+        _buildCreativePinIcon(assigned: true, isMyMission: true),
       ]);
       if (!mounted) {
         return;
       }
       setState(() {
-        _glowMarkerIcon = icons.first;
-        _responderMarkerIcon = icons.last;
+        _glowMarkerIcon = icons[0];
+        _responderMarkerIcon = icons[1];
+        _myMissionMarkerIcon = icons[2];
       });
       if (_latestReportsSnapshot != null) {
         _onReportsSnapshot(_latestReportsSnapshot!);
@@ -498,6 +513,7 @@ class _MapPageState extends State<MapPage> {
 
   Future<BitmapDescriptor> _buildCreativePinIcon({
     required bool assigned,
+    bool isMyMission = false,
   }) async {
     const baseMarkerSize = 126.0;
     final markerSize = kIsWeb ? 78.0 : baseMarkerSize;
@@ -509,11 +525,17 @@ class _MapPageState extends State<MapPage> {
     final center = Offset(markerSize / 2, markerSize / 2);
 
     final glowPaint = Paint()
-      ..color = assigned ? const Color(0x6634D399) : const Color(0x66FF1744);
+      ..color = isMyMission
+          ? const Color(0xFF6366F1).withOpacity(0.4)
+          : (assigned ? const Color(0x6634D399) : const Color(0x66FF1744));
     final pulsePaint = Paint()
-      ..color = assigned ? const Color(0x88388E3C) : const Color(0x88FF5252);
+      ..color = isMyMission
+          ? const Color(0xFF4F46E5).withOpacity(0.5)
+          : (assigned ? const Color(0x88388E3C) : const Color(0x88FF5252));
     final corePaint = Paint()
-      ..color = assigned ? const Color(0xFF1A73E8) : const Color(0xFFE53935);
+      ..color = isMyMission
+          ? const Color(0xFF4F46E5)
+          : (assigned ? const Color(0xFF1A73E8) : const Color(0xFFE53935));
     final innerPaint = Paint()..color = Colors.white;
 
     canvas.drawCircle(center, s(52), glowPaint);
@@ -527,9 +549,9 @@ class _MapPageState extends State<MapPage> {
       ..strokeWidth = s(4);
     canvas.drawCircle(center, s(28), ringPaint);
 
-    if (assigned) {
+    if (assigned || isMyMission) {
       final badgeCenter = Offset(markerSize - s(34), s(34));
-      final badgePaint = Paint()..color = const Color(0xFF16A34A);
+      final badgePaint = Paint()..color = isMyMission ? const Color(0xFFEC4899) : const Color(0xFF16A34A);
       canvas.drawCircle(badgeCenter, s(16), badgePaint);
 
       final borderPaint = Paint()
@@ -540,7 +562,7 @@ class _MapPageState extends State<MapPage> {
 
       final textPainter = TextPainter(
         text: TextSpan(
-          text: 'V',
+          text: isMyMission ? '★' : 'V',
           style: TextStyle(
             color: Colors.white,
             fontSize: s(16),
@@ -611,6 +633,72 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+  DocumentSnapshot<Map<String, dynamic>>? _findActiveMissionDoc(
+    VolunteerModel? volunteer,
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    if (volunteer == null) return null;
+    final missionId = volunteer.currentMissionId;
+    if (missionId == null || missionId.isEmpty) return null;
+    for (final doc in snapshot.docs) {
+      if (doc.id == missionId) {
+        return doc;
+      }
+    }
+    // Fallback search by status and matchedVolunteerId
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      if (data['matchedVolunteerId'] == volunteer.uid &&
+          (data['status'] == 'pending_acceptance' || data['status'] == 'assigned')) {
+        return doc;
+      }
+      if (data['assigned_volunteer_id'] == volunteer.uid &&
+          (data['status'] == 'pending_acceptance' || data['status'] == 'assigned')) {
+        return doc;
+      }
+    }
+    return null;
+  }
+
+  Future<LatLng?> _getCurrentLatLng() async {
+    try {
+      if (_hasLocationPermission) {
+        final pos = await Geolocator.getCurrentPosition();
+        return LatLng(pos.latitude, pos.longitude);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void _centerMapOnMission(LatLng volunteerLatLng, LatLng missionLatLng) {
+    if (_mapController == null) return;
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        math.min(volunteerLatLng.latitude, missionLatLng.latitude),
+        math.min(volunteerLatLng.longitude, missionLatLng.longitude),
+      ),
+      northeast: LatLng(
+        math.max(volunteerLatLng.latitude, missionLatLng.latitude),
+        math.max(volunteerLatLng.longitude, missionLatLng.longitude),
+      ),
+    );
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 100),
+    );
+  }
+
+  String _formatDistance(LatLng? p1, LatLng? p2) {
+    if (p1 == null || p2 == null) return 'Calculating distance...';
+    final meters = Geolocator.distanceBetween(
+      p1.latitude,
+      p1.longitude,
+      p2.latitude,
+      p2.longitude,
+    );
+    final km = meters / 1000;
+    return '${km.toStringAsFixed(1)} km away';
+  }
+
   Future<String> _loadCustomMapStyleJson() {
     return rootBundle.loadString('lib/assets/maps/silver_dark_style.json');
   }
@@ -644,6 +732,8 @@ class _MapPageState extends State<MapPage> {
 
   _LayerCategory _fromMapLayer(MapLayerCategory layer) {
     switch (layer) {
+      case MapLayerCategory.myMission:
+        return _LayerCategory.myMission;
       case MapLayerCategory.medical:
         return _LayerCategory.medical;
       case MapLayerCategory.food:
@@ -1123,12 +1213,16 @@ class _MapPageState extends State<MapPage> {
         } else {
           _infoWindowController.hideInfoWindow!();
         }
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) =>
-                ReportDetailsPage(reportId: reportId, reportData: reportData),
-          ),
-        );
+        if (widget.isVolunteer) {
+          ref.read(volunteerTabControllerProvider.notifier).state = 1;
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  ReportDetailsPage(reportId: reportId, reportData: reportData),
+            ),
+          );
+        }
       },
     );
 
@@ -1240,6 +1334,84 @@ class _MapPageState extends State<MapPage> {
     List<LatLng> focusPoints,
   })
   _buildMapLayers(QuerySnapshot<Map<String, dynamic>> snapshot) {
+    // ── MY MISSION fast-path ──────────────────────────────────────────────
+    if (_selectedCategory == _LayerCategory.myMission) {
+      final volunteer = ref.read(currentVolunteerProvider).value;
+      final missionDoc = _findActiveMissionDoc(volunteer, snapshot);
+
+      final layerMarkers = <Marker>{};
+      final layerCircles = <Circle>{};
+      final focusPoints = <LatLng>[];
+
+      if (missionDoc != null) {
+        final data = missionDoc.data() ?? <String, dynamic>{};
+        final missionPos = _extractLatLng(data);
+
+        if (missionPos != null) {
+          focusPoints.add(missionPos);
+
+          // Mission halo ring
+          layerCircles.add(
+            Circle(
+              circleId: const CircleId('my_mission_halo'),
+              center: missionPos,
+              radius: 120,
+              fillColor: const Color(0x206366F1),
+              strokeColor: const Color(0xFF6366F1),
+              strokeWidth: 2,
+              zIndex: 2,
+            ),
+          );
+
+          // Mission marker (Indigo ★)
+          layerMarkers.add(
+            Marker(
+              markerId: const MarkerId('my_mission_target'),
+              position: missionPos,
+              icon: _myMissionMarkerIcon,
+              zIndex: 5,
+              onTap: () {
+                _showReportBriefing(
+                  reportId: missionDoc.id,
+                  reportData: data,
+                  position: missionPos,
+                );
+              },
+            ),
+          );
+
+          // Auto-center map on first encounter of this mission
+          if (_autoCenteredMissionId != missionDoc.id && _mapController != null) {
+            _autoCenteredMissionId = missionDoc.id;
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              final myLatLng = await _getCurrentLatLng();
+              if (myLatLng != null) {
+                _centerMapOnMission(myLatLng, missionPos);
+              } else {
+                _mapController?.animateCamera(
+                  CameraUpdate.newCameraPosition(
+                    CameraPosition(target: missionPos, zoom: 15),
+                  ),
+                );
+              }
+            });
+          }
+        }
+      }
+
+      _docsInSnapshot = snapshot.docs.length;
+      _docsWithCoordinates = focusPoints.length;
+      _heatPointsCount = 0;
+
+      return (
+        markers: layerMarkers,
+        heatmaps: <Heatmap>{},
+        circles: layerCircles,
+        focusPoints: focusPoints,
+      );
+    }
+
+    // ── Standard layers ───────────────────────────────────────────────────
     final shouldRenderMarkers =
         _selectedCategory == _LayerCategory.medical ||
         _selectedCategory == _LayerCategory.food;
@@ -1418,8 +1590,8 @@ class _MapPageState extends State<MapPage> {
           },
           onCameraMove: (_) => _infoWindowController.onCameraMove!(),
           myLocationEnabled: _hasLocationPermission,
-          myLocationButtonEnabled: _hasLocationPermission,
-          zoomControlsEnabled: true,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: false,
           mapToolbarEnabled: false,
           markers: _markers,
           heatmaps: _heatmaps,
@@ -1519,12 +1691,26 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
           ),
+        // ── Top Bar Elements ──────────
+        if (widget.isVolunteer)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: _buildVolunteerMissionBanner(),
+            ),
+          ),
+        
         Positioned(
-          top: 16,
+          top: widget.isVolunteer ? 74 : 16,
           right: 16,
-          child: _LayerControlButton(
-            selectedCategory: _selectedCategory,
-            onSelected: _onLayerChanged,
+          child: SafeArea(
+            child: _LayerControlButton(
+              selectedCategory: _selectedCategory,
+              onSelected: _onLayerChanged,
+            ),
           ),
         ),
         Positioned(
@@ -1635,13 +1821,196 @@ class _MapPageState extends State<MapPage> {
       ],
     );
   }
+
+  Widget _buildVolunteerMissionBanner() {
+    final volunteer = ref.watch(currentVolunteerProvider).value;
+    final hasMission =
+        volunteer != null &&
+        volunteer.currentMissionId != null &&
+        volunteer.currentMissionId!.isNotEmpty;
+
+    if (!hasMission) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xDD1E293B),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.radar_rounded, color: Color(0xFF38BDF8), size: 18),
+              const SizedBox(width: 10),
+              Text(
+                'Scanning for missions…',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF94A3B8),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) =>
+            Transform.translate(offset: Offset(0, -16 * (1 - value)), child: Opacity(opacity: value, child: child)),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xEE1E1B4B), Color(0xEE312E81)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6366F1).withOpacity(0.25),
+                blurRadius: 16,
+                spreadRadius: -4,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4F46E5).withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.my_location_rounded, color: Color(0xFFA5B4FC), size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '★  MISSION ACTIVE',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFFEC4899),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap ★ marker to view details & navigate',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFFE0E7FF),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  if (_latestReportsSnapshot != null) {
+                    final doc = _findActiveMissionDoc(volunteer, _latestReportsSnapshot!);
+                    if (doc != null) {
+                      final data = doc.data() ?? <String, dynamic>{};
+                      final pos = _extractLatLng(data);
+                      if (pos != null) {
+                        _showReportBriefing(
+                          reportId: doc.id,
+                          reportData: data,
+                          position: pos,
+                        );
+                      }
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'View',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVolunteerCategoryChips() {
+    final categories = _LayerCategory.values;
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          final isSelected = _selectedCategory == cat;
+          return GestureDetector(
+            onTap: () => _onLayerChanged(cat),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected ? cat.indicatorColor : const Color(0xDD1E293B),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? cat.indicatorColor : const Color(0xFF334155),
+                ),
+                boxShadow: isSelected
+                    ? [BoxShadow(color: cat.indicatorColor.withOpacity(0.35), blurRadius: 10, spreadRadius: -2)]
+                    : [],
+              ),
+              child: Text(
+                cat.label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
-enum _LayerCategory { medical, food, airborne, waterborne, mentalHealth }
+enum _LayerCategory { myMission, medical, food, airborne, waterborne, mentalHealth }
 
 extension _LayerCategoryPresentation on _LayerCategory {
   String get label {
     switch (this) {
+      case _LayerCategory.myMission:
+        return 'My Mission';
       case _LayerCategory.medical:
         return 'Medical';
       case _LayerCategory.food:
@@ -1657,6 +2026,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
 
   Color get indicatorColor {
     switch (this) {
+      case _LayerCategory.myMission:
+        return const Color(0xFFEC4899);
       case _LayerCategory.medical:
         return const Color(0xFFD32F2F);
       case _LayerCategory.food:
@@ -1672,6 +2043,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
 
   String get firestoreCategoryKey {
     switch (this) {
+      case _LayerCategory.myMission:
+        return 'my_mission';
       case _LayerCategory.medical:
         return 'medical';
       case _LayerCategory.food:
@@ -1697,167 +2070,52 @@ class _LayerControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            colors: [Color(0xED0D1622), Color(0xED182232)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          border: Border.all(color: Colors.white24),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x4D000000),
-              blurRadius: 22,
-              offset: Offset(0, 10),
-            ),
-          ],
-        ),
-        child: PopupMenuButton<_LayerCategory>(
-          tooltip: 'Select Layer',
-          onSelected: onSelected,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<_LayerCategory>(
+          value: selectedCategory,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+          elevation: 16,
+          style: GoogleFonts.inter(
+            color: const Color(0xFF0F172A),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
-          offset: const Offset(0, 52),
-          itemBuilder: (context) {
-            return _LayerCategory.values
-                .map(
-                  (category) => PopupMenuItem<_LayerCategory>(
-                    value: category,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 11,
-                          height: 11,
-                          decoration: BoxDecoration(
-                            color: category.indicatorColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          category.label,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
+          onChanged: (newValue) {
+            if (newValue != null) onSelected(newValue);
+          },
+          items: _LayerCategory.values.map((category) {
+            return DropdownMenuItem(
+              value: category,
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: category.indicatorColor,
+                      shape: BoxShape.circle,
                     ),
                   ),
-                )
-                .toList();
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: Colors.white12,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: Icon(
-                    Icons.layers_rounded,
-                    size: 16,
-                    color: Colors.white.withValues(alpha: 0.95),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: selectedCategory.indicatorColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  selectedCategory.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: Colors.white70,
-                  size: 18,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Material(
-      color: const Color(0xFF10161F).withValues(alpha: 0.88),
-      borderRadius: BorderRadius.circular(14),
-      child: PopupMenuButton<_LayerCategory>(
-        onSelected: onSelected,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        offset: const Offset(0, 44),
-        itemBuilder: (context) {
-          return _LayerCategory.values
-              .map(
-                (category) => PopupMenuItem<_LayerCategory>(
-                  value: category,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: category.indicatorColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(category.label),
-                    ],
-                  ),
-                ),
-              )
-              .toList();
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.filter_alt_rounded,
-                size: 18,
-                color: Colors.white.withValues(alpha: 0.95),
+                  const SizedBox(width: 8),
+                  Text(category.label),
+                ],
               ),
-              const SizedBox(width: 8),
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: selectedCategory.indicatorColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                selectedCategory.label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
+            );
+          }).toList(),
         ),
       ),
     );
