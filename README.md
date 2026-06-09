@@ -31,9 +31,8 @@ This inspired us to build Allocare—an intelligent humanitarian coordination pl
 <!-- ## 🎥 Exclusive Preview
 
 <p align="center">
-  <img src="assets/allocare.gif" width="850"/>
-</p> -->
-
+  <img src="assets/allocare.gif" alt="Allocare Demo" width="800"/>
+</p>
 ---
 
 ## 🧠 Core System Layers
