@@ -1277,7 +1277,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                           ref
                                   .read(volunteerTabControllerProvider.notifier)
                                   .state =
-                              3;
+                              1;
                         },
                         child: Container(
                           width: double.infinity,

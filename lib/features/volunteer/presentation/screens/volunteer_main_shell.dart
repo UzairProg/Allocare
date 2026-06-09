@@ -57,57 +57,55 @@ class _VolunteerMainShellState extends ConsumerState<VolunteerMainShell> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
+        height: 65,
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
         color: Colors.white,
         elevation: 16,
         shadowColor: Colors.black.withOpacity(0.3),
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: <Widget>[
-              // Home Tab
-              _buildNavItem(
-                index: 0,
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home_rounded,
-                label: 'Home',
-                primaryColor: const Color(0xFF0284C7),
-                currentIndex: currentIndex,
-              ),
-              // Map Tab
-              _buildNavItem(
-                index: 3,
-                icon: Icons.map_outlined,
-                activeIcon: Icons.map_rounded,
-                label: 'Map',
-                primaryColor: const Color(0xFF0284C7),
-                currentIndex: currentIndex,
-              ),
-              // Spacer for the center FAB
-              const SizedBox(width: 48),
-              // Tasks Tab (maps to Tasks / Reports view)
-              _buildNavItem(
-                index: 1,
-                icon: Icons.task_outlined,
-                activeIcon: Icons.task_alt_rounded,
-                label: 'Mission Workspace',
-                primaryColor: const Color(0xFF0284C7),
-                currentIndex: currentIndex,
-              ),
-              // Profile Tab
-              _buildNavItem(
-                index: 4,
-                icon: Icons.person_outline_rounded,
-                activeIcon: Icons.person_rounded,
-                label: 'Profile',
-                primaryColor: const Color(0xFF0284C7),
-                currentIndex: currentIndex,
-              ),
-            ],
-          ),
+        padding: EdgeInsets.zero,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: <Widget>[
+            // Home Tab
+            _buildNavItem(
+              index: 0,
+              icon: Icons.home_outlined,
+              activeIcon: Icons.home_rounded,
+              label: 'Home',
+              primaryColor: const Color(0xFF0284C7),
+              currentIndex: currentIndex,
+            ),
+            // Map Tab
+            _buildNavItem(
+              index: 3,
+              icon: Icons.map_outlined,
+              activeIcon: Icons.map_rounded,
+              label: 'Map',
+              primaryColor: const Color(0xFF0284C7),
+              currentIndex: currentIndex,
+            ),
+            // Spacer for the center FAB
+            const SizedBox(width: 48),
+            // Tasks Tab (maps to Tasks / Reports view)
+            _buildNavItem(
+              index: 1,
+              icon: Icons.task_outlined,
+              activeIcon: Icons.task_alt_rounded,
+              label: 'Workspace',
+              primaryColor: const Color(0xFF0284C7),
+              currentIndex: currentIndex,
+            ),
+            // Profile Tab
+            _buildNavItem(
+              index: 4,
+              icon: Icons.person_outline_rounded,
+              activeIcon: Icons.person_rounded,
+              label: 'Profile',
+              primaryColor: const Color(0xFF0284C7),
+              currentIndex: currentIndex,
+            ),
+          ],
         ),
       ),
     );
