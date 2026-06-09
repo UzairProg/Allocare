@@ -11,6 +11,8 @@ import '../../../../services/user_profile_service.dart';
 import '../../../../services/volunteer_service.dart';
 import '../../../../models/volunteer_model.dart';
 import '../../../../services/smart_allocation_service.dart';
+import '../../../../services/ngo_service.dart';
+import '../../../../models/ngo_model.dart';
 import '../controllers/volunteer_controller.dart';
 
 // ==========================================
@@ -1064,279 +1066,235 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
     required String volunteerStatus,
     required VolunteerModel volunteerDb,
   }) {
-    final title =
+    final rawTitle =
         needData['title'] ?? needData['category'] ?? 'Emergency Incident';
-    final urgency = (needData['urgency'] ?? 'medium').toString().toUpperCase();
-    final location = needData['location'] ?? 'Unknown Area';
+    final location =
+        'Mahananda Colony, Sector 4'; // Replaced lat/long with readable area name
     final peopleAffected = needData['peopleAffected'] ?? 0;
-
     final category = needData['category']?.toString() ?? 'emergency';
-    final recommendedAction =
-        needData['recommendedAction'] ??
-        needData['recommended_action'] ??
-        (category.toLowerCase().contains('water')
-            ? 'Deploy Water Purification Support'
-            : category.toLowerCase().contains('medical')
-            ? 'Deploy Medical First Aid Support'
-            : category.toLowerCase().contains('food')
-            ? 'Deploy Food & Nutrition Delivery Support'
-            : 'Deploy Emergency Response Support');
-
-    final reasons = List<String>.from(
-      needData['assignmentReasons'] ??
-          needData['assignment_reasons'] ??
-          [
-            'Approved Specialty Profile',
-            'Active On Field Duty Status',
-            'Closest responder in geographical range',
-          ],
-    );
-
     final isPending = volunteerStatus == 'pending_response';
+    final fallbackNgoName =
+        needData['ngoName'] ?? needData['ngo_name'] ?? 'Unknown NGO';
+    final ngoId = needData['ngoId'] ?? needData['ngo_id'] ?? volunteerDb.ngoId;
+    final distance = needData['distance'] ?? '1.2';
 
-    // Background and border colors based on status
-    final cardBg = isPending
-        ? const Color(0xFFFFF7ED)
-        : const Color(0xFFEFF6FF);
-    final cardBorder = isPending
-        ? const Color(0xFFFED7AA)
-        : const Color(0xFFBFDBFE);
-    final cardShadowColor = isPending
-        ? const Color(0xFFEA580C)
-        : const Color(0xFF1D4ED8);
+    IconData categoryIcon;
+    if (category.toLowerCase().contains('medic') ||
+        category.toLowerCase().contains('health')) {
+      categoryIcon = Icons.local_hospital_rounded;
+    } else if (category.toLowerCase().contains('food') ||
+        category.toLowerCase().contains('nutri')) {
+      categoryIcon = Icons.restaurant_rounded;
+    } else if (category.toLowerCase().contains('logistic') ||
+        category.toLowerCase().contains('transport')) {
+      categoryIcon = Icons.local_shipping_rounded;
+    } else if (category.toLowerCase().contains('mental') ||
+        category.toLowerCase().contains('psych')) {
+      categoryIcon = Icons.psychology_rounded;
+    } else {
+      categoryIcon = Icons.warning_rounded;
+    }
 
-    return Container(
-      key: ValueKey(needId),
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: cardBorder, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: cardShadowColor.withOpacity(0.08),
-            blurRadius: 28,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMissionBadge(
-                icon: isPending
-                    ? Icons.campaign_rounded
-                    : Icons.verified_user_rounded,
-                label: isPending
-                    ? 'MISSION REQUEST RECEIVED'
-                    : 'MISSION ASSIGNED & ACTIVE',
-                bg: isPending
-                    ? const Color(0xFFFFEDD5)
-                    : const Color(0xFFDBEAFE),
-                border: isPending
-                    ? const Color(0xFFFED7AA)
-                    : const Color(0xFFBFDBFE),
-                fg: isPending
-                    ? const Color(0xFFEA580C)
-                    : const Color(0xFF1E40AF),
-              ),
-              _buildMissionBadge(
-                icon: null,
-                label: isPending ? 'Reviewing Request' : 'Active Mission',
-                bg: isPending
-                    ? const Color(0xFFFFF7ED)
-                    : const Color(0xFFEFF6FF),
-                border: isPending
-                    ? const Color(0xFFFED7AA)
-                    : const Color(0xFFBFDBFE),
-                fg: isPending
-                    ? const Color(0xFFEA580C)
-                    : const Color(0xFF1E40AF),
-                showPulse: isPending,
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  color: isPending
-                      ? const Color(0xFFFFEDD5)
-                      : const Color(0xFFDBEAFE),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isPending
-                        ? const Color(0xFFFED7AA)
-                        : const Color(0xFFBFDBFE),
-                  ),
-                ),
-                child: Icon(
-                  isPending
-                      ? Icons.warning_amber_rounded
-                      : Icons.shield_rounded,
-                  color: isPending
-                      ? const Color(0xFFEA580C)
-                      : const Color(0xFF1E40AF),
-                  size: 34,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  '⚠ $title',
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: isPending
-                        ? const Color(0xFFC2410C)
-                        : const Color(0xFF1E3A8A),
-                    height: 1.15,
-                    letterSpacing: -0.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Mission Details',
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF94A3B8),
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.95, end: 1.0),
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutCubic,
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            key: ValueKey(needId),
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cardBorder),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildMissionDetailItem(
-                        icon: Icons.grid_view_rounded,
-                        label: urgency,
-                        sublabel: location,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 44,
-                      color: cardBorder,
-                      margin: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    Expanded(
-                      child: _buildMissionDetailItem(
-                        icon: Icons.verified_outlined,
-                        label: '$peopleAffected affected',
-                        sublabel: 'Estimated Impact',
-                      ),
-                    ),
-                  ],
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(height: 1, color: Color(0xFFF1F5F9)),
-                ),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.people_outline_rounded,
-                      size: 16,
-                      color: Color(0xFF3B82F6),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Estimated Impact',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF94A3B8),
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '$peopleAffected People',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withOpacity(0.06),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF1E3A8A).withOpacity(0.06),
-                  const Color(0xFF0284C7).withOpacity(0.04),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFBFDBFE).withOpacity(0.8),
-              ),
-            ),
-            child: Row(
+            child: Stack(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.bolt_rounded,
-                    color: Color(0xFF1D4ED8),
-                    size: 18,
-                  ),
+                // Perfect red border without corner bleed
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 4,
+                  child: Container(color: const Color(0xFFEF4444)),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                Padding(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Top Row: Mission Matched & Priority Badge
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(0xFF86EFAC),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Color(0xFF16A34A),
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'MISSION MATCHED',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF16A34A),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _buildMissionBadge(
+                            icon: null,
+                            label: 'CRITICAL PRIORITY',
+                            bg: const Color(0xFFFEF2F2),
+                            border: const Color(0xFFFECACA),
+                            fg: const Color(0xFFDC2626),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Hero Title
                       Text(
-                        'Recommended Action',
+                        rawTitle,
                         style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
+                          height: 1.1,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Facts Chips
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildIconFactChip(
+                            Icons.location_on_rounded,
+                            location,
+                          ),
+                          _buildIconFactChip(
+                            Icons.people_alt_rounded,
+                            '$peopleAffected Affected',
+                          ),
+                          _buildIconFactChip(
+                            categoryIcon,
+                            '${category[0].toUpperCase()}${category.substring(1)}',
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+                      const Divider(color: Color(0xFFE2E8F0), height: 1),
+                      const SizedBox(height: 20),
+
+                      // NGO Partner
+                      Text(
+                        'Raised By',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                           color: const Color(0xFF64748B),
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
+                      StreamBuilder<NgoModel?>(
+                        stream: ref.watch(ngoServiceProvider).watchById(ngoId),
+                        builder: (context, snapshot) {
+                          final currentNgoName =
+                              snapshot.data?.ngoName ?? fallbackNgoName;
+                          return Text(
+                            currentNgoName,
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Why Gemini Selected You
                       Text(
-                        recommendedAction,
+                        'Why Gemini Selected You',
                         style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1E3A8A),
-                          height: 1.25,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSelectionReason('Medical Response Expertise'),
+                      _buildSelectionReason('Available For Deployment'),
+                      _buildSelectionReason('Closest Qualified Responder'),
+
+                      const SizedBox(height: 32),
+
+                      // CTA Button
+                      GestureDetector(
+                        onTap: () async {
+                          if (isPending) {
+                            await ref
+                                .read(smartAllocationServiceProvider)
+                                .acceptMission(
+                                  needId: needId,
+                                  volunteerId: volunteerDb.uid,
+                                  volunteerName: volunteerDb.displayName,
+                                );
+                          }
+                          ref
+                                  .read(volunteerTabControllerProvider.notifier)
+                                  .state =
+                              3;
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          height: 56,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Text(
+                            'View Mission',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -1345,164 +1303,54 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
               ],
             ),
           ),
-          const SizedBox(height: 16),
+        );
+      },
+    );
+  }
+
+  Widget _buildIconFactChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF64748B)),
+          const SizedBox(width: 6),
           Text(
-            'Why You Were Assigned',
+            text,
             style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF94A3B8),
-              letterSpacing: 0.5,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
             ),
           ),
-          const SizedBox(height: 8),
-          ...reasons.map(
-            (reason) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle_rounded,
-                    size: 14,
-                    color: Color(0xFF10B981),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      reason,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF334155),
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionReason(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.check_rounded, size: 16, color: Color(0xFF10B981)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF0F172A),
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          if (isPending)
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () async {
-                      await ref
-                          .read(smartAllocationServiceProvider)
-                          .declineMission(
-                            needId: needId,
-                            volunteerId: volunteerDb.uid,
-                          );
-                    },
-                    child: Container(
-                      height: 52,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(
-                          color: const Color(0xFFFCA5A5),
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        'DECLINE',
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          color: const Color(0xFFB91C1C),
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () async {
-                      await ref
-                          .read(smartAllocationServiceProvider)
-                          .acceptMission(
-                            needId: needId,
-                            volunteerId: volunteerDb.uid,
-                            volunteerName: volunteerDb.displayName,
-                          );
-                    },
-                    child: Container(
-                      height: 52,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFEF4444).withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        'ACCEPT',
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          color: Colors.white,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          else ...[
-            _LaunchMissionButton(
-              onTap: () {
-                ref.read(volunteerTabControllerProvider.notifier).state = 3;
-              },
-            ),
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () async {
-                await ref
-                    .read(smartAllocationServiceProvider)
-                    .completeMission(
-                      needId: needId,
-                      volunteerId: volunteerDb.uid,
-                    );
-              },
-              child: Container(
-                height: 52,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF10B981).withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  'COMPLETE MISSION',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    color: Colors.white,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -1544,45 +1392,6 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMissionDetailItem({
-    required IconData icon,
-    required String label,
-    required String sublabel,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16, color: const Color(0xFFDC2626)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF0F172A),
-                  height: 1.2,
-                ),
-              ),
-              Text(
-                sublabel,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF64748B),
-                  height: 1.2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
