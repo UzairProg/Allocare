@@ -302,9 +302,9 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
                   delegate: SliverChildListDelegate([
                     // Mission Info Card
                     _buildMissionInfoCard(
+                      context,
                       data,
-                      category,
-                      peopleAffected,
+                      title,
                       ngoId,
                     ),
                     const SizedBox(height: 24),
@@ -379,115 +379,208 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
   }
 
   Widget _buildMissionInfoCard(
+    BuildContext context,
     Map<String, dynamic> data,
-    String category,
-    dynamic peopleAffected,
+    String title,
     String ngoId,
   ) {
+    final description = data['description'] ??
+        'No additional details provided for this mission. Please proceed with standard protocols for this emergency category.';
+    final locationName = data['location_name'] ?? 'Mahananda Colony, Sector 4';
+    final imageUrl = data['imageUrl'] ?? data['image_url'];
+
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
+      padding: const EdgeInsets.all(24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Facts grid
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFAFAFC),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Column(
-              children: [
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.assignment_rounded,
+                  color: Color(0xFF2563EB),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _factItem('📍', 'Mahananda Colony'),
-                    _factItem('👥', '$peopleAffected Affected'),
+                    Text(
+                      'Mission Details',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF2563EB),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                        height: 1.2,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Row(
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: Color(0xFFE2E8F0), height: 1),
+          const SizedBox(height: 16),
+          
+          // Details Grid (Location & NGO)
+          Row(
+            children: [
+              Expanded(
+                child: Row(
                   children: [
-                    _factItem(
-                      '🏥',
-                      '${category[0].toUpperCase()}${category.substring(1)} Response',
-                    ),
-                    StreamBuilder<NgoModel?>(
-                      stream: ref.watch(ngoServiceProvider).watchById(ngoId),
-                      builder: (ctx, snap) =>
-                          _factItem('🤝', snap.data?.ngoName ?? 'NGO Partner'),
+                    const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        locationName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.domain_rounded, size: 16, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: StreamBuilder<NgoModel?>(
+                        stream: ref.watch(ngoServiceProvider).watchById(ngoId),
+                        builder: (ctx, snap) {
+                          return Text(
+                            snap.data?.ngoName ?? 'NGO Partner',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF334155),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          Text(
+            description,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF475569),
+              height: 1.6,
             ),
           ),
-          // Why chosen
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'WHY YOU WERE CHOSEN',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF94A3B8),
-                    letterSpacing: 1,
+          
+          if (imageUrl != null && imageUrl.toString().isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text(
+              'ATTACHED MEDIA',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF94A3B8),
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => Dialog(
+                    backgroundColor: Colors.transparent,
+                    insetPadding: const EdgeInsets.all(16),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        InteractiveViewer(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(imageUrl),
+                          ),
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 30),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                height: 72,
+                width: 72,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  image: DecorationImage(
+                    image: NetworkImage(imageUrl),
+                    fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(height: 10),
-                _reasonRow('Medical Response Expertise'),
-                _reasonRow('Available For Immediate Deployment'),
-                _reasonRow('Closest Qualified Volunteer'),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _factItem(String icon, String text) {
-    return Expanded(
-      child: Row(
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 13)),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF475569),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.black.withValues(alpha: 0.3),
+                  ),
+                  child: const Icon(Icons.zoom_out_map_rounded, color: Colors.white, size: 24),
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _reasonRow(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 16),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
-            ),
-          ),
+          ],
         ],
       ),
     );

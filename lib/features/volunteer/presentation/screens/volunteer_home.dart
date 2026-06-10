@@ -1123,7 +1123,10 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFF0F172A), width: 1.5),
+          border: Border.all(
+            color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF2563EB).withValues(alpha: 0.08),
@@ -1361,7 +1364,8 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                               volunteerName: volunteerDb.displayName,
                             );
                       }
-                      ref.read(volunteerTabControllerProvider.notifier).state = 1;
+                      // Navigate to Volunteer Map Screen (Index 3)
+                      ref.read(volunteerTabControllerProvider.notifier).state = 3;
                     },
                     child: Container(
                       width: double.infinity,
@@ -1385,7 +1389,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'OPEN MISSION WORKSPACE',
+                            'VIEW MISSION',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
