@@ -1068,8 +1068,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
   }) {
     final rawTitle =
         needData['title'] ?? needData['category'] ?? 'Emergency Incident';
-    final location =
-        'Mahananda Colony, Sector 4'; // Replaced lat/long with readable area name
+    final location = needData['location_name'] ?? 'Mahananda Colony, Sector 4';
     final peopleAffected = needData['peopleAffected'] ?? 0;
     final category = needData['category']?.toString() ?? 'emergency';
     final isPending = volunteerStatus == 'pending_response';
@@ -1077,6 +1076,8 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
         needData['ngoName'] ?? needData['ngo_name'] ?? 'Unknown NGO';
     final ngoId = needData['ngoId'] ?? needData['ngo_id'] ?? volunteerDb.ngoId;
     final distance = needData['distance'] ?? '1.2';
+    
+    final catLabel = '${category[0].toUpperCase()}${category.substring(1)}';
 
     IconData categoryIcon;
     if (category.toLowerCase().contains('medic') ||
@@ -1096,237 +1097,340 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
     }
 
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.95, end: 1.0),
-      duration: const Duration(milliseconds: 500),
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
       curve: Curves.easeOutCubic,
-      builder: (context, scale, child) {
-        return Transform.scale(
-          scale: scale,
-          child: Container(
-            key: ValueKey(needId),
-            width: double.infinity,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withOpacity(0.06),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                // Perfect red border without corner bleed
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: 4,
-                  child: Container(color: const Color(0xFFEF4444)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top Row: Mission Matched & Priority Badge
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: const Color(0xFF86EFAC),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.check_circle_rounded,
-                                  color: Color(0xFF16A34A),
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'MISSION MATCHED',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF16A34A),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _buildMissionBadge(
-                            icon: null,
-                            label: 'CRITICAL PRIORITY',
-                            bg: const Color(0xFFFEF2F2),
-                            border: const Color(0xFFFECACA),
-                            fg: const Color(0xFFDC2626),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
+      builder: (context, value, child) {
+        final scale = 0.97 + (0.03 * value);
+        final opacity = value.clamp(0.0, 1.0);
+        final translateY = 16.0 * (1.0 - value);
 
-                      // Hero Title
-                      Text(
-                        rawTitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F172A),
-                          height: 1.1,
-                          letterSpacing: -0.5,
+        return Transform.translate(
+          offset: Offset(0, translateY),
+          child: Transform.scale(
+            scale: scale,
+            child: Opacity(
+              opacity: opacity,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        key: ValueKey(needId),
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFF0F172A), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+              blurRadius: 30,
+              spreadRadius: 2,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Watermark Icon
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Icon(
+                categoryIcon,
+                size: 140,
+                color: const Color(0xFFE2E8F0).withValues(alpha: 0.3),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Row: Badges
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Mission Matched Badge with pulse
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.8, end: 1.0),
+                        duration: const Duration(milliseconds: 800),
+                        curve: Curves.elasticOut,
+                        builder: (context, scale, child) {
+                          return Transform.scale(scale: scale, child: child);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF86EFAC).withValues(alpha: 0.5),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.verified_user_rounded,
+                                color: Color(0xFF16A34A),
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Mission Matched',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF15803D),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 20),
 
-                      // Facts Chips
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _buildIconFactChip(
-                            Icons.location_on_rounded,
-                            location,
+                      // Critical Priority Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFFFECACA).withValues(alpha: 0.5),
                           ),
-                          _buildIconFactChip(
-                            Icons.people_alt_rounded,
-                            '$peopleAffected Affected',
-                          ),
-                          _buildIconFactChip(
-                            categoryIcon,
-                            '${category[0].toUpperCase()}${category.substring(1)}',
-                          ),
-                        ],
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            )
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              color: Color(0xFFDC2626),
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Critical Priority',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFB91C1C),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
 
-                      const SizedBox(height: 24),
-                      const Divider(color: Color(0xFFE2E8F0), height: 1),
-                      const SizedBox(height: 20),
+                  // Hero Title
+                  Text(
+                    rawTitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0F172A),
+                      height: 1.2,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '$catLabel Response Required',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF475569),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
-                      // NGO Partner
+                  // Snapshot Chips
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildMissionFactChip(Icons.location_on_outlined, location),
+                      _buildMissionFactChip(Icons.people_outline_rounded, '$peopleAffected Affected'),
+                      _buildMissionFactChip(categoryIcon, catLabel),
+                      _buildMissionFactChip(Icons.navigation_outlined, '$distance km Away'),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // AI Match Insight Panel
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: Color(0xFF2563EB),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Matched to your $catLabel specialization, active field status, and proximity to the incident.',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1E3A8A),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // NGO Partner
+                  Row(
+                    children: [
+                      const Icon(Icons.domain_rounded, size: 16, color: Color(0xFF64748B)),
+                      const SizedBox(width: 6),
                       Text(
-                        'Raised By',
+                        'Raised by ',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF64748B),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      StreamBuilder<NgoModel?>(
-                        stream: ref.watch(ngoServiceProvider).watchById(ngoId),
-                        builder: (context, snapshot) {
-                          final currentNgoName =
-                              snapshot.data?.ngoName ?? fallbackNgoName;
-                          return Text(
-                            currentNgoName,
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0F172A),
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Why Gemini Selected You
-                      Text(
-                        'Why Gemini Selected You',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSelectionReason('Medical Response Expertise'),
-                      _buildSelectionReason('Available For Deployment'),
-                      _buildSelectionReason('Closest Qualified Responder'),
-
-                      const SizedBox(height: 32),
-
-                      // CTA Button
-                      GestureDetector(
-                        onTap: () async {
-                          if (isPending) {
-                            await ref
-                                .read(smartAllocationServiceProvider)
-                                .acceptMission(
-                                  needId: needId,
-                                  volunteerId: volunteerDb.uid,
-                                  volunteerName: volunteerDb.displayName,
-                                );
-                          }
-                          ref
-                                  .read(volunteerTabControllerProvider.notifier)
-                                  .state =
-                              1;
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          height: 56,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEF4444),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Text(
-                            'View Mission',
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
+                      Expanded(
+                        child: StreamBuilder<NgoModel?>(
+                          stream: ref.watch(ngoServiceProvider).watchById(ngoId),
+                          builder: (context, snapshot) {
+                            final currentNgoName = snapshot.data?.ngoName ?? fallbackNgoName;
+                            return Text(
+                              currentNgoName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF334155),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 28),
+
+                  // CTA Button
+                  GestureDetector(
+                    onTap: () async {
+                      if (isPending) {
+                        await ref
+                            .read(smartAllocationServiceProvider)
+                            .acceptMission(
+                              needId: needId,
+                              volunteerId: volunteerDb.uid,
+                              volunteerName: volunteerDb.displayName,
+                            );
+                      }
+                      ref.read(volunteerTabControllerProvider.notifier).state = 1;
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0F172A), Color(0xFF2563EB)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'OPEN MISSION WORKSPACE',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.arrow_forward_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildIconFactChip(IconData icon, String text) {
+  Widget _buildMissionFactChip(IconData icon, String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: const Color(0xFF64748B)),
+          Icon(icon, size: 14, color: const Color(0xFF475569)),
           const SizedBox(width: 6),
           Text(
             text,
-            style: GoogleFonts.inter(
-              fontSize: 12,
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
+              color: const Color(0xFF1E293B),
             ),
           ),
         ],
