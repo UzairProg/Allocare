@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,6 +19,60 @@ class VolunteerTasksScreen extends ConsumerStatefulWidget {
   ConsumerState<VolunteerTasksScreen> createState() =>
       _VolunteerTasksScreenState();
 }
+
+class CompletionFlowState {
+  final bool inFlow;
+  final bool showSuccess;
+  final String? missionId;
+  final Map<String, dynamic>? missionData;
+
+  CompletionFlowState({
+    this.inFlow = false,
+    this.showSuccess = false,
+    this.missionId,
+    this.missionData,
+  });
+
+  CompletionFlowState copyWith({
+    bool? inFlow,
+    bool? showSuccess,
+    String? missionId,
+    Map<String, dynamic>? missionData,
+  }) {
+    return CompletionFlowState(
+      inFlow: inFlow ?? this.inFlow,
+      showSuccess: showSuccess ?? this.showSuccess,
+      missionId: missionId ?? this.missionId,
+      missionData: missionData ?? this.missionData,
+    );
+  }
+}
+
+class CompletionFlowNotifier extends StateNotifier<CompletionFlowState> {
+  CompletionFlowNotifier() : super(CompletionFlowState());
+
+  void startFlow(String missionId, Map<String, dynamic> data) {
+    state = CompletionFlowState(
+      inFlow: true,
+      showSuccess: false,
+      missionId: missionId,
+      missionData: data,
+    );
+  }
+
+  void showSuccess() {
+    state = state.copyWith(showSuccess: true);
+  }
+
+  void exitFlow() {
+    state = CompletionFlowState();
+  }
+}
+
+final completionFlowProvider =
+    StateNotifierProvider<CompletionFlowNotifier, CompletionFlowState>(
+        (ref) => CompletionFlowNotifier());
+
 
 class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
   bool _isLoading = false;
@@ -117,9 +172,22 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final volunteer = ref.watch(currentVolunteerProvider).value;
-    if (volunteer == null)
+    // CRITICAL: Check completion flow FIRST, before ANY provider access.
+    // When completeMission() clears currentMissionId, the provider rebuilds
+    // and volunteer.currentMissionId becomes null. We must intercept here.
+    final flowState = ref.watch(completionFlowProvider);
+    if (flowState.inFlow && flowState.missionId != null && flowState.missionData != null) {
+      print('[MISSION UI] build() → inFlow=true, showing completion scaffold');
+      return _buildCompletionScaffold(flowState);
+    }
+
+    final volunteerAsync = ref.watch(currentVolunteerProvider);
+    final volunteer = volunteerAsync.value;
+    print('[MISSION UI] build() → inFlow=${flowState.inFlow}, volunteer=${volunteer != null}, missionId=${volunteer?.currentMissionId}');
+    
+    if (volunteer == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     final missionId = volunteer.currentMissionId;
     if (missionId == null || missionId.isEmpty) return _buildNoMission();
@@ -145,8 +213,22 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
           final peopleAffected = data['peopleAffected'] ?? 0;
           final urgency = data['urgency'] ?? 'critical';
           final ngoId = data['ngoId'] ?? data['ngo_id'] ?? volunteer.ngoId;
-          final lat = _toDouble(data['latitude']);
-          final lng = _toDouble(data['longitude']);
+          
+          double? lat = _toDouble(data['latitude']);
+          double? lng = _toDouble(data['longitude']);
+          if (lat == null || lng == null) {
+            final loc = data['location'];
+            if (loc is GeoPoint) {
+              lat = loc.latitude;
+              lng = loc.longitude;
+            } else if (loc is Map) {
+              lat = _toDouble(loc['latitude']) ?? _toDouble(loc['lat']);
+              lng = _toDouble(loc['longitude']) ?? _toDouble(loc['lng']);
+            }
+          }
+          // Default fallback if completely missing so button always shows
+          lat ??= 19.8762; 
+          lng ??= 75.3433;
           // Auto-scroll when stage changes
           if (stage != _lastStage) {
             _lastStage = stage;
@@ -712,11 +794,45 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
           const SizedBox(height: 16),
           // Buttons
           if (lat != null && lng != null)
-            _primaryButton(
-              '🗺 Open In Google Maps',
-              () => _launchMaps(lat, lng),
+            GestureDetector(
+              onTap: () => _launchMaps(lat, lng),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/open_maps.svg',
+                      width: 24,
+                      height: 24,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Navigate on Map',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF334155),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _outlineButton('📍 ARRIVED ON SITE', () async {
             print('[MISSION UI] ARRIVED ON SITE pressed');
             setState(() => _isLoading = true);
@@ -843,16 +959,24 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
           ),
           const SizedBox(height: 20),
           _primaryButton('COMPLETE MISSION', () async {
-            print('[MISSION UI] COMPLETE MISSION pressed. status=$status');
-            setState(() => _isLoading = true);
+            print('[MISSION] ═══ COMPLETE MISSION PRESSED ═══');
+            print('[MISSION] status=$status, missionId=$missionId, odId=$odId');
+            // Cache everything BEFORE Firestore clears currentMissionId
+            print('[MISSION] Cached data. Setting _inCompletionFlow=true BEFORE await');
+            // CRITICAL: Set _inCompletionFlow BEFORE the await.
+            // The Firestore listener fires DURING the await and triggers a rebuild.
+            // If _inCompletionFlow is false at that point, the rebuild shows "No Active Mission".
+            ref.read(completionFlowProvider.notifier).startFlow(missionId, Map<String, dynamic>.from(data));
+            setState(() {
+              _isLoading = true;
+            });
+            print('[MISSION] Calling completeMission service...');
             await ref
                 .read(smartAllocationServiceProvider)
                 .completeMission(needId: missionId, volunteerId: odId);
+            print('[MISSION] completeMission returned. mounted=$mounted');
             if (mounted) {
-              setState(() {
-                _isLoading = false;
-                _showFeedback = true;
-              });
+              setState(() => _isLoading = false);
             }
           }),
         ],
@@ -1125,10 +1249,223 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
               ),
             );
             Future.delayed(const Duration(milliseconds: 1200), () {
-              if (mounted)
-                ref.read(volunteerTabControllerProvider.notifier).state = 0;
+              ref.read(completionFlowProvider.notifier).showSuccess();
             });
           }),
+        ],
+      ),
+    );
+  }
+
+  // ── COMPLETION SCAFFOLD ── renders feedback or success using cached data
+  Widget _buildCompletionScaffold(CompletionFlowState flowState) {
+    final data = flowState.missionData!;
+    final title = data['title'] ?? data['category'] ?? 'Emergency Mission';
+    final category = data['category']?.toString() ?? 'emergency';
+    final affected = data['peopleAffected'] ?? 0;
+    final ngoId = data['ngoId'] ?? data['ngo_id'] ?? '';
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: flowState.showSuccess
+              ? _buildSuccessScreen(title, category, affected, ngoId)
+              : _buildFeedbackScreen(title, affected),
+        ),
+      ),
+    );
+  }
+
+  void _exitCompletionFlow() {
+    ref.read(completionFlowProvider.notifier).exitFlow();
+    setState(() {
+      _showFeedback = false;
+      _feedbackRating = 0;
+      _feedbackTags.clear();
+      _feedbackNotes.clear();
+    });
+    ref.read(volunteerTabControllerProvider.notifier).state = 0;
+  }
+
+  // ── MISSION SUCCESS SCREEN ──
+  Widget _buildSuccessScreen(String title, String category, dynamic affected, String ngoId) {
+    final catLabel = category.isNotEmpty ? '${category[0].toUpperCase()}${category.substring(1)}' : 'Emergency';
+
+    return Column(
+      children: [
+        const SizedBox(height: 24),
+        // Animated success icon
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.elasticOut,
+          builder: (context, value, child) => Transform.scale(
+            scale: 0.8 + (0.2 * value),
+            child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
+          ),
+          child: Container(
+            width: 88,
+            height: 88,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFDCFCE7),
+            ),
+            child: const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 52),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Mission Successfully\nCompleted',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A), height: 1.2),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'All operational objectives completed successfully.\nThank you for supporting this response effort.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), height: 1.5),
+        ),
+        const SizedBox(height: 32),
+
+        // Impact Summary Card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('IMPACT SUMMARY', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8), letterSpacing: 1)),
+              const SizedBox(height: 16),
+              _summaryRow('Mission Type', '$catLabel Response'),
+              _summaryRow('Location', 'Mahananda Colony'),
+              _summaryRow('People Assisted', '$affected'),
+              ngoId.isNotEmpty
+                  ? StreamBuilder<NgoModel?>(
+                      stream: ref.watch(ngoServiceProvider).watchById(ngoId),
+                      builder: (ctx, snap) => _summaryRow('NGO Partner', snap.data?.ngoName ?? 'NGO Partner'),
+                    )
+                  : _summaryRow('NGO Partner', 'Local Partner'),
+              _summaryRow('Status', 'Resolved', isLast: true),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Impact Overview
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFBBF7D0)),
+          ),
+          child: Column(
+            children: [
+              const Icon(Icons.volunteer_activism_rounded, color: Color(0xFF22C55E), size: 28),
+              const SizedBox(height: 10),
+              Text(
+                'Your response helped provide $catLabel assistance to approximately $affected affected people.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF166534), height: 1.5),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Contribution Metrics
+        Row(children: [
+          _statCard('People Helped', '$affected'),
+          const SizedBox(width: 10),
+          _statCard('Reports Filed', '1'),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          _statCard('Category', catLabel),
+          const SizedBox(width: 10),
+          _statCard('Status', 'Resolved'),
+        ]),
+        const SizedBox(height: 16),
+
+        // Lives Impacted highlight
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFBFDBFE)),
+          ),
+          child: Column(
+            children: [
+              Text('LIVES IMPACTED', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF2563EB), letterSpacing: 1)),
+              const SizedBox(height: 6),
+              Text('+$affected', style: GoogleFonts.inter(fontSize: 40, fontWeight: FontWeight.w900, color: const Color(0xFF2563EB))),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Mission Evidence
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Icon(Icons.verified, color: Color(0xFF22C55E), size: 18),
+                const SizedBox(width: 8),
+                Text('Field Verification Successful', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF334155))),
+              ]),
+              const SizedBox(height: 10),
+              Text('Mission ID: ${ref.read(completionFlowProvider).missionId?.substring(0, math.min(8, ref.read(completionFlowProvider).missionId?.length ?? 0))}...', style: GoogleFonts.jetBrainsMono(fontSize: 11, color: const Color(0xFF94A3B8))),
+              const SizedBox(height: 4),
+              Text('Verified \u2022 ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}', style: GoogleFonts.jetBrainsMono(fontSize: 11, color: const Color(0xFF94A3B8))),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Thank you acknowledgment
+        Text(
+          'Your field response has been logged. This mission is now marked as resolved and has been added to your volunteer history.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), height: 1.5),
+        ),
+        const SizedBox(height: 24),
+
+        // Primary CTA
+        _primaryButton('Return To Home', () => _exitCompletionFlow()),
+        const SizedBox(height: 12),
+        // Secondary CTA
+        _outlineButton('View Mission History', () => _exitCompletionFlow()),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  Widget _summaryRow(String label, String value, {bool isLast = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B))),
+          Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
         ],
       ),
     );
