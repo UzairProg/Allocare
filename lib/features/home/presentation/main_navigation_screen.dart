@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../insights/presentation/sentinel_strategic_hub_page.dart';
 import '../../map/presentation/map_screen.dart';
@@ -25,6 +26,8 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
   int _index = 0;
   MapLayerCategory _mapLaunchLayer = MapLayerCategory.medical;
   int _mapLaunchNonce = 0;
+  LatLng? _mapLaunchFocus;
+  String? _mapLaunchReportId;
 
   void setIndex(int index) {
     setState(() {
@@ -32,9 +35,15 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
     });
   }
 
-  void openStrategicMap({required MapLayerCategory layer}) {
+  void openStrategicMap({
+    required MapLayerCategory layer,
+    LatLng? focus,
+    String? reportId,
+  }) {
     setState(() {
       _mapLaunchLayer = layer;
+      _mapLaunchFocus = focus;
+      _mapLaunchReportId = reportId;
       _mapLaunchNonce++;
       _index = 1;
     });
@@ -47,6 +56,8 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
       MapScreen(
         key: ValueKey<String>('map_${_mapLaunchLayer.name}_$_mapLaunchNonce'),
         initialLayer: _mapLaunchLayer,
+        initialFocus: _mapLaunchFocus,
+        initialReportId: _mapLaunchReportId,
         initialZoom: 14.8,
         lockInitialFocus: true,
       ),

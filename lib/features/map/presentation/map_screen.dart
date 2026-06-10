@@ -14,6 +14,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/firestore/firestore_paths.dart';
+import '../../reports/presentation/report_detail_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../volunteer/presentation/screens/volunteer_mission_detail_screen.dart';
+import '../../volunteer/presentation/controllers/volunteer_controller.dart';
+import '../../../services/volunteer_service.dart';
+import '../../../models/volunteer_model.dart';
 
 Color _colorForUrgency(double score) {
   if (score >= 4.5) return const Color(0xFFD32F2F);
@@ -22,52 +29,62 @@ Color _colorForUrgency(double score) {
   return const Color(0xFF388E3C);
 }
 
-enum MapLayerCategory { medical, food, airborne, waterborne, mentalHealth }
+enum MapLayerCategory { myMission, medical, food, airborne, waterborne, mentalHealth }
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends ConsumerWidget {
   const MapScreen({
     super.key,
     this.initialLayer = MapLayerCategory.medical,
     this.initialFocus,
     this.initialZoom = 13.0,
     this.lockInitialFocus = false,
+    this.initialReportId,
+    this.isVolunteer = false,
   });
 
   final MapLayerCategory initialLayer;
   final LatLng? initialFocus;
   final double initialZoom;
   final bool lockInitialFocus;
+  final String? initialReportId;
+  final bool isVolunteer;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MapPage(
       initialLayer: initialLayer,
       initialFocus: initialFocus,
       initialZoom: initialZoom,
       lockInitialFocus: lockInitialFocus,
+      initialReportId: initialReportId,
+      isVolunteer: isVolunteer,
     );
   }
 }
 
-class MapPage extends StatefulWidget {
+class MapPage extends ConsumerStatefulWidget {
   const MapPage({
     super.key,
     this.initialLayer = MapLayerCategory.medical,
     this.initialFocus,
     this.initialZoom = 13.0,
     this.lockInitialFocus = false,
+    this.initialReportId,
+    this.isVolunteer = false,
   });
 
   final MapLayerCategory initialLayer;
   final LatLng? initialFocus;
   final double initialZoom;
   final bool lockInitialFocus;
+  final String? initialReportId;
+  final bool isVolunteer;
 
   @override
-  State<MapPage> createState() => _MapPageState();
+  ConsumerState<MapPage> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> {
+class _MapPageState extends ConsumerState<MapPage> {
   static const LatLng _sambhajinagar = LatLng(19.8762, 75.3433);
   static const CameraPosition _initialCameraPosition = CameraPosition(
     target: _sambhajinagar,
@@ -140,6 +157,8 @@ class _MapPageState extends State<MapPage> {
 
   BitmapDescriptor _glowMarkerIcon = BitmapDescriptor.defaultMarker;
   BitmapDescriptor _responderMarkerIcon = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor _myMissionMarkerIcon = BitmapDescriptor.defaultMarker;
+  String? _autoCenteredMissionId;
   _LayerCategory _selectedCategory = _LayerCategory.medical;
   final Set<String> _announcedAssignmentKeys = <String>{};
   _MissionDispatchAlert? _missionDispatchAlert;
@@ -155,11 +174,12 @@ class _MapPageState extends State<MapPage> {
 
   // Command Center Dispatch Alert state
   CommandCenterDispatchData? _dispatchAlert;
+  bool _hasSelectedInitialReport = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedCategory = _fromMapLayer(widget.initialLayer);
+    _selectedCategory = widget.isVolunteer ? _LayerCategory.myMission : _fromMapLayer(widget.initialLayer);
     unawaited(_resolveLocationPermission());
     unawaited(_loadMarkerIcons());
     _reportsSubscription = _reportsStream.listen(
@@ -194,6 +214,36 @@ class _MapPageState extends State<MapPage> {
 
     _handleMissionDispatchSnapshot(snapshot);
     unawaited(_focusCameraOnData(layers.focusPoints));
+
+    // Auto-select initial report if passed
+    if (widget.initialReportId != null && !_hasSelectedInitialReport) {
+      _hasSelectedInitialReport = true;
+      DocumentSnapshot<Map<String, dynamic>>? matchedDoc;
+      for (final doc in snapshot.docs) {
+        if (doc.id == widget.initialReportId) {
+          matchedDoc = doc;
+          break;
+        }
+      }
+      if (matchedDoc != null) {
+        final data = matchedDoc.data();
+        final position = data != null ? _extractLatLng(data) : null;
+        if (position != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showReportBriefing(
+              reportId: matchedDoc!.id,
+              reportData: data!,
+              position: position,
+            );
+            _mapController?.animateCamera(
+              CameraUpdate.newCameraPosition(
+                CameraPosition(target: position, zoom: 15.0),
+              ),
+            );
+          });
+        }
+      }
+    }
 
     print('Mapped ${layers.markers.length} markers');
     print(
@@ -441,15 +491,17 @@ class _MapPageState extends State<MapPage> {
   Future<void> _loadMarkerIcons() async {
     try {
       final icons = await Future.wait([
-        _buildCreativePinIcon(assigned: false),
-        _buildCreativePinIcon(assigned: true),
+        _buildCreativePinIcon(assigned: false, isMyMission: false),
+        _buildCreativePinIcon(assigned: true, isMyMission: false),
+        _buildCreativePinIcon(assigned: true, isMyMission: true),
       ]);
       if (!mounted) {
         return;
       }
       setState(() {
-        _glowMarkerIcon = icons.first;
-        _responderMarkerIcon = icons.last;
+        _glowMarkerIcon = icons[0];
+        _responderMarkerIcon = icons[1];
+        _myMissionMarkerIcon = icons[2];
       });
       if (_latestReportsSnapshot != null) {
         _onReportsSnapshot(_latestReportsSnapshot!);
@@ -461,6 +513,7 @@ class _MapPageState extends State<MapPage> {
 
   Future<BitmapDescriptor> _buildCreativePinIcon({
     required bool assigned,
+    bool isMyMission = false,
   }) async {
     const baseMarkerSize = 126.0;
     final markerSize = kIsWeb ? 78.0 : baseMarkerSize;
@@ -472,11 +525,17 @@ class _MapPageState extends State<MapPage> {
     final center = Offset(markerSize / 2, markerSize / 2);
 
     final glowPaint = Paint()
-      ..color = assigned ? const Color(0x6634D399) : const Color(0x66FF1744);
+      ..color = isMyMission
+          ? const Color(0xFF6366F1).withOpacity(0.4)
+          : (assigned ? const Color(0x6634D399) : const Color(0x66FF1744));
     final pulsePaint = Paint()
-      ..color = assigned ? const Color(0x88388E3C) : const Color(0x88FF5252);
+      ..color = isMyMission
+          ? const Color(0xFF4F46E5).withOpacity(0.5)
+          : (assigned ? const Color(0x88388E3C) : const Color(0x88FF5252));
     final corePaint = Paint()
-      ..color = assigned ? const Color(0xFF1A73E8) : const Color(0xFFE53935);
+      ..color = isMyMission
+          ? const Color(0xFF4F46E5)
+          : (assigned ? const Color(0xFF1A73E8) : const Color(0xFFE53935));
     final innerPaint = Paint()..color = Colors.white;
 
     canvas.drawCircle(center, s(52), glowPaint);
@@ -490,9 +549,9 @@ class _MapPageState extends State<MapPage> {
       ..strokeWidth = s(4);
     canvas.drawCircle(center, s(28), ringPaint);
 
-    if (assigned) {
+    if (assigned || isMyMission) {
       final badgeCenter = Offset(markerSize - s(34), s(34));
-      final badgePaint = Paint()..color = const Color(0xFF16A34A);
+      final badgePaint = Paint()..color = isMyMission ? const Color(0xFFEC4899) : const Color(0xFF16A34A);
       canvas.drawCircle(badgeCenter, s(16), badgePaint);
 
       final borderPaint = Paint()
@@ -503,7 +562,7 @@ class _MapPageState extends State<MapPage> {
 
       final textPainter = TextPainter(
         text: TextSpan(
-          text: 'V',
+          text: isMyMission ? '★' : 'V',
           style: TextStyle(
             color: Colors.white,
             fontSize: s(16),
@@ -574,6 +633,72 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+  DocumentSnapshot<Map<String, dynamic>>? _findActiveMissionDoc(
+    VolunteerModel? volunteer,
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    if (volunteer == null) return null;
+    final missionId = volunteer.currentMissionId;
+    if (missionId == null || missionId.isEmpty) return null;
+    for (final doc in snapshot.docs) {
+      if (doc.id == missionId) {
+        return doc;
+      }
+    }
+    // Fallback search by status and matchedVolunteerId
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      if (data['matchedVolunteerId'] == volunteer.uid &&
+          (data['status'] == 'pending_acceptance' || data['status'] == 'assigned')) {
+        return doc;
+      }
+      if (data['assigned_volunteer_id'] == volunteer.uid &&
+          (data['status'] == 'pending_acceptance' || data['status'] == 'assigned')) {
+        return doc;
+      }
+    }
+    return null;
+  }
+
+  Future<LatLng?> _getCurrentLatLng() async {
+    try {
+      if (_hasLocationPermission) {
+        final pos = await Geolocator.getCurrentPosition();
+        return LatLng(pos.latitude, pos.longitude);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void _centerMapOnMission(LatLng volunteerLatLng, LatLng missionLatLng) {
+    if (_mapController == null) return;
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        math.min(volunteerLatLng.latitude, missionLatLng.latitude),
+        math.min(volunteerLatLng.longitude, missionLatLng.longitude),
+      ),
+      northeast: LatLng(
+        math.max(volunteerLatLng.latitude, missionLatLng.latitude),
+        math.max(volunteerLatLng.longitude, missionLatLng.longitude),
+      ),
+    );
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 100),
+    );
+  }
+
+  String _formatDistance(LatLng? p1, LatLng? p2) {
+    if (p1 == null || p2 == null) return 'Calculating distance...';
+    final meters = Geolocator.distanceBetween(
+      p1.latitude,
+      p1.longitude,
+      p2.latitude,
+      p2.longitude,
+    );
+    final km = meters / 1000;
+    return '${km.toStringAsFixed(1)} km away';
+  }
+
   Future<String> _loadCustomMapStyleJson() {
     return rootBundle.loadString('lib/assets/maps/silver_dark_style.json');
   }
@@ -607,6 +732,8 @@ class _MapPageState extends State<MapPage> {
 
   _LayerCategory _fromMapLayer(MapLayerCategory layer) {
     switch (layer) {
+      case MapLayerCategory.myMission:
+        return _LayerCategory.myMission;
       case MapLayerCategory.medical:
         return _LayerCategory.medical;
       case MapLayerCategory.food:
@@ -1086,12 +1213,16 @@ class _MapPageState extends State<MapPage> {
         } else {
           _infoWindowController.hideInfoWindow!();
         }
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) =>
-                ReportDetailsPage(reportId: reportId, reportData: reportData),
-          ),
-        );
+        if (widget.isVolunteer) {
+          ref.read(volunteerTabControllerProvider.notifier).state = 1;
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  ReportDetailsPage(reportId: reportId, reportData: reportData),
+            ),
+          );
+        }
       },
     );
 
@@ -1203,6 +1334,84 @@ class _MapPageState extends State<MapPage> {
     List<LatLng> focusPoints,
   })
   _buildMapLayers(QuerySnapshot<Map<String, dynamic>> snapshot) {
+    // ── MY MISSION fast-path ──────────────────────────────────────────────
+    if (_selectedCategory == _LayerCategory.myMission) {
+      final volunteer = ref.read(currentVolunteerProvider).value;
+      final missionDoc = _findActiveMissionDoc(volunteer, snapshot);
+
+      final layerMarkers = <Marker>{};
+      final layerCircles = <Circle>{};
+      final focusPoints = <LatLng>[];
+
+      if (missionDoc != null) {
+        final data = missionDoc.data() ?? <String, dynamic>{};
+        final missionPos = _extractLatLng(data);
+
+        if (missionPos != null) {
+          focusPoints.add(missionPos);
+
+          // Mission halo ring
+          layerCircles.add(
+            Circle(
+              circleId: const CircleId('my_mission_halo'),
+              center: missionPos,
+              radius: 120,
+              fillColor: const Color(0x206366F1),
+              strokeColor: const Color(0xFF6366F1),
+              strokeWidth: 2,
+              zIndex: 2,
+            ),
+          );
+
+          // Mission marker (Indigo ★)
+          layerMarkers.add(
+            Marker(
+              markerId: const MarkerId('my_mission_target'),
+              position: missionPos,
+              icon: _myMissionMarkerIcon,
+              zIndex: 5,
+              onTap: () {
+                _showReportBriefing(
+                  reportId: missionDoc.id,
+                  reportData: data,
+                  position: missionPos,
+                );
+              },
+            ),
+          );
+
+          // Auto-center map on first encounter of this mission
+          if (_autoCenteredMissionId != missionDoc.id && _mapController != null) {
+            _autoCenteredMissionId = missionDoc.id;
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              final myLatLng = await _getCurrentLatLng();
+              if (myLatLng != null) {
+                _centerMapOnMission(myLatLng, missionPos);
+              } else {
+                _mapController?.animateCamera(
+                  CameraUpdate.newCameraPosition(
+                    CameraPosition(target: missionPos, zoom: 15),
+                  ),
+                );
+              }
+            });
+          }
+        }
+      }
+
+      _docsInSnapshot = snapshot.docs.length;
+      _docsWithCoordinates = focusPoints.length;
+      _heatPointsCount = 0;
+
+      return (
+        markers: layerMarkers,
+        heatmaps: <Heatmap>{},
+        circles: layerCircles,
+        focusPoints: focusPoints,
+      );
+    }
+
+    // ── Standard layers ───────────────────────────────────────────────────
     final shouldRenderMarkers =
         _selectedCategory == _LayerCategory.medical ||
         _selectedCategory == _LayerCategory.food;
@@ -1381,8 +1590,8 @@ class _MapPageState extends State<MapPage> {
           },
           onCameraMove: (_) => _infoWindowController.onCameraMove!(),
           myLocationEnabled: _hasLocationPermission,
-          myLocationButtonEnabled: _hasLocationPermission,
-          zoomControlsEnabled: true,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: false,
           mapToolbarEnabled: false,
           markers: _markers,
           heatmaps: _heatmaps,
@@ -1482,12 +1691,26 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
           ),
+        // ── Top Bar Elements ──────────
+        if (widget.isVolunteer)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: _buildVolunteerMissionBanner(),
+            ),
+          ),
+        
         Positioned(
-          top: 16,
+          top: widget.isVolunteer ? 74 : 16,
           right: 16,
-          child: _LayerControlButton(
-            selectedCategory: _selectedCategory,
-            onSelected: _onLayerChanged,
+          child: SafeArea(
+            child: _LayerControlButton(
+              selectedCategory: _selectedCategory,
+              onSelected: _onLayerChanged,
+            ),
           ),
         ),
         Positioned(
@@ -1598,13 +1821,196 @@ class _MapPageState extends State<MapPage> {
       ],
     );
   }
+
+  Widget _buildVolunteerMissionBanner() {
+    final volunteer = ref.watch(currentVolunteerProvider).value;
+    final hasMission =
+        volunteer != null &&
+        volunteer.currentMissionId != null &&
+        volunteer.currentMissionId!.isNotEmpty;
+
+    if (!hasMission) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xDD1E293B),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.radar_rounded, color: Color(0xFF38BDF8), size: 18),
+              const SizedBox(width: 10),
+              Text(
+                'Scanning for missions…',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF94A3B8),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) =>
+            Transform.translate(offset: Offset(0, -16 * (1 - value)), child: Opacity(opacity: value, child: child)),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xEE1E1B4B), Color(0xEE312E81)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6366F1).withOpacity(0.25),
+                blurRadius: 16,
+                spreadRadius: -4,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4F46E5).withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.my_location_rounded, color: Color(0xFFA5B4FC), size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '★  MISSION ACTIVE',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFFEC4899),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap ★ marker to view details & navigate',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFFE0E7FF),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  if (_latestReportsSnapshot != null) {
+                    final doc = _findActiveMissionDoc(volunteer, _latestReportsSnapshot!);
+                    if (doc != null) {
+                      final data = doc.data() ?? <String, dynamic>{};
+                      final pos = _extractLatLng(data);
+                      if (pos != null) {
+                        _showReportBriefing(
+                          reportId: doc.id,
+                          reportData: data,
+                          position: pos,
+                        );
+                      }
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'View',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVolunteerCategoryChips() {
+    final categories = _LayerCategory.values;
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          final isSelected = _selectedCategory == cat;
+          return GestureDetector(
+            onTap: () => _onLayerChanged(cat),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected ? cat.indicatorColor : const Color(0xDD1E293B),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? cat.indicatorColor : const Color(0xFF334155),
+                ),
+                boxShadow: isSelected
+                    ? [BoxShadow(color: cat.indicatorColor.withOpacity(0.35), blurRadius: 10, spreadRadius: -2)]
+                    : [],
+              ),
+              child: Text(
+                cat.label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
-enum _LayerCategory { medical, food, airborne, waterborne, mentalHealth }
+enum _LayerCategory { myMission, medical, food, airborne, waterborne, mentalHealth }
 
 extension _LayerCategoryPresentation on _LayerCategory {
   String get label {
     switch (this) {
+      case _LayerCategory.myMission:
+        return 'My Mission';
       case _LayerCategory.medical:
         return 'Medical';
       case _LayerCategory.food:
@@ -1620,6 +2026,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
 
   Color get indicatorColor {
     switch (this) {
+      case _LayerCategory.myMission:
+        return const Color(0xFFEC4899);
       case _LayerCategory.medical:
         return const Color(0xFFD32F2F);
       case _LayerCategory.food:
@@ -1635,6 +2043,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
 
   String get firestoreCategoryKey {
     switch (this) {
+      case _LayerCategory.myMission:
+        return 'my_mission';
       case _LayerCategory.medical:
         return 'medical';
       case _LayerCategory.food:
@@ -1660,167 +2070,52 @@ class _LayerControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            colors: [Color(0xED0D1622), Color(0xED182232)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          border: Border.all(color: Colors.white24),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x4D000000),
-              blurRadius: 22,
-              offset: Offset(0, 10),
-            ),
-          ],
-        ),
-        child: PopupMenuButton<_LayerCategory>(
-          tooltip: 'Select Layer',
-          onSelected: onSelected,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<_LayerCategory>(
+          value: selectedCategory,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+          elevation: 16,
+          style: GoogleFonts.inter(
+            color: const Color(0xFF0F172A),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
-          offset: const Offset(0, 52),
-          itemBuilder: (context) {
-            return _LayerCategory.values
-                .map(
-                  (category) => PopupMenuItem<_LayerCategory>(
-                    value: category,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 11,
-                          height: 11,
-                          decoration: BoxDecoration(
-                            color: category.indicatorColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          category.label,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
+          onChanged: (newValue) {
+            if (newValue != null) onSelected(newValue);
+          },
+          items: _LayerCategory.values.map((category) {
+            return DropdownMenuItem(
+              value: category,
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: category.indicatorColor,
+                      shape: BoxShape.circle,
                     ),
                   ),
-                )
-                .toList();
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: Colors.white12,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: Icon(
-                    Icons.layers_rounded,
-                    size: 16,
-                    color: Colors.white.withValues(alpha: 0.95),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: selectedCategory.indicatorColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  selectedCategory.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: Colors.white70,
-                  size: 18,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Material(
-      color: const Color(0xFF10161F).withValues(alpha: 0.88),
-      borderRadius: BorderRadius.circular(14),
-      child: PopupMenuButton<_LayerCategory>(
-        onSelected: onSelected,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        offset: const Offset(0, 44),
-        itemBuilder: (context) {
-          return _LayerCategory.values
-              .map(
-                (category) => PopupMenuItem<_LayerCategory>(
-                  value: category,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: category.indicatorColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(category.label),
-                    ],
-                  ),
-                ),
-              )
-              .toList();
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.filter_alt_rounded,
-                size: 18,
-                color: Colors.white.withValues(alpha: 0.95),
+                  const SizedBox(width: 8),
+                  Text(category.label),
+                ],
               ),
-              const SizedBox(width: 8),
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: selectedCategory.indicatorColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                selectedCategory.label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
+            );
+          }).toList(),
         ),
       ),
     );
@@ -2443,987 +2738,6 @@ class _MissionDispatchCard extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class ReportDetailsPage extends StatelessWidget {
-  const ReportDetailsPage({
-    super.key,
-    required this.reportId,
-    required this.reportData,
-  });
-
-  final String reportId;
-  final Map<String, dynamic> reportData;
-
-  @override
-  Widget build(BuildContext context) {
-    final category = _categoryKey;
-    final categoryLabel = _categoryLabel(category);
-    final accentColor = _categoryAccentColor(category);
-    final status = _statusLabel;
-    final statusColor = _statusColor;
-    final createdAt =
-        _extractDateTime(reportData['createdAt']) ??
-        _extractDateTime(reportData['updatedAt']) ??
-        DateTime.now();
-    final imageUrl = _resolveImageUrl();
-    final description = _readText([
-      'description',
-      'report',
-      'details',
-    ], fallback: 'No field description was provided.');
-    final coordinates = _coordinatesText;
-    final riskScore = _riskScore;
-    final supplyLine = _supplyLine;
-    final peopleAffected = reportData['peopleAffected'] ?? 0;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        title: const Text(
-          'Allocare Intelligence',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Chip(
-              label: Text(
-                status,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.7,
-                ),
-              ),
-              backgroundColor: statusColor,
-              side: BorderSide.none,
-            ),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          if (imageUrl != null && imageUrl.isNotEmpty) ...[
-            _EvidenceImageCard(
-              imageUrl: imageUrl,
-              heroTag: 'report-image-$reportId',
-              onOpenFullScreen: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => _ReportImageViewerPage(
-                      imageUrl: imageUrl,
-                      heroTag: 'report-image-$reportId',
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-          _SmartAllocationCard(
-            accentColor: accentColor,
-            categoryLabel: categoryLabel,
-            riskScore: riskScore,
-            supplyLine: supplyLine,
-            peopleAffected: peopleAffected is num ? peopleAffected.toInt() : 0,
-            createdAt: createdAt,
-            assignedVolunteerName:
-                reportData['assigned_volunteer_name'] as String?,
-            assignedVolunteerPhone:
-                reportData['assigned_volunteer_contact'] as String?,
-            assignedVolunteerSpeciality:
-                reportData['assigned_volunteer_speciality'] as String?,
-          ),
-          const SizedBox(height: 16),
-          _IntelSectionCard(
-            title: 'Field Report',
-            accentColor: accentColor,
-            child: Text(
-              description,
-              style: const TextStyle(
-                color: Color(0xFF243447),
-                fontSize: 15,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _IntelSectionCard(
-            title: 'Geospatial Data',
-            accentColor: accentColor,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on_rounded,
-                      color: accentColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        coordinates ?? 'Coordinates unavailable',
-                        style: const TextStyle(
-                          color: Color(0xFF243447),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: coordinates == null
-                        ? null
-                        : () => _launchMaps(coordinates),
-                    icon: const Icon(Icons.navigation_rounded),
-                    label: const Text('Navigate in Maps'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: accentColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String get _categoryKey {
-    return (reportData['category'] as String?)?.trim().toLowerCase() ??
-        'general';
-  }
-
-  String _categoryLabel(String category) {
-    switch (category) {
-      case 'medical':
-        return 'Medical';
-      case 'food_nutrition':
-        return 'Food';
-      default:
-        if (category.isEmpty) {
-          return 'General';
-        }
-        return category
-            .replaceAll('_', ' ')
-            .split(' ')
-            .map(
-              (part) => part.isEmpty
-                  ? part
-                  : '${part[0].toUpperCase()}${part.substring(1)}',
-            )
-            .join(' ');
-    }
-  }
-
-  Color _categoryAccentColor(String category) {
-    switch (category) {
-      case 'medical':
-        return const Color(0xFFD32F2F);
-      case 'food_nutrition':
-        return const Color(0xFFF9A825);
-      default:
-        return const Color(0xFF2563EB);
-    }
-  }
-
-  DateTime? _extractDateTime(Object? value) {
-    if (value is Timestamp) {
-      return value.toDate();
-    }
-    if (value is DateTime) {
-      return value;
-    }
-    return null;
-  }
-
-  String? _resolveImageUrl() {
-    final candidates = [
-      reportData['image_url'],
-      reportData['imageUrl'],
-      reportData['secure_url'],
-    ];
-    for (final candidate in candidates) {
-      if (candidate is String && candidate.trim().isNotEmpty) {
-        return candidate.trim();
-      }
-    }
-    return null;
-  }
-
-  String _readText(List<String> keys, {required String fallback}) {
-    for (final key in keys) {
-      final candidate = reportData[key];
-      if (candidate is String && candidate.trim().isNotEmpty) {
-        return candidate.trim();
-      }
-    }
-    return fallback;
-  }
-
-  String get _statusLabel {
-    final raw = (reportData['status'] as String?)?.trim();
-    if (raw == null || raw.isEmpty) {
-      return 'AWAITING DISPATCH';
-    }
-    return raw.toUpperCase();
-  }
-
-  Color get _statusColor {
-    final raw = (reportData['status'] as String?)?.trim().toLowerCase() ?? '';
-    switch (raw) {
-      case 'open':
-        return const Color(0xFFB45309);
-      case 'in progress':
-      case 'assigned':
-        return const Color(0xFF0F766E);
-      case 'resolved':
-        return const Color(0xFF15803D);
-      default:
-        return const Color(0xFF374151);
-    }
-  }
-
-  double get _riskScore {
-    final raw = reportData['urgency_score'];
-    if (raw is num) {
-      return raw.toDouble();
-    }
-    final urgency =
-        (reportData['urgency'] as String?)?.trim().toLowerCase() ?? '';
-    switch (urgency) {
-      case 'critical':
-        return 10.0;
-      case 'high':
-        return 8.5;
-      case 'medium':
-      case 'normal':
-        return 5.0;
-      case 'low':
-        return 2.5;
-      default:
-        return 1.0;
-    }
-  }
-
-  String get _coordinatesText {
-    final latitude = reportData['latitude'];
-    final longitude = reportData['longitude'];
-    if (latitude is num && longitude is num) {
-      return '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}';
-    }
-
-    final location = reportData['location'];
-    if (location is String) {
-      final text = location.trim();
-      if (text.contains('·')) {
-        return text.split('·').last.trim();
-      }
-      if (text.contains(',')) {
-        return text;
-      }
-    }
-
-    final coordinates = reportData['coordinates'];
-    if (coordinates is GeoPoint) {
-      return '${coordinates.latitude.toStringAsFixed(5)}, ${coordinates.longitude.toStringAsFixed(5)}';
-    }
-    if (coordinates is Map<String, dynamic>) {
-      final lat = coordinates['latitude'] ?? coordinates['lat'];
-      final lng = coordinates['longitude'] ?? coordinates['lng'];
-      if (lat is num && lng is num) {
-        return '${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}';
-      }
-    }
-
-    return 'Coordinates unavailable';
-  }
-
-  String get _supplyLine {
-    final category = _categoryKey;
-    final subcategory = _readText([
-      'subcategory',
-      'crisis_type',
-      'title',
-    ], fallback: 'Immediate review required');
-    final peopleAffected = reportData['peopleAffected'];
-    final peopleText = peopleAffected is num
-        ? '${peopleAffected.toInt()} Patients'
-        : '';
-
-    final supplies = <String>[];
-    switch (category) {
-      case 'medical':
-        supplies.add('Antibiotics');
-        supplies.add('First Aid');
-        break;
-      case 'food_nutrition':
-        supplies.add('Food Packs');
-        supplies.add('Nutritional Support');
-        break;
-      default:
-        supplies.add('Field Assessment');
-    }
-
-    return [
-      'Supplies: ${supplies.join(', ')}',
-      if (peopleText.isNotEmpty) peopleText,
-      subcategory,
-    ].join(' • ');
-  }
-
-  Future<void> _launchMaps(String coordinateText) async {
-    final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(coordinateText)}',
-    );
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-}
-
-class _EvidenceImageCard extends StatelessWidget {
-  const _EvidenceImageCard({
-    required this.imageUrl,
-    required this.heroTag,
-    required this.onOpenFullScreen,
-  });
-
-  final String imageUrl;
-  final String heroTag;
-  final VoidCallback onOpenFullScreen;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 24,
-            offset: Offset(0, 12),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Material(
-          color: Colors.black,
-          child: InkWell(
-            onTap: onOpenFullScreen,
-            child: Stack(
-              children: [
-                Hero(
-                  tag: heroTag,
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      filterQuality: FilterQuality.high,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: const Color(0xFF1E2329),
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.broken_image_rounded,
-                            size: 36,
-                            color: Color(0xFF9CA3AF),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 14,
-                  right: 14,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.65),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.2)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.zoom_out_map_rounded,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'TAP TO EXPAND',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SmartAllocationCard extends StatelessWidget {
-  const _SmartAllocationCard({
-    required this.accentColor,
-    required this.categoryLabel,
-    required this.riskScore,
-    required this.supplyLine,
-    required this.peopleAffected,
-    required this.createdAt,
-    this.assignedVolunteerName,
-    this.assignedVolunteerPhone,
-    this.assignedVolunteerSpeciality,
-  });
-
-  final Color accentColor;
-  final String categoryLabel;
-  final double riskScore;
-  final String supplyLine;
-  final int peopleAffected;
-  final DateTime createdAt;
-  final String? assignedVolunteerName;
-  final String? assignedVolunteerPhone;
-  final String? assignedVolunteerSpeciality;
-
-  @override
-  Widget build(BuildContext context) {
-    final timeText = DateFormat('MMM d • hh:mm a').format(createdAt.toLocal());
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F151F), Color(0xFF18202E)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: accentColor.withOpacity(0.4), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withOpacity(0.25),
-            blurRadius: 36,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accentColor.withOpacity(0.3)),
-                ),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  color: accentColor,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'AI Smart Allocation',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Analyzed $timeText',
-                      style: const TextStyle(
-                        color: Colors.white60,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              _buildMetricTile(
-                'CATEGORY',
-                categoryLabel,
-                Icons.category_rounded,
-                accentColor,
-              ),
-              const SizedBox(width: 14),
-              _buildMetricTile(
-                'URGENCY',
-                '${riskScore.toStringAsFixed(1)}/10',
-                Icons.warning_rounded,
-                _colorForUrgency(riskScore),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _buildMetricTile(
-                'AFFECTED',
-                peopleAffected > 0 ? '$peopleAffected People' : 'Unknown',
-                Icons.people_alt_rounded,
-                const Color(0xFF60A5FA),
-              ),
-              const SizedBox(width: 14),
-              _buildMetricTile(
-                'REQUIRED',
-                _truncate(supplyLine),
-                Icons.health_and_safety_rounded,
-                const Color(0xFF34D399),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-            ),
-            child:
-                assignedVolunteerName != null &&
-                    assignedVolunteerName!.isNotEmpty
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF16A34A).withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.verified_user_rounded,
-                                color: Color(0xFF86EFAC),
-                                size: 24,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Assigned Responder',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  assignedVolunteerName!,
-                                  style: const TextStyle(
-                                    color: Color(0xFF86EFAC),
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                if (assignedVolunteerSpeciality != null &&
-                                    assignedVolunteerSpeciality!
-                                        .isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    assignedVolunteerSpeciality!,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (assignedVolunteerPhone != null &&
-                          assignedVolunteerPhone!.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () =>
-                                _makePhoneCall(assignedVolunteerPhone!),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(
-                                0xFF16A34A,
-                              ).withOpacity(0.2),
-                              foregroundColor: const Color(0xFF86EFAC),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: const BorderSide(
-                                  color: Color(0xFF16A34A),
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            icon: const Icon(Icons.call_rounded, size: 18),
-                            label: Text(
-                              'Call ${assignedVolunteerPhone!}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  )
-                : Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: accentColor.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.radar_rounded,
-                            color: accentColor,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Dispatching Local NGOs',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            SizedBox(height: 6),
-                            Text(
-                              'Allocare AI is scanning for the nearest available volunteers with matching resources.',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                                height: 1.4,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-    try {
-      if (await canLaunchUrl(phoneUri)) {
-        await launchUrl(phoneUri);
-      } else {
-        debugPrint('Could not launch $phoneUri');
-      }
-    } catch (e) {
-      debugPrint('Error making phone call: $e');
-    }
-  }
-
-  Widget _buildMetricTile(
-    String label,
-    String value,
-    IconData icon,
-    Color iconColor,
-  ) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 14, color: iconColor.withOpacity(0.9)),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _truncate(String value) {
-    return value.length > 25 ? '${value.substring(0, 22)}...' : value;
-  }
-
-  Color _colorForUrgency(double score) {
-    if (score >= 4.5) return const Color(0xFFD32F2F);
-    if (score >= 3.5) return const Color(0xFFF57C00);
-    if (score >= 2.5) return const Color(0xFFFBC02D);
-    return const Color(0xFF388E3C);
-  }
-}
-
-class _IntelSectionCard extends StatelessWidget {
-  const _IntelSectionCard({
-    required this.title,
-    required this.accentColor,
-    required this.child,
-  });
-
-  final String title;
-  final Color accentColor;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title.toUpperCase(),
-              style: TextStyle(
-                color: accentColor,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.15,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _KeyValuePill extends StatelessWidget {
-  const _KeyValuePill({
-    required this.label,
-    required this.value,
-    required this.accentColor,
-  });
-
-  final String label;
-  final String value;
-  final Color accentColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accentColor.withValues(alpha: 0.14)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF6B7280),
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF111827),
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              height: 1.35,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _IntelligenceRow extends StatelessWidget {
-  const _IntelligenceRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF6B7280),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Color(0xFF111827),
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ReportImageViewerPage extends StatelessWidget {
-  const _ReportImageViewerPage({required this.imageUrl, required this.heroTag});
-
-  final String imageUrl;
-  final String heroTag;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: const Text('Full Evidence View'),
-      ),
-      body: Center(
-        child: Hero(
-          tag: heroTag,
-          child: InteractiveViewer(
-            minScale: 1,
-            maxScale: 4,
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(
-                  Icons.broken_image_outlined,
-                  color: Colors.white70,
-                  size: 48,
-                );
-              },
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -20,11 +20,12 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  static const MethodChannel _pnvChannel = MethodChannel('com.example.allocare_app/pnv');
+  static const MethodChannel _pnvChannel =
+      MethodChannel('com.example.allocare_app/pnv');
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   AppUserRole _selectedRole = AppUserRole.volunteer;
   bool _obscurePassword = true;
   bool _isPnvLoading = false;
@@ -39,7 +40,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handlePNV() async {
     setState(() => _isPnvLoading = true);
     try {
-      final response = await _pnvChannel.invokeMethod<Map<dynamic, dynamic>>('getVerifiedPhone');
+      final response =
+          await _pnvChannel.invokeMethod<Map<dynamic, dynamic>>('getVerifiedPhone');
       final phone = response?['phoneNumber'] as String?;
 
       if (phone != null && phone.isNotEmpty) {
@@ -48,7 +50,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           SnackBar(
             content: Row(
               children: [
-                SvgPicture.asset('lib/assets/icons/firebase_logo.svg', width: 20, height: 20),
+                SvgPicture.asset(
+                  'lib/assets/icons/firebase_logo.svg',
+                  width: 20,
+                  height: 20,
+                ),
                 const SizedBox(width: 10),
                 Text('Verified via Firebase PNV: $phone'),
               ],
@@ -60,7 +66,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } on PlatformException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Firebase PNV detection unavailable: ${e.message}')),
+        SnackBar(
+          content: Text('Firebase PNV detection unavailable: ${e.message}'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isPnvLoading = false);
@@ -86,7 +94,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return AuthPageShell(
       title: 'Sign In',
-      subtitle: 'Unifying fragmented crisis data into priority-based smart intelligence.',
+      subtitle:
+          'Unifying fragmented crisis data into priority-based smart intelligence.',
       form: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -105,11 +114,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onChanged: (role) => setState(() => _selectedRole = role),
           ),
           const SizedBox(height: 32),
-
-          // Google Login
           OutlinedButton.icon(
-            onPressed: isBusy ? null : () => ref.read(authControllerProvider.notifier).signInWithGoogle(role: _selectedRole),
-            icon: SvgPicture.asset('lib/assets/icons/google_logo.svg', width: 20, height: 20),
+            onPressed: isBusy
+                ? null
+                : () async {
+                    await ref
+                        .read(authControllerProvider.notifier)
+                        .signInWithGoogle(role: _selectedRole);
+                  },
+            icon: SvgPicture.asset(
+              'lib/assets/icons/google_logo.svg',
+              width: 20,
+              height: 20,
+            ),
             label: Text(
               'Continue with Google',
               style: GoogleFonts.poppins(
@@ -120,18 +137,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               side: const BorderSide(color: Color(0xFFE2E8F0)),
               backgroundColor: Colors.white,
             ),
           ),
           const SizedBox(height: 16),
-
-          // Firebase PNV Login
           AuthPrimaryButton(
             label: _isPnvLoading ? 'Detecting...' : 'Instant PNV Login',
             isLoading: _isPnvLoading,
-            icon: SvgPicture.asset('lib/assets/icons/firebase_logo.svg', width: 22, height: 22),
+            icon: SvgPicture.asset(
+              'lib/assets/icons/firebase_logo.svg',
+              width: 22,
+              height: 22,
+            ),
             onPressed: isBusy ? null : _handlePNV,
             color: const Color(0xFF0F172A),
           ),
@@ -139,11 +160,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           Center(
             child: Text(
               'Verified via Firebase Phone Number Verification',
-              style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           const SizedBox(height: 32),
-
           Row(
             children: [
               const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
@@ -163,11 +187,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ],
           ),
           const SizedBox(height: 24),
-
           TextFormField(
             controller: _emailController,
             enabled: !isBusy,
-            style: GoogleFonts.inter(color: const Color(0xFF0F172A), fontSize: 15),
+            style: GoogleFonts.inter(
+              color: const Color(0xFF0F172A),
+              fontSize: 15,
+            ),
             decoration: _inputDecoration('Email Address', Icons.email_outlined),
             keyboardType: TextInputType.emailAddress,
           ),
@@ -176,11 +202,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             controller: _passwordController,
             enabled: !isBusy,
             obscureText: _obscurePassword,
-            style: GoogleFonts.inter(color: const Color(0xFF0F172A), fontSize: 15),
+            style: GoogleFonts.inter(
+              color: const Color(0xFF0F172A),
+              fontSize: 15,
+            ),
             decoration: _inputDecoration('Password', Icons.lock_outline).copyWith(
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF64748B), size: 20),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: const Color(0xFF64748B),
+                  size: 20,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
           ),
@@ -188,13 +222,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           AuthPrimaryButton(
             label: 'Sign In',
             isLoading: isBusy,
-            onPressed: () {
-              ref.read(authControllerProvider.notifier).signInWithEmail(
-                email: _emailController.text,
-                password: _passwordController.text,
-              );
+            onPressed: () async {
+              await ref.read(authControllerProvider.notifier).signInWithEmail(
+                    email: _emailController.text,
+                    password: _passwordController.text,
+                  );
             },
-            color: const Color(0xFF4285F4), // Simple Google Blue
+            color: const Color(0xFF4285F4),
           ),
         ],
       ),
@@ -202,7 +236,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            "New to Allocare? ",
+            'New to Allocare? ',
             style: GoogleFonts.inter(color: const Color(0xFF64748B)),
           ),
           TextButton(

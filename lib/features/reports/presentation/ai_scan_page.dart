@@ -340,6 +340,7 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
             'createdAt': FieldValue.serverTimestamp(),
             'crisis_type': subcat,
             'description': raw['description']?.toString() ?? '',
+            'ai_summary': raw['summary']?.toString() ?? '',
             'image_url': '',
             'latitude': lat,
             'location': formattedLocation,

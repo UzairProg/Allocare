@@ -10,9 +10,7 @@ import '../../../models/need_model.dart';
 import '../../../services/user_profile_service.dart';
 
 final needSubmissionServiceProvider = Provider<NeedSubmissionService>((ref) {
-  return NeedSubmissionService(
-    firestore: ref.watch(firestoreProvider),
-  );
+  return NeedSubmissionService(firestore: ref.watch(firestoreProvider));
 });
 
 class NeedSubmissionService {
@@ -29,19 +27,50 @@ class NeedSubmissionService {
       throw Exception('Selected image file does not exist.');
     }
 
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('https://api.cloudinary.com/v1_1/dsuwvrile/image/upload'),
-    )
-      ..fields['upload_preset'] = 'allocare_preset'
-      ..fields['folder'] = 'reports'
-      ..files.add(await http.MultipartFile.fromPath('file', image.path));
+    final request =
+        http.MultipartRequest(
+            'POST',
+            Uri.parse('https://api.cloudinary.com/v1_1/dsuwvrile/image/upload'),
+          )
+          ..fields['upload_preset'] = 'allocare_preset'
+          ..fields['folder'] = 'reports'
+          ..files.add(await http.MultipartFile.fromPath('file', image.path));
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Cloudinary upload failed (${response.statusCode}): ${response.body}');
+      throw Exception(
+        'Cloudinary upload failed (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final secureUrl = (body['secure_url'] as String?)?.trim();
+    if (secureUrl == null || secureUrl.isEmpty) {
+      throw Exception('Cloudinary did not return a secure_url.');
+    }
+
+    return secureUrl;
+  }
+
+  Future<String> uploadBytesToCloudinary(List<int> bytes, String filename) async {
+    final request =
+        http.MultipartRequest(
+            'POST',
+            Uri.parse('https://api.cloudinary.com/v1_1/dsuwvrile/image/upload'),
+          )
+          ..fields['upload_preset'] = 'allocare_preset'
+          ..fields['folder'] = 'reports'
+          ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Cloudinary upload failed (${response.statusCode}): ${response.body}',
+      );
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -55,17 +84,15 @@ class NeedSubmissionService {
 
   Future<String> submitReport(
     NeedModel need, {
-    File? imageFile,
+    List<int>? imageBytes,
+    String? imageName,
   }) async {
     String imageUrl = '';
-    if (imageFile != null) {
-      imageUrl = await uploadToCloudinary(imageFile);
-    }
-    if (imageUrl.isEmpty) {
-      return '';
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      imageUrl = await uploadBytesToCloudinary(imageBytes, imageName ?? 'image.jpg');
     }
 
-    final normalizedImageUrl = _requirePublicCloudinaryUrl(imageUrl);
+    final normalizedImageUrl = imageUrl.isEmpty ? '' : _requirePublicCloudinaryUrl(imageUrl);
 
     print('Final URL being saved to Firestore: $normalizedImageUrl');
 
@@ -74,7 +101,9 @@ class NeedSubmissionService {
       ..['crisis_type'] = _resolveCrisisType(need)
       ..['urgency_score'] = _urgencyToScore(need.urgency);
 
-    final reportDoc = await firestore.collection(FirestorePaths.reports).add(reportData);
+    final reportDoc = await firestore
+        .collection(FirestorePaths.reports)
+        .add(reportData);
 
     final savedReport = await reportDoc.get();
     final savedImageUrl = (savedReport.data()?['image_url'] as String?) ?? '';
@@ -85,14 +114,18 @@ class NeedSubmissionService {
       ..['image_url'] = normalizedImageUrl
       ..['crisis_type'] = reportData['crisis_type']
       ..['urgency_score'] = reportData['urgency_score'];
-    await firestore.collection(FirestorePaths.needs).doc(reportDoc.id).set(syncedNeedData);
+    await firestore
+        .collection(FirestorePaths.needs)
+        .doc(reportDoc.id)
+        .set(syncedNeedData);
     return reportDoc.id;
   }
 
   String _requirePublicCloudinaryUrl(String url) {
     final trimmed = url.trim();
     final parsed = Uri.tryParse(trimmed);
-    final valid = parsed != null &&
+    final valid =
+        parsed != null &&
         parsed.hasScheme &&
         parsed.scheme == 'https' &&
         parsed.host.contains('res.cloudinary.com');
@@ -144,6 +177,7 @@ extension on NeedModel {
     String? location,
     String? locationMode,
     String? reportedBy,
+    String? ngoId,
     int? peopleAffected,
     String? status,
     double? latitude,
@@ -164,6 +198,7 @@ extension on NeedModel {
       location: location ?? this.location,
       locationMode: locationMode ?? this.locationMode,
       reportedBy: reportedBy ?? this.reportedBy,
+      ngoId: ngoId ?? this.ngoId,
       peopleAffected: peopleAffected ?? this.peopleAffected,
       status: status ?? this.status,
       latitude: latitude ?? this.latitude,
@@ -172,7 +207,8 @@ extension on NeedModel {
       contactPhone: contactPhone ?? this.contactPhone,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      supportingDocsMetadata: supportingDocsMetadata ?? this.supportingDocsMetadata,
+      supportingDocsMetadata:
+          supportingDocsMetadata ?? this.supportingDocsMetadata,
     );
   }
 }

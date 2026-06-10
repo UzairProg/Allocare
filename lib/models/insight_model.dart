@@ -6,12 +6,14 @@ class InsightModel {
     required this.title,
     required this.score,
     required this.recommendation,
+    this.ngoId,
   });
 
   final String id;
   final String title;
   final double score;
   final String recommendation;
+  final String? ngoId;
 
   factory InsightModel.fromMap(String id, Map<String, dynamic> map) {
     return InsightModel(
@@ -19,7 +21,11 @@ class InsightModel {
       title: (map['title'] as String?) ?? 'Underserved Areas Detected',
       score: _toDouble(map['score']),
       recommendation:
-          (map['recommendation'] as String?) ?? 'Focus interventions in high-need localities.',
+          (map['recommendation'] as String?) ??
+          'Focus interventions in high-need localities.',
+      ngoId:
+          _readOptionalString(map, 'ngoId') ??
+          _readOptionalString(map, 'ngo_id'),
     );
   }
 
@@ -28,6 +34,7 @@ class InsightModel {
       'title': title,
       'score': score,
       'recommendation': recommendation,
+      if (ngoId != null && ngoId!.trim().isNotEmpty) 'ngoId': ngoId,
       'updatedAt': Timestamp.now(),
     };
   }
@@ -40,5 +47,14 @@ class InsightModel {
       return value.toDouble();
     }
     return 0;
+  }
+
+  static String? _readOptionalString(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return null;
   }
 }
