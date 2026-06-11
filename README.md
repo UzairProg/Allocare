@@ -1,4 +1,4 @@
-# ALLOCARE
+#  ALLOCARE
 
 ALLOCARE transforms fragmented community data into real-time intelligence, enabling early risk detection, targeted awareness, and smarter resource allocation for faster humanitarian response.
 
@@ -17,7 +17,7 @@ Communities across the World frequently face heatwaves, floods, disease outbreak
 
 ---
 
-## 🌍 Why ALLOCARE Matters
+##  Why ALLOCARE Matters
 
 According to the [Global Humanitarian Overview 2025](https://humanitarianaction.info/global-humanitarian-overview-2025), over 305 million people worldwide require humanitarian assistance and protection.
 
@@ -37,7 +37,7 @@ This inspired us to build Allocare—an intelligent humanitarian coordination pl
 
 ---
 
-## What Makes ALLOCARE Different?
+##  What Makes ALLOCARE Different?
 
 | Innovation                             | How ALLOCARE Creates Impact                                                         |
 | -------------------------------------- | ----------------------------------------------------------------------------------- |
