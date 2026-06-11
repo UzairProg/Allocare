@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../models/need_model.dart';
+import '../../../../services/volunteer_service.dart';
 import '../../../reports/presentation/ai_scan_page.dart';
+import 'volunteer_voice_observation.dart';
+import 'volunteer_photo_observation.dart';
 
 class VolunteerReportScreen extends StatefulWidget {
   const VolunteerReportScreen({super.key});
@@ -9,7 +13,8 @@ class VolunteerReportScreen extends StatefulWidget {
   State<VolunteerReportScreen> createState() => _VolunteerReportScreenState();
 }
 
-class _VolunteerReportScreenState extends State<VolunteerReportScreen> with SingleTickerProviderStateMixin {
+class _VolunteerReportScreenState extends State<VolunteerReportScreen>
+    with SingleTickerProviderStateMixin {
   String _activeFlow = 'hub';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -22,14 +27,12 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    ));
-    _slideAnimation = Tween<double>(begin: 30.0, end: 0.0).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _slideAnimation = Tween<double>(begin: 30.0, end: 0.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
     _animationController.forward();
   }
 
@@ -44,10 +47,26 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
   bool _isAnalyzing = false;
 
   final List<Map<String, dynamic>> _categories = [
-    {'name': 'Medical Hazard', 'icon': Icons.medical_services_outlined, 'color': const Color(0xFFEF4444)},
-    {'name': 'Resource Shortage', 'icon': Icons.inventory_2_outlined, 'color': const Color(0xFF3B82F6)},
-    {'name': 'Road Blockage', 'icon': Icons.block_flipped, 'color': const Color(0xFFF59E0B)},
-    {'name': 'Infrastructure', 'icon': Icons.foundation_outlined, 'color': const Color(0xFF10B981)},
+    {
+      'name': 'Medical Hazard',
+      'icon': Icons.medical_services_outlined,
+      'color': const Color(0xFFEF4444),
+    },
+    {
+      'name': 'Resource Shortage',
+      'icon': Icons.inventory_2_outlined,
+      'color': const Color(0xFF3B82F6),
+    },
+    {
+      'name': 'Road Blockage',
+      'icon': Icons.block_flipped,
+      'color': const Color(0xFFF59E0B),
+    },
+    {
+      'name': 'Infrastructure',
+      'icon': Icons.foundation_outlined,
+      'color': const Color(0xFF10B981),
+    },
   ];
 
   final List<String> _severities = ['Critical', 'High', 'Medium', 'Low'];
@@ -202,14 +221,20 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
               _selectedCategory = 'Road Blockage';
               _selectedSeverity = 'High';
               _titleController.text = 'Road blocked by fallen tree in Sector 3';
-              _descController.text = 'A large tree has fallen across the main road in Sector 3, completely blocking all ambulance access. Needs immediate clearing crew.';
-              _locationController.text = '19.8762° N, 75.3433° E (Sector 3 - Pundlik Nagar)';
+              _descController.text =
+                  'A large tree has fallen across the main road in Sector 3, completely blocking all ambulance access. Needs immediate clearing crew.';
+              _locationController.text =
+                  '19.8762° N, 75.3433° E (Sector 3 - Pundlik Nagar)';
             });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(
                   children: [
-                    const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                    const Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -239,7 +264,8 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
     if (mounted) {
       setState(() {
         _isAutoDetecting = false;
-        _locationController.text = '19.8762° N, 75.3433° E (Sector 3 - Pundlik Nagar)';
+        _locationController.text =
+            '19.8762° N, 75.3433° E (Sector 3 - Pundlik Nagar)';
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -268,10 +294,16 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
       showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           title: Row(
             children: [
-              const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 28),
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF10B981),
+                size: 28,
+              ),
               const SizedBox(width: 12),
               Text(
                 'Intelligence Logged',
@@ -368,10 +400,29 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Container(width: 50, height: 6, color: const Color(0xFF3B82F6).withOpacity(0.5), margin: const EdgeInsets.only(bottom: 12)),
-                              Container(width: 50, height: 6, color: const Color(0xFF3B82F6).withOpacity(0.5), margin: const EdgeInsets.only(bottom: 12)),
-                              Container(width: 50, height: 6, color: const Color(0xFF3B82F6).withOpacity(0.5), margin: const EdgeInsets.only(bottom: 12)),
-                              Container(width: 30, height: 6, color: const Color(0xFF3B82F6).withOpacity(0.5)),
+                              Container(
+                                width: 50,
+                                height: 6,
+                                color: const Color(0xFF3B82F6).withOpacity(0.5),
+                                margin: const EdgeInsets.only(bottom: 12),
+                              ),
+                              Container(
+                                width: 50,
+                                height: 6,
+                                color: const Color(0xFF3B82F6).withOpacity(0.5),
+                                margin: const EdgeInsets.only(bottom: 12),
+                              ),
+                              Container(
+                                width: 50,
+                                height: 6,
+                                color: const Color(0xFF3B82F6).withOpacity(0.5),
+                                margin: const EdgeInsets.only(bottom: 12),
+                              ),
+                              Container(
+                                width: 30,
+                                height: 6,
+                                color: const Color(0xFF3B82F6).withOpacity(0.5),
+                              ),
                             ],
                           ),
                         ),
@@ -408,7 +459,11 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                               color: Color(0xFF10B981),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.check, color: Colors.white, size: 14),
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 14,
+                            ),
                           ),
                         ),
                         // Small dot decoration
@@ -423,7 +478,14 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                               shape: BoxShape.circle,
                             ),
                             child: Center(
-                              child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFD97706), shape: BoxShape.circle)),
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFD97706),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -452,40 +514,43 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                   ),
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Option 1
                 _buildOptionCard(
                   title: 'Voice observation',
-                  subtitle: 'Speak naturally. AI structures the report automatically.',
+                  subtitle:
+                      'Speak naturally. AI structures the report automatically.',
                   iconData: Icons.mic_rounded,
                   iconColor: const Color(0xFF3B82F6),
                   iconBgColor: const Color(0xFFEFF6FF),
                   onTap: () {
-                    setState(() {
-                      _activeFlow = 'structured';
-                    });
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _startVoiceReportSimulation();
-                    });
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const VolunteerVoiceObservationScreen(),
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Option 2
                 _buildOptionCard(
                   title: 'Photo evidence',
-                  subtitle: 'Capture evidence and generate an AI-assisted incident report.',
+                  subtitle:
+                      'Capture evidence and generate an AI-assisted incident report.',
                   iconData: Icons.camera_alt_rounded,
                   iconColor: const Color(0xFFF59E0B),
                   iconBgColor: const Color(0xFFFEF3C7),
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const AIScanPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const VolunteerPhotoObservationScreen(),
+                      ),
                     );
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Option 3
                 _buildOptionCard(
                   title: 'Structured report',
@@ -540,11 +605,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                 color: iconBgColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                iconData,
-                color: iconColor,
-                size: 28,
-              ),
+              child: Icon(iconData, color: iconColor, size: 28),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -617,7 +678,11 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.campaign_outlined, color: Color(0xFF2563EB), size: 26),
+                      const Icon(
+                        Icons.campaign_outlined,
+                        color: Color(0xFF2563EB),
+                        size: 26,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -682,7 +747,10 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                           ),
                           const Spacer(),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
@@ -724,7 +792,11 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.auto_awesome, color: Color(0xFF4F46E5), size: 16),
+                              const Icon(
+                                Icons.auto_awesome,
+                                color: Color(0xFF4F46E5),
+                                size: 16,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'Start Voice Report',
@@ -777,7 +849,9 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.white : const Color(0xFF475569),
+                                color: isSelected
+                                    ? Colors.white
+                                    : const Color(0xFF475569),
                               ),
                             ),
                           ],
@@ -787,7 +861,9 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                         backgroundColor: Colors.white,
                         onSelected: (selected) {
                           if (selected) {
-                            setState(() => _selectedCategory = cat['name'] as String);
+                            setState(
+                              () => _selectedCategory = cat['name'] as String,
+                            );
                           }
                         },
                       );
@@ -812,7 +888,8 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                     hintText: 'e.g., Water pipeline leak, shelter crowd size',
                     fillColor: Colors.white,
                   ),
-                  validator: (v) => (v?.isEmpty ?? true) ? 'Please enter a title' : null,
+                  validator: (v) =>
+                      (v?.isEmpty ?? true) ? 'Please enter a title' : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -848,20 +925,29 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: OutlinedButton(
-                          onPressed: () => setState(() => _selectedSeverity = severity),
+                          onPressed: () =>
+                              setState(() => _selectedSeverity = severity),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(
-                              color: isSelected ? color : const Color(0xFFCBD5E1),
+                              color: isSelected
+                                  ? color
+                                  : const Color(0xFFCBD5E1),
                               width: isSelected ? 2.0 : 1.0,
                             ),
-                            backgroundColor: isSelected ? color.withValues(alpha: 0.08) : Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            backgroundColor: isSelected
+                                ? color.withValues(alpha: 0.08)
+                                : Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           child: Text(
                             severity,
                             style: GoogleFonts.inter(
-                              color: isSelected ? color : const Color(0xFF64748B),
+                              color: isSelected
+                                  ? color
+                                  : const Color(0xFF64748B),
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -887,10 +973,13 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                   controller: _descController,
                   maxLines: 4,
                   decoration: const InputDecoration(
-                    hintText: 'Describe what you see and what immediate assistance is required...',
+                    hintText:
+                        'Describe what you see and what immediate assistance is required...',
                     fillColor: Colors.white,
                   ),
-                  validator: (v) => (v?.isEmpty ?? true) ? 'Please describe the scenario' : null,
+                  validator: (v) => (v?.isEmpty ?? true)
+                      ? 'Please describe the scenario'
+                      : null,
                 ),
                 const SizedBox(height: 24),
 
@@ -919,11 +1008,15 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                             ),
                           )
                         : IconButton(
-                            icon: const Icon(Icons.my_location, color: Color(0xFF5B888F)),
+                            icon: const Icon(
+                              Icons.my_location,
+                              color: Color(0xFF5B888F),
+                            ),
                             onPressed: _detectLocation,
                           ),
                   ),
-                  validator: (v) => (v?.isEmpty ?? true) ? 'Please define a location' : null,
+                  validator: (v) =>
+                      (v?.isEmpty ?? true) ? 'Please define a location' : null,
                 ),
                 const SizedBox(height: 32),
 
@@ -935,7 +1028,9 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> with Sing
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: theme.colorScheme.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                     child: Text(
                       'Submit Ground Intelligence',
