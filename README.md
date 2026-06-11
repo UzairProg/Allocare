@@ -1,4 +1,4 @@
-# Allocare
+# ALLOCARE
 
 ALLOCARE transforms fragmented community data into real-time intelligence, enabling early risk detection, targeted awareness, and smarter resource allocation for faster humanitarian response.
 
@@ -17,6 +17,14 @@ Communities across the World frequently face heatwaves, floods, disease outbreak
 
 ---
 
+## 🌍 Why ALLOCARE Matters
+
+According to the [Global Humanitarian Overview 2025](https://humanitarianaction.info/global-humanitarian-overview-2025), over 305 million people worldwide require humanitarian assistance and protection.
+
+The [World Health Organization's Early Warning, Alert and Response System (EWARS)](https://www.who.int/emergencies/surveillance/early-warning-alert-and-response-system-ewars) emphasizes the importance of early risk detection during humanitarian emergencies.
+
+---
+
 ##  Solution
 
 We asked ourselves a simple question:
@@ -26,6 +34,20 @@ What if every volunteer observation could become an early warning signal?
 This inspired us to build Allocare—an intelligent humanitarian coordination platform that transforms community reports into real-time intelligence, enabling early risk detection, targeted awareness, prioritized resource allocation, and faster humanitarian action.
 
 > From fragmented data → verified insights → fair allocation → real-world action.
+
+---
+
+## What Makes ALLOCARE Different?
+
+| Innovation                             | How ALLOCARE Creates Impact                                                         |
+| -------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Fair Resource Allocation**           | Prioritizes aid distribution based on urgency, impact, and community needs.         |
+| **Neglected Area Detection**           | Identifies underserved communities that may be overlooked during response efforts.  |
+| **Over-Allocation Prevention**         | Reduces duplicate aid distribution and improves resource efficiency.                |
+| **Operational AI Intelligence**        | Converts reports, surveys, images, and field observations into actionable insights. |
+| **Intelligent Volunteer Coordination** | Matches volunteers to missions using skills, location, and availability.            |
+| **Early Risk Detection**               | Detects emerging health, environmental, and community risks before they escalate.   |
+
 ---
 
 ## 🎥 Exclusive Preview
