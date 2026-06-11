@@ -14,6 +14,9 @@ import '../../../../services/smart_allocation_service.dart';
 import '../../../../services/ngo_service.dart';
 import '../../../../models/ngo_model.dart';
 import '../controllers/volunteer_controller.dart';
+import 'volunteer_profile.dart';
+import 'volunteer_mission_history_page.dart';
+import '../../../map/presentation/map_screen.dart';
 
 // ==========================================
 // DATA MODELS FOR DYNAMIC RENDERING
@@ -102,7 +105,7 @@ class ImpactMetricsModel {
   final double timeSavedChange;
   final int serviceHours;
   final int missionsCompleted;
-  final double avgRating;
+  final int reportsSubmitted;
 
   const ImpactMetricsModel({
     required this.livesImpacted,
@@ -111,7 +114,7 @@ class ImpactMetricsModel {
     required this.timeSavedChange,
     required this.serviceHours,
     required this.missionsCompleted,
-    required this.avgRating,
+    required this.reportsSubmitted,
   });
 }
 
@@ -278,24 +281,113 @@ final validationMetricsProvider = Provider<ValidationMetricsModel>((ref) {
 });
 
 final impactMetricsProvider = Provider<ImpactMetricsModel>((ref) {
-  return const ImpactMetricsModel(
-    livesImpacted: 128,
-    livesImpactedChange: 12,
-    timeSavedHrs: 4.2,
-    timeSavedChange: 0.5,
-    serviceHours: 42,
-    missionsCompleted: 14,
-    avgRating: 4.8,
+  final volunteerDb = ref.watch(currentVolunteerProvider).asData?.value;
+  final missionsSnapshot = ref.watch(volunteerMissionsStreamProvider).asData?.value;
+  final reportsSnapshot = ref.watch(volunteerReportsStreamProvider).asData?.value;
+
+  int dynamicLivesImpacted = 0;
+  double hoursServed = 0.0;
+  int missionsCompleted = volunteerDb?.missionsCompleted ?? 0;
+
+  if (missionsSnapshot != null) {
+      for (var doc in missionsSnapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          dynamicLivesImpacted += (data['peopleAffected'] as num?)?.toInt() ?? 0;
+          
+          final start = data['acceptedAt'] as Timestamp?;
+          final end = data['completedAt'] as Timestamp?;
+          if (start != null && end != null) {
+              final diff = end.toDate().difference(start.toDate()).inMinutes;
+              if (diff >= 0 && diff < 600) {
+                  hoursServed += diff / 60.0;
+              }
+          }
+      }
+  }
+  
+  int actualLivesImpacted = volunteerDb?.livesImpacted ?? 0;
+  if (actualLivesImpacted == 0) {
+      actualLivesImpacted = dynamicLivesImpacted;
+  }
+
+  int actualMissions = missionsSnapshot != null ? missionsSnapshot.docs.length : missionsCompleted;
+  int actualReports = reportsSnapshot != null ? reportsSnapshot.docs.length : 0;
+
+  return ImpactMetricsModel(
+    livesImpacted: actualLivesImpacted,
+    livesImpactedChange: 0,
+    timeSavedHrs: hoursServed,
+    timeSavedChange: 0,
+    serviceHours: hoursServed.round(),
+    missionsCompleted: actualMissions,
+    reportsSubmitted: actualReports,
   );
 });
 
+final nearbyAlertsStreamProvider = StreamProvider.autoDispose<QuerySnapshot>((ref) {
+  return FirebaseFirestore.instance
+      .collection('needs')
+      .where('status', isEqualTo: 'open')
+      .snapshots();
+});
+
+final activePeersStreamProvider = StreamProvider.autoDispose<QuerySnapshot>((ref) {
+  final ngoId = ref.watch(currentVolunteerProvider).asData?.value?.ngoId;
+  if (ngoId == null) return const Stream.empty();
+  return FirebaseFirestore.instance
+      .collection('volunteers')
+      .where('ngoId', isEqualTo: ngoId)
+      .where('isActiveOnField', isEqualTo: true)
+      .snapshots();
+});
+
+final allNgosStreamProvider = StreamProvider.autoDispose<QuerySnapshot>((ref) {
+  return FirebaseFirestore.instance.collection('ngos').snapshots();
+});
+
 final tacticalRadarProvider = Provider<TacticalRadarMetricsModel>((ref) {
-  return const TacticalRadarMetricsModel(
-    nearbyAlerts: 8,
-    activePeers: 14,
-    recentMissionType: 'Medical',
-    recentMissionTime: 'Completed 2 days ago',
-    partnerNgos: 5,
+  final alertsSnap = ref.watch(nearbyAlertsStreamProvider).asData?.value;
+  final peersSnap = ref.watch(activePeersStreamProvider).asData?.value;
+  final missionsSnap = ref.watch(volunteerMissionsStreamProvider).asData?.value;
+  final ngosSnap = ref.watch(allNgosStreamProvider).asData?.value;
+
+  String recentType = 'No recent missions';
+  String recentTime = 'Awaiting deployment';
+
+  if (missionsSnap != null && missionsSnap.docs.isNotEmpty) {
+      final docs = missionsSnap.docs.toList();
+      docs.sort((a, b) {
+          final timeA = (a.data() as Map<String, dynamic>)['completedAt'] as Timestamp?;
+          final timeB = (b.data() as Map<String, dynamic>)['completedAt'] as Timestamp?;
+          if (timeA == null) return 1;
+          if (timeB == null) return -1;
+          return timeB.compareTo(timeA);
+      });
+
+      final mostRecent = docs.first.data() as Map<String, dynamic>;
+      recentType = mostRecent['category'] as String? ?? 'General Support';
+
+      final completedAt = mostRecent['completedAt'] as Timestamp?;
+      if (completedAt != null) {
+          final diff = DateTime.now().difference(completedAt.toDate());
+          if (diff.inDays > 0) {
+              recentTime = 'Completed ${diff.inDays} days ago';
+          } else if (diff.inHours > 0) {
+              recentTime = 'Completed ${diff.inHours} hours ago';
+          } else if (diff.inMinutes > 0) {
+              recentTime = 'Completed ${diff.inMinutes} mins ago';
+          } else {
+              recentTime = 'Completed just now';
+          }
+      }
+  }
+
+  return TacticalRadarMetricsModel(
+    nearbyAlerts: alertsSnap?.docs.length ?? 0,
+    activePeers: peersSnap?.docs.length ?? 0,
+    recentMissionType: recentType,
+    recentMissionTime: recentTime,
+    partnerNgos: ngosSnap?.docs.length ?? 0,
   );
 });
 
@@ -1705,11 +1797,11 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
         const SizedBox(width: 12),
         Expanded(
           child: _buildImpactCard(
-            icon: Icons.star_rounded,
+            icon: Icons.article_rounded,
             iconColor: const Color(0xFFF59E0B),
-            value: imp.avgRating,
+            value: imp.reportsSubmitted,
             suffix: '',
-            label: 'Avg Rating',
+            label: 'Field Reports',
             animationTrigger: animationTrigger,
           ),
         ),
@@ -1767,6 +1859,111 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
     );
   }
 
+  void _showNgosBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) {
+          return Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Partner NGOs',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance.collection('ngos').snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                      final docs = snapshot.data!.docs;
+                      if (docs.isEmpty) return const Center(child: Text('No NGOs found'));
+                      return ListView.builder(
+                        controller: scrollController,
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          final data = docs[index].data() as Map<String, dynamic>;
+                          final name = data['ngoName'] as String? ?? 'NGO';
+                          
+                          final city = data['city'] as String?;
+                          final state = data['state'] as String?;
+                          
+                          String area = 'Location unavailable';
+                          if (city != null && city.isNotEmpty && state != null && state.isNotEmpty) {
+                              area = '$city, $state';
+                          } else if (city != null && city.isNotEmpty) {
+                              area = city;
+                          } else if (state != null && state.isNotEmpty) {
+                              area = state;
+                          }
+                          
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFE0E7FF),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.domain_rounded, color: Color(0xFF4F46E5), size: 24),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: const Color(0xFF1E293B)),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Area: $area',
+                                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   // 4. UNIFORM TACTICAL LOCAL RADAR GRID (2x2)
   Widget _buildTacticalGrid(TacticalRadarMetricsModel radar) {
     final alertValue = radar.nearbyAlerts.toString().padLeft(2, '0');
@@ -1789,6 +1986,9 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
               icon: Icons.notifications_active_outlined,
               color: const Color(0xFFEF4444),
               bgColor: const Color(0xFFFEF2F2),
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const MapScreen(isVolunteer: true, initialLayer: MapLayerCategory.medical)));
+              },
             ),
             _buildTacticalGridCard(
               title: 'Active Responders',
@@ -1798,6 +1998,9 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
               color: const Color(0xFF3B82F6),
               bgColor: const Color(0xFFF0F9FF),
               miniRadar: true,
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const MapScreen(isVolunteer: true, initialLayer: MapLayerCategory.medical)));
+              },
             ),
             _buildTacticalGridCard(
               title: 'Recent Mission',
@@ -1806,6 +2009,9 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
               icon: Icons.history_rounded,
               color: const Color(0xFF10B981),
               bgColor: const Color(0xFFECFDF5),
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const VolunteerMissionHistoryPage()));
+              },
             ),
             _buildTacticalGridCard(
               title: 'Partner NGOs',
@@ -1814,6 +2020,9 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
               icon: Icons.handshake_outlined,
               color: const Color(0xFF8B5CF6),
               bgColor: const Color(0xFFF5F3FF),
+              onTap: () {
+                _showNgosBottomSheet(context);
+              },
             ),
           ],
         );
@@ -1830,11 +2039,12 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
     required Color bgColor,
     List<double>? sparklinePoints,
     bool miniRadar = false,
+    VoidCallback? onTap,
   }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap ?? () {},
         borderRadius: BorderRadius.circular(20),
         splashColor: color.withOpacity(0.08),
         highlightColor: color.withOpacity(0.04),

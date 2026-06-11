@@ -186,9 +186,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.isVolunteer
-        ? _LayerCategory.myMission
-        : _fromMapLayer(widget.initialLayer);
+    _selectedCategory = _fromMapLayer(widget.initialLayer);
     unawaited(_resolveLocationPermission());
     unawaited(_loadMarkerIcons());
     _reportsSubscription = _reportsStream.listen(

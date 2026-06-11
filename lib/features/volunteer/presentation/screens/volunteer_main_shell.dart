@@ -34,76 +34,86 @@ class _VolunteerMainShellState extends ConsumerState<VolunteerMainShell> {
     final currentIndex = ref.watch(volunteerTabControllerProvider);
 
     return Scaffold(
-      extendBody: true, // Allows notches and bottom bar transparency
+      extendBody: true,
       body: IndexedStack(
         index: currentIndex,
         children: _pages,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _onTabTapped(2),
-        backgroundColor: const Color(0xFF0284C7),
-        elevation: 6,
-        shape: const CircleBorder(),
-        child: AnimatedRotation(
-          turns: currentIndex == 2 ? 0.125 : 0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutBack,
-          child: const Icon(
-            Icons.sensors,
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          height: 64,
+          decoration: BoxDecoration(
             color: Colors.white,
-            size: 26,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: const Color(0xFF0B1F4D).withOpacity(0.05),
+                blurRadius: 0,
+                spreadRadius: 1,
+                offset: const Offset(0, -1),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildNavItem(0, Icons.grid_view_rounded, 'Home', currentIndex),
+              _buildNavItem(3, Icons.map_outlined, 'Map', currentIndex),
+              _buildCenterReportButton(currentIndex),
+              _buildNavItem(1, Icons.dashboard_customize_outlined, 'Workspace', currentIndex),
+              _buildNavItem(4, Icons.person_outline_rounded, 'Profile', currentIndex),
+            ],
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        height: 65,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        color: Colors.white,
-        elevation: 16,
-        shadowColor: Colors.black.withOpacity(0.3),
-        padding: EdgeInsets.zero,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: <Widget>[
-            // Home Tab
-            _buildNavItem(
-              index: 0,
-              icon: Icons.home_outlined,
-              activeIcon: Icons.home_rounded,
-              label: 'Home',
-              primaryColor: const Color(0xFF0284C7),
-              currentIndex: currentIndex,
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label, int currentIndex) {
+    final isSelected = currentIndex == index;
+    final color = isSelected ? const Color(0xFF0B1F4D) : const Color(0xFF94A3B8);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onTabTapped(index),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF0B1F4D).withOpacity(0.08) : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: AnimatedScale(
+                scale: isSelected ? 1.05 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 22,
+                ),
+              ),
             ),
-            // Map Tab
-            _buildNavItem(
-              index: 3,
-              icon: Icons.map_outlined,
-              activeIcon: Icons.map_rounded,
-              label: 'Map',
-              primaryColor: const Color(0xFF0284C7),
-              currentIndex: currentIndex,
-            ),
-            // Spacer for the center FAB
-            const SizedBox(width: 48),
-            // Tasks Tab (maps to Tasks / Reports view)
-            _buildNavItem(
-              index: 1,
-              icon: Icons.task_outlined,
-              activeIcon: Icons.task_alt_rounded,
-              label: 'Workspace',
-              primaryColor: const Color(0xFF0284C7),
-              currentIndex: currentIndex,
-            ),
-            // Profile Tab
-            _buildNavItem(
-              index: 4,
-              icon: Icons.person_outline_rounded,
-              activeIcon: Icons.person_rounded,
-              label: 'Profile',
-              primaryColor: const Color(0xFF0284C7),
-              currentIndex: currentIndex,
+            const SizedBox(height: 2),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: color,
+                letterSpacing: -0.1,
+              ),
+              child: Text(label),
             ),
           ],
         ),
@@ -111,50 +121,59 @@ class _VolunteerMainShellState extends ConsumerState<VolunteerMainShell> {
     );
   }
 
-  Widget _buildNavItem({
-    required int index,
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-    required Color primaryColor,
-    required int currentIndex,
-  }) {
-    final isSelected = currentIndex == index;
-
+  Widget _buildCenterReportButton(int currentIndex) {
+    final isSelected = currentIndex == 2;
+    
     return Expanded(
-      child: Tooltip(
-        message: label,
-        child: InkWell(
-          onTap: () => _onTabTapped(index),
-          borderRadius: BorderRadius.circular(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedContainer(
+      child: GestureDetector(
+        onTap: () => _onTabTapped(2),
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              top: -8,
+              child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                height: 48,
+                width: 48,
                 decoration: BoxDecoration(
-                  color: isSelected ? primaryColor.withOpacity(0.08) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF2563EB),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF2563EB).withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Icon(
-                  isSelected ? activeIcon : icon,
-                  color: isSelected ? primaryColor : const Color(0xFF64748B),
-                  size: 22,
+                child: AnimatedScale(
+                  scale: isSelected ? 1.05 : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Icon(
+                    Icons.track_changes_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
+            ),
+            Positioned(
+              bottom: 6,
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
                 style: GoogleFonts.inter(
                   fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  color: isSelected ? primaryColor : const Color(0xFF64748B),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? const Color(0xFF0B1F4D) : const Color(0xFF94A3B8),
+                  letterSpacing: -0.1,
                 ),
+                child: const Text('Report'),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
