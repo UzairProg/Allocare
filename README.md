@@ -13,7 +13,7 @@ ALLOCARE transforms fragmented community data into real-time intelligence, enabl
 
 ##  Problem
 
-Communities across India frequently face heatwaves, floods, disease outbreaks, water contamination, and resource shortages. However, critical information collected by NGOs and volunteers often remains fragmented across reports, spreadsheets, messaging platforms, and disconnected systems. This fragmented data leads to delayed responses, duplicate aid, underserved communities, and missed opportunities for early intervention.
+Communities across the World frequently face heatwaves, floods, disease outbreaks, water contamination, and resource shortages. However, critical information collected by NGOs and volunteers often remains fragmented across reports, spreadsheets, messaging platforms, and disconnected systems. This fragmented data leads to delayed responses, duplicate aid, underserved communities, and missed opportunities for early intervention.
 
 ---
 
