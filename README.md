@@ -33,7 +33,7 @@ This inspired us to build Allocare—an intelligent humanitarian coordination pl
 <p align="center">
   <img src="assets/allocare.gif" alt="Allocare Demo" width="800"/>
 </p>
----
+
 
 ## 🧠 Core System Layers
 
