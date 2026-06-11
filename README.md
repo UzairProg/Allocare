@@ -368,6 +368,19 @@ flutter test
 
 ---
 
+## 📚 References
+
+1. Global Humanitarian Overview 2025 (OCHA)
+   https://humanitarianaction.info/global-humanitarian-overview-2025
+
+2. WHO Early Warning Alert and Response System (EWARS)
+   https://www.who.int/emergencies/surveillance/early-warning-alert-and-response-system-ewars
+
+3. UN Climate and Humanitarian Action
+   https://www.unocha.org/climate-change
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! Here's how to get started:
