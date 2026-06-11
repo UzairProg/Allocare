@@ -12,6 +12,7 @@ import '../../../../services/ngo_service.dart';
 import '../../../../models/ngo_model.dart';
 import '../controllers/volunteer_controller.dart';
 import 'volunteer_report.dart';
+import 'volunteer_mission_history_page.dart';
 
 class VolunteerTasksScreen extends ConsumerStatefulWidget {
   const VolunteerTasksScreen({super.key});
@@ -289,6 +290,15 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
                       ),
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.history_rounded, color: Color(0xFF64748B)),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const VolunteerMissionHistoryPage()),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
                 ],
                 bottom: const PreferredSize(
                   preferredSize: Size.fromHeight(1),
@@ -342,6 +352,21 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
   Widget _buildNoMission() {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history_rounded, color: Color(0xFF64748B)),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const VolunteerMissionHistoryPage()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(40),
@@ -1545,7 +1570,12 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
         _primaryButton('Return To Home', () => _exitCompletionFlow()),
         const SizedBox(height: 12),
         // Secondary CTA
-        _outlineButton('View Mission History', () => _exitCompletionFlow()),
+        _outlineButton('View Mission History', () {
+          _exitCompletionFlow();
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const VolunteerMissionHistoryPage()),
+          );
+        }),
         const SizedBox(height: 40),
       ],
     );

@@ -227,7 +227,7 @@ class _ImpactGuardianCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = volunteer.displayName;
     final speciality = volunteer.formattedSpecializations.isNotEmpty
-        ? volunteer.formattedSpecializations.join(', ')
+        ? volunteer.formattedSpecializations.first
         : 'Specialist';
 
     final isOnline = volunteer.isActiveOnField;
@@ -501,8 +501,11 @@ class _LeaderboardHeroCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
               children: [
                 _StatItem(label: 'NOBILITY INDEX', value: '9${9 - index}/100'),
                 _StatItem(label: 'MISSIONS', value: '$missions'),
@@ -649,6 +652,7 @@ class _SpecialityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(maxWidth: 120),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFFEFF6FF),
@@ -662,6 +666,8 @@ class _SpecialityBadge extends StatelessWidget {
           fontWeight: FontWeight.w900,
           letterSpacing: 0.5,
         ),
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
       ),
     );
   }

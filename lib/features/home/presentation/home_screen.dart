@@ -830,11 +830,14 @@ class _ActivityListTileState extends State<_ActivityListTile> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Text(
-                            '${item.subtitle} · ${item.timeAgo}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                              fontSize: isWeb ? 12 : 10,
+                          Expanded(
+                            child: Text(
+                              '${item.subtitle} · ${item.timeAgo}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                                fontSize: isWeb ? 12 : 10,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -935,11 +938,12 @@ class _ActivityListTileState extends State<_ActivityListTile> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFFDCFCE7)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 6,
+          runSpacing: 6,
           children: [
             const Icon(Icons.verified_rounded, size: 12, color: Color(0xFF16A34A)),
-            const SizedBox(width: 6),
             Text(
               'STRATEGIC MATCH: ${item.assignedVolunteer}',
               style: const TextStyle(
@@ -947,9 +951,9 @@ class _ActivityListTileState extends State<_ActivityListTile> {
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF16A34A),
               ),
+              overflow: TextOverflow.ellipsis,
             ),
-            if (item.proximity != null) ...[
-              const SizedBox(width: 6),
+            if (item.proximity != null)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
@@ -961,14 +965,11 @@ class _ActivityListTileState extends State<_ActivityListTile> {
                   style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
                 ),
               ),
-            ],
-            if (item.volunteerRank != null) ...[
-              const SizedBox(width: 6),
+            if (item.volunteerRank != null)
               Text(
                 '· ${item.volunteerRank}',
                 style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: const Color(0xFF16A34A).withOpacity(0.7)),
               ),
-            ],
           ],
         ),
       );
@@ -978,13 +979,16 @@ class _ActivityListTileState extends State<_ActivityListTile> {
       children: [
         Icon(Icons.auto_awesome_rounded, size: 12, color: item.accentColor.withOpacity(0.5)),
         const SizedBox(width: 8),
-        Text(
-          'OPTIMIZING HUMANITY FORCE RESPONSE...',
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w900,
-            color: item.accentColor.withOpacity(0.8),
-            letterSpacing: 0.8,
+        Expanded(
+          child: Text(
+            'OPTIMIZING HUMANITY FORCE RESPONSE...',
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              color: item.accentColor.withOpacity(0.8),
+              letterSpacing: 0.8,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
