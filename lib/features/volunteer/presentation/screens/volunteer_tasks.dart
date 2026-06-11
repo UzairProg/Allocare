@@ -1048,7 +1048,7 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'GROUND INTELLIGENCE',
+                  'FIELD REPORT',
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
@@ -1065,7 +1065,7 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                _outlineButton('Submit Intelligence Report', () {
+                _outlineButton('Submit Report', () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const VolunteerReportScreen(),

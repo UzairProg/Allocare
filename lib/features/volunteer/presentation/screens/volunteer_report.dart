@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../reports/presentation/ai_scan_page.dart';
 
 class VolunteerReportScreen extends StatefulWidget {
   const VolunteerReportScreen({super.key});
@@ -8,7 +9,30 @@ class VolunteerReportScreen extends StatefulWidget {
   State<VolunteerReportScreen> createState() => _VolunteerReportScreenState();
 }
 
-class _VolunteerReportScreenState extends State<VolunteerReportScreen> {
+class _VolunteerReportScreenState extends State<VolunteerReportScreen> with SingleTickerProviderStateMixin {
+  String _activeFlow = 'hub';
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
+    _slideAnimation = Tween<double>(begin: 30.0, end: 0.0).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+    _animationController.forward();
+  }
+
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
@@ -30,6 +54,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> {
 
   @override
   void dispose() {
+    _animationController.dispose();
     _titleController.dispose();
     _descController.dispose();
     _locationController.dispose();
@@ -281,13 +306,289 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_activeFlow == 'hub') {
+      return _buildHub(context);
+    }
+    return _buildStructuredReport(context);
+  }
+
+  Widget _buildHub(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          'Report Hub',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            color: const Color(0xFF1E293B),
+          ),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, _slideAnimation.value),
+                child: child,
+              ),
+            );
+          },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Top Section: Illustration area
+                Container(
+                  width: double.infinity,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9), // Soft blue/grey
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // A stylized document icon
+                        Container(
+                          width: 90,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFBFDBFE),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(width: 50, height: 6, color: const Color(0xFF3B82F6).withOpacity(0.5), margin: const EdgeInsets.only(bottom: 12)),
+                              Container(width: 50, height: 6, color: const Color(0xFF3B82F6).withOpacity(0.5), margin: const EdgeInsets.only(bottom: 12)),
+                              Container(width: 50, height: 6, color: const Color(0xFF3B82F6).withOpacity(0.5), margin: const EdgeInsets.only(bottom: 12)),
+                              Container(width: 30, height: 6, color: const Color(0xFF3B82F6).withOpacity(0.5)),
+                            ],
+                          ),
+                        ),
+                        // AI indicator circle
+                        Positioned(
+                          right: 40,
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF93C5FD).withOpacity(0.6),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'AI',
+                                style: TextStyle(
+                                  color: Color(0xFF1E3A8A),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Small success check
+                        Positioned(
+                          right: 20,
+                          top: 30,
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check, color: Colors.white, size: 14),
+                          ),
+                        ),
+                        // Small dot decoration
+                        Positioned(
+                          left: 40,
+                          bottom: 40,
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFDE68A),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFD97706), shape: BoxShape.circle)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'What would you like to\nsubmit?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0F172A),
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose how to share your observation',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 40),
+                
+                // Option 1
+                _buildOptionCard(
+                  title: 'Voice observation',
+                  subtitle: 'Speak naturally. AI structures the report automatically.',
+                  iconData: Icons.mic_rounded,
+                  iconColor: const Color(0xFF3B82F6),
+                  iconBgColor: const Color(0xFFEFF6FF),
+                  onTap: () {
+                    setState(() {
+                      _activeFlow = 'structured';
+                    });
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _startVoiceReportSimulation();
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Option 2
+                _buildOptionCard(
+                  title: 'Photo evidence',
+                  subtitle: 'Capture evidence and generate an AI-assisted incident report.',
+                  iconData: Icons.camera_alt_rounded,
+                  iconColor: const Color(0xFFF59E0B),
+                  iconBgColor: const Color(0xFFFEF3C7),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AIScanPage()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Option 3
+                _buildOptionCard(
+                  title: 'Structured report',
+                  subtitle: 'Fill detailed operational information manually.',
+                  iconData: Icons.assignment_rounded,
+                  iconColor: const Color(0xFF10B981),
+                  iconBgColor: const Color(0xFFD1FAE5),
+                  onTap: () {
+                    setState(() {
+                      _activeFlow = 'structured';
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionCard({
+    required String title,
+    required String subtitle,
+    required IconData iconData,
+    required Color iconColor,
+    required Color iconBgColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withOpacity(0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                iconData,
+                color: iconColor,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: const Color(0xFF64748B),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStructuredReport(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
+          onPressed: () => setState(() => _activeFlow = 'hub'),
+        ),
         title: Text(
-          'Ground Intelligence',
+          'Structured Report',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
             fontSize: 22,
