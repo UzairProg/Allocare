@@ -27,7 +27,7 @@ class GroundIntelligenceService {
     required this.geminiService,
   });
 
-  /// The complete backend pipeline for Voice Observation
+  /// The complete backend pipeline for Voice Report
   Future<String> submitVoiceReport({
     required File audioFile,
     required String missionId,

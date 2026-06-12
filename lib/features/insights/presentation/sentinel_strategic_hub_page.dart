@@ -32,7 +32,7 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage> {
         foregroundColor: const Color(0xFF1E293B),
         centerTitle: true,
         title: const Text(
-          'AI Insights Hub',
+          'AI Recommendations Hub',
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
         ),
       ),

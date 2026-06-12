@@ -410,7 +410,7 @@ class _VolunteerVoiceObservationScreenState extends ConsumerState<VolunteerVoice
               ),
               const SizedBox(width: 8),
               Text(
-                'Voice Observation',
+                'Voice Report',
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
                   fontSize: 18,
@@ -457,7 +457,7 @@ class _VolunteerVoiceObservationScreenState extends ConsumerState<VolunteerVoice
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
-            'GROUND INTELLIGENCE',
+            'REPORTS',
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.bold,

@@ -96,7 +96,7 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Ground Intelligence Report Submitted.'),
+            content: Text('Reports Report Submitted.'),
             backgroundColor: Color(0xFF16A34A),
           ),
         );
@@ -123,7 +123,7 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          'Intelligence Report',
+          'Field Report',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             fontSize: 18,

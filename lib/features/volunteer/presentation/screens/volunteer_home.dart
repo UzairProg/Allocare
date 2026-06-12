@@ -282,35 +282,43 @@ final validationMetricsProvider = Provider<ValidationMetricsModel>((ref) {
 
 final impactMetricsProvider = Provider<ImpactMetricsModel>((ref) {
   final volunteerDb = ref.watch(currentVolunteerProvider).asData?.value;
-  final missionsSnapshot = ref.watch(volunteerMissionsStreamProvider).asData?.value;
-  final reportsSnapshot = ref.watch(volunteerReportsStreamProvider).asData?.value;
+  final missionsSnapshot = ref
+      .watch(volunteerMissionsStreamProvider)
+      .asData
+      ?.value;
+  final reportsSnapshot = ref
+      .watch(volunteerReportsStreamProvider)
+      .asData
+      ?.value;
 
   int dynamicLivesImpacted = 0;
   double hoursServed = 0.0;
   int missionsCompleted = volunteerDb?.missionsCompleted ?? 0;
 
   if (missionsSnapshot != null) {
-      for (var doc in missionsSnapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          dynamicLivesImpacted += (data['peopleAffected'] as num?)?.toInt() ?? 0;
-          
-          final start = data['acceptedAt'] as Timestamp?;
-          final end = data['completedAt'] as Timestamp?;
-          if (start != null && end != null) {
-              final diff = end.toDate().difference(start.toDate()).inMinutes;
-              if (diff >= 0 && diff < 600) {
-                  hoursServed += diff / 60.0;
-              }
-          }
+    for (var doc in missionsSnapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      dynamicLivesImpacted += (data['peopleAffected'] as num?)?.toInt() ?? 0;
+
+      final start = data['acceptedAt'] as Timestamp?;
+      final end = data['completedAt'] as Timestamp?;
+      if (start != null && end != null) {
+        final diff = end.toDate().difference(start.toDate()).inMinutes;
+        if (diff >= 0 && diff < 600) {
+          hoursServed += diff / 60.0;
+        }
       }
-  }
-  
-  int actualLivesImpacted = volunteerDb?.livesImpacted ?? 0;
-  if (actualLivesImpacted == 0) {
-      actualLivesImpacted = dynamicLivesImpacted;
+    }
   }
 
-  int actualMissions = missionsSnapshot != null ? missionsSnapshot.docs.length : missionsCompleted;
+  int actualLivesImpacted = volunteerDb?.livesImpacted ?? 0;
+  if (actualLivesImpacted == 0) {
+    actualLivesImpacted = dynamicLivesImpacted;
+  }
+
+  int actualMissions = missionsSnapshot != null
+      ? missionsSnapshot.docs.length
+      : missionsCompleted;
   int actualReports = reportsSnapshot != null ? reportsSnapshot.docs.length : 0;
 
   return ImpactMetricsModel(
@@ -324,14 +332,18 @@ final impactMetricsProvider = Provider<ImpactMetricsModel>((ref) {
   );
 });
 
-final nearbyAlertsStreamProvider = StreamProvider.autoDispose<QuerySnapshot>((ref) {
+final nearbyAlertsStreamProvider = StreamProvider.autoDispose<QuerySnapshot>((
+  ref,
+) {
   return FirebaseFirestore.instance
       .collection('needs')
       .where('status', isEqualTo: 'open')
       .snapshots();
 });
 
-final activePeersStreamProvider = StreamProvider.autoDispose<QuerySnapshot>((ref) {
+final activePeersStreamProvider = StreamProvider.autoDispose<QuerySnapshot>((
+  ref,
+) {
   final ngoId = ref.watch(currentVolunteerProvider).asData?.value?.ngoId;
   if (ngoId == null) return const Stream.empty();
   return FirebaseFirestore.instance
@@ -355,31 +367,33 @@ final tacticalRadarProvider = Provider<TacticalRadarMetricsModel>((ref) {
   String recentTime = 'Awaiting deployment';
 
   if (missionsSnap != null && missionsSnap.docs.isNotEmpty) {
-      final docs = missionsSnap.docs.toList();
-      docs.sort((a, b) {
-          final timeA = (a.data() as Map<String, dynamic>)['completedAt'] as Timestamp?;
-          final timeB = (b.data() as Map<String, dynamic>)['completedAt'] as Timestamp?;
-          if (timeA == null) return 1;
-          if (timeB == null) return -1;
-          return timeB.compareTo(timeA);
-      });
+    final docs = missionsSnap.docs.toList();
+    docs.sort((a, b) {
+      final timeA =
+          (a.data() as Map<String, dynamic>)['completedAt'] as Timestamp?;
+      final timeB =
+          (b.data() as Map<String, dynamic>)['completedAt'] as Timestamp?;
+      if (timeA == null) return 1;
+      if (timeB == null) return -1;
+      return timeB.compareTo(timeA);
+    });
 
-      final mostRecent = docs.first.data() as Map<String, dynamic>;
-      recentType = mostRecent['category'] as String? ?? 'General Support';
+    final mostRecent = docs.first.data() as Map<String, dynamic>;
+    recentType = mostRecent['category'] as String? ?? 'General Support';
 
-      final completedAt = mostRecent['completedAt'] as Timestamp?;
-      if (completedAt != null) {
-          final diff = DateTime.now().difference(completedAt.toDate());
-          if (diff.inDays > 0) {
-              recentTime = 'Completed ${diff.inDays} days ago';
-          } else if (diff.inHours > 0) {
-              recentTime = 'Completed ${diff.inHours} hours ago';
-          } else if (diff.inMinutes > 0) {
-              recentTime = 'Completed ${diff.inMinutes} mins ago';
-          } else {
-              recentTime = 'Completed just now';
-          }
+    final completedAt = mostRecent['completedAt'] as Timestamp?;
+    if (completedAt != null) {
+      final diff = DateTime.now().difference(completedAt.toDate());
+      if (diff.inDays > 0) {
+        recentTime = 'Completed ${diff.inDays} days ago';
+      } else if (diff.inHours > 0) {
+        recentTime = 'Completed ${diff.inHours} hours ago';
+      } else if (diff.inMinutes > 0) {
+        recentTime = 'Completed ${diff.inMinutes} mins ago';
+      } else {
+        recentTime = 'Completed just now';
       }
+    }
   }
 
   return TacticalRadarMetricsModel(
@@ -586,7 +600,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
 
                 // 4. Uniform Tactical Local Radar Grid
                 Text(
-                  'TACTICAL LOCAL RADAR (3KM RADIUS)',
+                  'LOCAL INSIGHTS (3KM RADIUS)',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
@@ -997,7 +1011,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            'Finding Nearby Missions',
+            'Scanning Nearby Incidents',
             style: GoogleFonts.inter(
               fontSize: 22,
               fontWeight: FontWeight.w800,
@@ -1168,7 +1182,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
         needData['ngoName'] ?? needData['ngo_name'] ?? 'Unknown NGO';
     final ngoId = needData['ngoId'] ?? needData['ngo_id'] ?? volunteerDb.ngoId;
     final distance = needData['distance'] ?? '1.2';
-    
+
     final catLabel = '${category[0].toUpperCase()}${category.substring(1)}';
 
     IconData categoryIcon;
@@ -1201,10 +1215,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
           offset: Offset(0, translateY),
           child: Transform.scale(
             scale: scale,
-            child: Opacity(
-              opacity: opacity,
-              child: child,
-            ),
+            child: Opacity(opacity: opacity, child: child),
           ),
         );
       },
@@ -1266,7 +1277,9 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                             color: const Color(0xFFDCFCE7),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: const Color(0xFF86EFAC).withValues(alpha: 0.5),
+                              color: const Color(
+                                0xFF86EFAC,
+                              ).withValues(alpha: 0.5),
                             ),
                           ),
                           child: Row(
@@ -1301,14 +1314,18 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                           color: const Color(0xFFFEF2F2),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: const Color(0xFFFECACA).withValues(alpha: 0.5),
+                            color: const Color(
+                              0xFFFECACA,
+                            ).withValues(alpha: 0.5),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+                              color: const Color(
+                                0xFFDC2626,
+                              ).withValues(alpha: 0.1),
                               blurRadius: 8,
                               spreadRadius: 1,
-                            )
+                            ),
                           ],
                         ),
                         child: Row(
@@ -1364,10 +1381,19 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildMissionFactChip(Icons.location_on_outlined, location),
-                      _buildMissionFactChip(Icons.people_outline_rounded, '$peopleAffected Affected'),
+                      _buildMissionFactChip(
+                        Icons.location_on_outlined,
+                        location,
+                      ),
+                      _buildMissionFactChip(
+                        Icons.people_outline_rounded,
+                        '$peopleAffected Affected',
+                      ),
                       _buildMissionFactChip(categoryIcon, catLabel),
-                      _buildMissionFactChip(Icons.navigation_outlined, '$distance km Away'),
+                      _buildMissionFactChip(
+                        Icons.navigation_outlined,
+                        '$distance km Away',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -1411,7 +1437,11 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                   // NGO Partner
                   Row(
                     children: [
-                      const Icon(Icons.domain_rounded, size: 16, color: Color(0xFF64748B)),
+                      const Icon(
+                        Icons.domain_rounded,
+                        size: 16,
+                        color: Color(0xFF64748B),
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Raised by ',
@@ -1423,9 +1453,12 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                       ),
                       Expanded(
                         child: StreamBuilder<NgoModel?>(
-                          stream: ref.watch(ngoServiceProvider).watchById(ngoId),
+                          stream: ref
+                              .watch(ngoServiceProvider)
+                              .watchById(ngoId),
                           builder: (context, snapshot) {
-                            final currentNgoName = snapshot.data?.ngoName ?? fallbackNgoName;
+                            final currentNgoName =
+                                snapshot.data?.ngoName ?? fallbackNgoName;
                             return Text(
                               currentNgoName,
                               maxLines: 1,
@@ -1457,7 +1490,8 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                             );
                       }
                       // Navigate to Volunteer Map Screen (Index 3)
-                      ref.read(volunteerTabControllerProvider.notifier).state = 3;
+                      ref.read(volunteerTabControllerProvider.notifier).state =
+                          3;
                     },
                     child: Container(
                       width: double.infinity,
@@ -1471,7 +1505,9 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFF2563EB,
+                            ).withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -1609,7 +1645,7 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Gemini AI Insights',
+              'Gemini AI Recommendations',
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -1889,37 +1925,47 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                 const SizedBox(height: 16),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('ngos').snapshots(),
+                    stream: FirebaseFirestore.instance
+                        .collection('ngos')
+                        .snapshots(),
                     builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                      if (!snapshot.hasData)
+                        return const Center(child: CircularProgressIndicator());
                       final docs = snapshot.data!.docs;
-                      if (docs.isEmpty) return const Center(child: Text('No NGOs found'));
+                      if (docs.isEmpty)
+                        return const Center(child: Text('No NGOs found'));
                       return ListView.builder(
                         controller: scrollController,
                         itemCount: docs.length,
                         itemBuilder: (context, index) {
-                          final data = docs[index].data() as Map<String, dynamic>;
+                          final data =
+                              docs[index].data() as Map<String, dynamic>;
                           final name = data['ngoName'] as String? ?? 'NGO';
-                          
+
                           final city = data['city'] as String?;
                           final state = data['state'] as String?;
-                          
+
                           String area = 'Location unavailable';
-                          if (city != null && city.isNotEmpty && state != null && state.isNotEmpty) {
-                              area = '$city, $state';
+                          if (city != null &&
+                              city.isNotEmpty &&
+                              state != null &&
+                              state.isNotEmpty) {
+                            area = '$city, $state';
                           } else if (city != null && city.isNotEmpty) {
-                              area = city;
+                            area = city;
                           } else if (state != null && state.isNotEmpty) {
-                              area = state;
+                            area = state;
                           }
-                          
+
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                              ),
                             ),
                             child: Row(
                               children: [
@@ -1929,21 +1975,33 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
                                     color: Color(0xFFE0E7FF),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.domain_rounded, color: Color(0xFF4F46E5), size: 24),
+                                  child: const Icon(
+                                    Icons.domain_rounded,
+                                    color: Color(0xFF4F46E5),
+                                    size: 24,
+                                  ),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         name,
-                                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: const Color(0xFF1E293B)),
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                          color: const Color(0xFF1E293B),
+                                        ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         'Area: $area',
-                                        style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B)),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: const Color(0xFF64748B),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1987,7 +2045,15 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
               color: const Color(0xFFEF4444),
               bgColor: const Color(0xFFFEF2F2),
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const MapScreen(isVolunteer: true, initialLayer: MapLayerCategory.medical)));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MapScreen(
+                      isVolunteer: true,
+                      initialLayer: MapLayerCategory.medical,
+                    ),
+                  ),
+                );
               },
             ),
             _buildTacticalGridCard(
@@ -1999,7 +2065,15 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
               bgColor: const Color(0xFFF0F9FF),
               miniRadar: true,
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const MapScreen(isVolunteer: true, initialLayer: MapLayerCategory.medical)));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MapScreen(
+                      isVolunteer: true,
+                      initialLayer: MapLayerCategory.medical,
+                    ),
+                  ),
+                );
               },
             ),
             _buildTacticalGridCard(
@@ -2010,7 +2084,12 @@ class _VolunteerHomeScreenState extends ConsumerState<VolunteerHomeScreen>
               color: const Color(0xFF10B981),
               bgColor: const Color(0xFFECFDF5),
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const VolunteerMissionHistoryPage()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const VolunteerMissionHistoryPage(),
+                  ),
+                );
               },
             ),
             _buildTacticalGridCard(

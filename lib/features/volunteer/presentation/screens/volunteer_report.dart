@@ -282,7 +282,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Ground Intelligence Uploaded\nNGO command center notified.',
+            'Reports Uploaded\nNGO command center notified.',
             style: GoogleFonts.inter(fontWeight: FontWeight.w600),
           ),
           backgroundColor: const Color(0xFF10B981),
@@ -312,7 +312,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
             ],
           ),
           content: Text(
-            'Your ground intelligence has been uploaded to Firestore and routed to the NGO command center.',
+            'Your reports has been uploaded to Firestore and routed to the NGO command center.',
             style: GoogleFonts.inter(),
           ),
           actions: [
@@ -517,7 +517,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
 
                 // Option 1
                 _buildOptionCard(
-                  title: 'Voice observation',
+                  title: 'Voice report',
                   subtitle:
                       'Speak naturally. AI structures the report automatically.',
                   iconData: Icons.mic_rounded,
@@ -535,7 +535,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
 
                 // Option 2
                 _buildOptionCard(
-                  title: 'Photo evidence',
+                  title: 'Photo report',
                   subtitle:
                       'Capture evidence and generate an AI-assisted incident report.',
                   iconData: Icons.camera_alt_rounded,
@@ -553,7 +553,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
 
                 // Option 3
                 _buildOptionCard(
-                  title: 'Structured report',
+                  title: 'Manual report',
                   subtitle: 'Fill detailed operational information manually.',
                   iconData: Icons.assignment_rounded,
                   iconColor: const Color(0xFF10B981),
@@ -649,7 +649,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
           onPressed: () => setState(() => _activeFlow = 'hub'),
         ),
         title: Text(
-          'Structured Report',
+          'Manual Report',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
             fontSize: 22,
@@ -686,7 +686,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Submit real-time ground intelligence. This will immediately notify dispatchers and update the tactical map.',
+                          'Submit real-time reports. This will immediately notify dispatchers and update the tactical map.',
                           style: GoogleFonts.inter(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w500,
@@ -1033,7 +1033,7 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
                       ),
                     ),
                     child: Text(
-                      'Submit Ground Intelligence',
+                      'Submit Reports',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

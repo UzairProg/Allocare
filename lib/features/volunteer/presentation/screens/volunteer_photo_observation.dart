@@ -192,7 +192,7 @@ class _VolunteerPhotoObservationScreenState extends ConsumerState<VolunteerPhoto
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          'Photo Evidence',
+          'Photo Report',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             fontSize: 18,
@@ -718,7 +718,7 @@ class _VolunteerPhotoObservationScreenState extends ConsumerState<VolunteerPhoto
               _buildProgressStep('Contextual Metadata Analyzed', _analysisStep >= 1),
               _buildProgressStep('Visual Crisis Vectors Mapped', _analysisStep >= 2),
               _buildProgressStep('Resource Allocation Predicted', _analysisStep >= 3),
-              _buildProgressStep('Synthesizing Master Intelligence Report', _analysisStep >= 4, isLast: true),
+              _buildProgressStep('Synthesizing Master Field Report', _analysisStep >= 4, isLast: true),
             ],
           ),
         ),

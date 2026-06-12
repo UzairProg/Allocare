@@ -1629,7 +1629,7 @@ class _GeminiBriefCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'View AI Insights',
+                        'View AI Recommendations',
                         style: GoogleFonts.poppins(
                           color: const Color(0xFF38BDF8),
                           fontWeight: FontWeight.bold,

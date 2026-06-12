@@ -137,7 +137,7 @@ class _VolunteerGroundReportsHistoryPageState extends ConsumerState<VolunteerGro
             ),
             const SizedBox(height: 8),
             Text(
-              'Capture field evidence using Voice Observation or Photo Evidence tools.',
+              'Capture field evidence using Voice Report or Photo Report tools.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 color: const Color(0xFF64748B),
@@ -181,7 +181,7 @@ class _VolunteerGroundReportsHistoryPageState extends ConsumerState<VolunteerGro
     } else if (reportType.contains('photo')) {
       typeIcon = Icons.camera_alt_rounded;
       typeColor = const Color(0xFF0EA5E9);
-      typeLabel = 'Photo Evidence';
+      typeLabel = 'Photo Report';
     }
 
     Color severityColor = const Color(0xFFF59E0B);
@@ -511,7 +511,7 @@ class _ReportDetailSheet extends StatelessWidget {
                 child: const Icon(Icons.mic_rounded, color: Color(0xFF8B5CF6)),
               ),
               title: Text(
-                'Voice Observation Recording',
+                'Voice Report Recording',
                 style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B)),
               ),
               subtitle: Text(
