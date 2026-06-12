@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 
+import '../../../../services/volunteer_service.dart';
+import '../../../reports/application/ground_intelligence_service.dart';
 import 'volunteer_ai_generated_report_screen.dart';
 
 class VolunteerPhotoObservationScreen extends ConsumerStatefulWidget {
@@ -21,15 +24,49 @@ class _VolunteerPhotoObservationScreenState extends ConsumerState<VolunteerPhoto
   bool _isAnalyzing = false;
   int _analysisStep = 0;
   
+  // Location
+  Position? _currentPosition;
+  String _address = 'Detecting location...';
+  
   late final AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
+    _initLocation();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
+  }
+
+  Future<void> _initLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) setState(() => _address = 'Location services disabled');
+        return;
+      }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) setState(() => _address = 'Location permission denied');
+          return;
+        }
+      }
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+          _address = '${position.latitude.toStringAsFixed(5)}° N, ${position.longitude.toStringAsFixed(5)}° E';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _address = 'Failed to get location');
+    }
   }
 
   @override
@@ -148,42 +185,68 @@ class _VolunteerPhotoObservationScreenState extends ConsumerState<VolunteerPhoto
       _analysisStep = 1;
     });
 
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (!mounted) return;
-    setState(() => _analysisStep = 2);
-    
-    await Future.delayed(const Duration(milliseconds: 1500));
-    if (!mounted) return;
-    setState(() => _analysisStep = 3);
+    try {
+      final volunteer = ref.read(currentVolunteerProvider).asData?.value;
+      
+      final contextData = {
+        'volunteerName': volunteer?.displayName ?? 'Unknown',
+        'ngoId': volunteer?.ngoId ?? 'Unknown',
+        'location': _address,
+        'missionId': volunteer?.currentMissionId ?? 'Unknown',
+      };
 
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-    setState(() => _analysisStep = 4);
+      if (mounted) setState(() => _analysisStep = 2);
 
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
+      final groundService = ref.read(groundIntelligenceServiceProvider);
+      
+      final result = await groundService.analyzeEvidence(
+        audioFile: null,
+        supportingImages: _selectedImages,
+        contextData: contextData,
+      );
 
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 400),
-        pageBuilder: (context, animation, secondaryAnimation) => 
-            VolunteerAIGeneratedReportScreen(
-              supportingImages: _selectedImages,
-              audioPath: '',
-              reportType: 'photo_evidence',
-            ),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
-    ).then((_) {
+      if (mounted) setState(() => _analysisStep = 4);
+      await Future.delayed(const Duration(milliseconds: 600));
+
+      if (!mounted) return;
+
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 400),
+          pageBuilder: (context, animation, secondaryAnimation) => 
+              VolunteerAIGeneratedReportScreen(
+                supportingImages: _selectedImages,
+                audioPath: '',
+                reportType: 'photo',
+                aiAnalysisResult: result,
+                appLocation: _address,
+              ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ).then((_) {
+        if (mounted) {
+          setState(() {
+            _isAnalyzing = false;
+            _analysisStep = 0;
+          });
+        }
+      });
+    } catch (e) {
       if (mounted) {
         setState(() {
           _isAnalyzing = false;
           _analysisStep = 0;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Processing failed: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
       }
-    });
+    }
   }
 
   @override
@@ -393,7 +456,7 @@ class _VolunteerPhotoObservationScreenState extends ConsumerState<VolunteerPhoto
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'GPS coordinates attached',
+                  _address,
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     color: const Color(0xFF64748B),

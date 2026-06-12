@@ -189,14 +189,65 @@ ${context.isEmpty ? '' : 'Context metadata:\n$context'}
         'Gemini returned an empty response for binary file input.',
       );
     }
-
     return _normalizeJsonObject(text, sourceLabel: 'binary parse');
+  }
+
+  Future<String> analyzeMultimodalEvidence({
+    required List<Map<String, dynamic>> mediaFiles,
+    required String contextText,
+  }) async {
+    final context = contextText.trim();
+    final prompt = '''
+You are an emergency-intel parser and evidence validator.
+Analyze the provided audio and/or images together.
+
+Context metadata:
+$context
+
+First, determine if the provided evidence (audio vs images) is consistent. For example, if audio mentions a medical emergency but images show food distribution, that is a mismatch. If only one type of evidence is provided, it is automatically matched.
+
+Return strict JSON with exactly these keys:
+- evidenceMatched (boolean)
+- evidenceConfidence (integer 0-100)
+- evidenceReason (string explaining the match or mismatch)
+- incidentType (string, e.g., "Medical Emergency", "Fire", "Traffic Accident")
+- severity (string: "low", "medium", "high", "critical")
+- summary (string, detailed summary of the situation. DO NOT include the location or address in this summary, as it is displayed separately.)
+- estimatedAffected (integer)
+- requiredResources (array of strings)
+- recommendedCategory (strictly one of: medical, fire, police, accident, infrastructure, natural_disaster, other)
+- confidenceScore (integer 0-100)
+- detectedRisks (array of strings)
+- recommendedActions (array of strings)
+
+Return ONLY a single valid JSON object.
+Do not add markdown code fences.
+Do not add explanations before or after the JSON.
+''';
+
+    final parts = <Part>[TextPart(prompt)];
+    for (final media in mediaFiles) {
+      parts.add(DataPart(media['mimeType'] as String, media['bytes'] as Uint8List));
+    }
+
+    final response = await _generateWithModelFallback(
+      (model) => model.generateContent([
+        Content.multi(parts),
+      ]),
+    );
+
+    final text = response.text?.trim();
+    if (text == null || text.isEmpty) {
+      throw StateError('Gemini returned an empty response for multimodal input.');
+    }
+
+    return _normalizeJsonObject(text, sourceLabel: 'multimodal parse');
   }
 
   Future<GenerateContentResponse> _generateWithModelFallback(
     Future<GenerateContentResponse> Function(GenerativeModel model) request,
   ) async {
-    Object? lastError;
+    final List<String> errors = [];
 
     for (final candidateModel in _candidateModels()) {
       final isGemma = candidateModel.toLowerCase().contains('gemma');
@@ -213,12 +264,12 @@ ${context.isEmpty ? '' : 'Context metadata:\n$context'}
       try {
         return await request(model);
       } catch (error) {
-        lastError = error;
+        errors.add('[$candidateModel]: $error');
       }
     }
 
     throw StateError(
-      'Gemini request failed for all candidate models (${_candidateModels().join(', ')}): $lastError',
+      'Gemini request failed for all candidate models. Errors:\n${errors.join('\n')}',
     );
   }
 

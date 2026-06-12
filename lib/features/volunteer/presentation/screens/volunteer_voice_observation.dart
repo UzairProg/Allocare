@@ -191,8 +191,29 @@ class _VolunteerVoiceObservationScreenState extends ConsumerState<VolunteerVoice
 
   Future<void> _processReport(File audioFile) async {
     try {
-      // Mock processing delay for demo
-      await Future.delayed(const Duration(seconds: 3));
+      if (mounted) {
+        setState(() {
+          _isProcessing = true;
+          _processingController.repeat();
+        });
+      }
+
+      final volunteer = ref.read(currentVolunteerProvider).asData?.value;
+      
+      final contextData = {
+        'volunteerName': volunteer?.displayName ?? 'Unknown',
+        'ngoId': volunteer?.ngoId ?? 'Unknown',
+        'location': _address,
+        'missionId': volunteer?.currentMissionId ?? 'Unknown',
+      };
+
+      final groundService = ref.read(groundIntelligenceServiceProvider);
+      
+      final result = await groundService.analyzeEvidence(
+        audioFile: audioFile,
+        supportingImages: _supportingImages,
+        contextData: contextData,
+      );
 
       if (mounted) {
         setState(() {
@@ -207,6 +228,8 @@ class _VolunteerVoiceObservationScreenState extends ConsumerState<VolunteerVoice
                 VolunteerAIGeneratedReportScreen(
                   supportingImages: _supportingImages,
                   audioPath: audioFile.path,
+                  aiAnalysisResult: result,
+                  appLocation: _address,
                 ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);

@@ -80,179 +80,6 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
     super.dispose();
   }
 
-  void _startVoiceReportSimulation() {
-    showModalBottomSheet<void>(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Listening view
-                  Container(
-                    height: 80,
-                    width: 80,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.mic_rounded,
-                      color: Color(0xFFEF4444),
-                      size: 40,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Listening...',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Text(
-                      '"There is a large tree down across the main road in Sector 3, blocking all ambulance access. Severity is high. We need cleanup crews."',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        Navigator.pop(context); // Close previous
-        showModalBottomSheet<void>(
-          context: context,
-          isDismissible: false,
-          enableDrag: false,
-          backgroundColor: Colors.white,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          builder: (context) {
-            return Container(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const SizedBox(
-                    height: 80,
-                    width: 80,
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF4F46E5),
-                      strokeWidth: 4,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Gemini AI Analyzing...',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Extracting location, severity, and incident details...',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            );
-          },
-        );
-
-        Future.delayed(const Duration(milliseconds: 1800), () {
-          if (mounted) {
-            Navigator.pop(context); // Close modal
-            setState(() {
-              _selectedCategory = 'Road Blockage';
-              _selectedSeverity = 'High';
-              _titleController.text = 'Road blocked by fallen tree in Sector 3';
-              _descController.text =
-                  'A large tree has fallen across the main road in Sector 3, completely blocking all ambulance access. Needs immediate clearing crew.';
-              _locationController.text =
-                  '19.8762° N, 75.3433° E (Sector 3 - Pundlik Nagar)';
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(
-                      Icons.auto_awesome,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Gemini extracted and auto-filled 5 report fields.',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
-                backgroundColor: const Color(0xFF4F46E5),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        });
-      }
-    });
-  }
 
   void _detectLocation() async {
     setState(() {
@@ -779,7 +606,13 @@ class _VolunteerReportScreenState extends State<VolunteerReportScreen>
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _startVoiceReportSimulation,
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const VolunteerVoiceObservationScreen(),
+                              ),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: const Color(0xFF4F46E5),

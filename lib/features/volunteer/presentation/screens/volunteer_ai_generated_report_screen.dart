@@ -12,12 +12,16 @@ class VolunteerAIGeneratedReportScreen extends ConsumerStatefulWidget {
   final List<File> supportingImages;
   final String audioPath;
   final String reportType;
+  final Map<String, dynamic>? aiAnalysisResult;
+  final String appLocation;
 
   const VolunteerAIGeneratedReportScreen({
     super.key,
     required this.supportingImages,
     required this.audioPath,
     this.reportType = 'voice',
+    this.aiAnalysisResult,
+    required this.appLocation,
   });
 
   @override
@@ -27,6 +31,7 @@ class VolunteerAIGeneratedReportScreen extends ConsumerStatefulWidget {
 class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGeneratedReportScreen> {
   bool _isSubmitting = false;
   bool _isEditing = false;
+  bool _isEvidenceExpanded = false;
 
   late TextEditingController _titleController;
   late TextEditingController _impactController;
@@ -35,9 +40,10 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: 'Suspected Waterborne Disease Outbreak');
-    _impactController = TextEditingController(text: '150');
-    _summaryController = TextEditingController(text: 'AI detected indicators consistent with a possible waterborne disease outbreak. Multiple references to illness symptoms, contaminated water sources, and affected residents were identified from the volunteer observation.');
+    final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
+    _titleController = TextEditingController(text: aiData['incidentType']?.toString() ?? 'Report');
+    _impactController = TextEditingController(text: aiData['estimatedAffected']?.toString() ?? '0');
+    _summaryController = TextEditingController(text: aiData['summary']?.toString() ?? '');
   }
 
   @override
@@ -59,6 +65,10 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
       final volunteer = ref.read(currentVolunteerProvider).asData?.value;
       if (volunteer == null) throw Exception('User not logged in');
 
+      final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
+      final audioUrl = widget.aiAnalysisResult?['audioUrl'] as String? ?? 'mock_audio_url';
+      final uploadedImages = widget.aiAnalysisResult?['uploadedImages'] as List<Map<String, dynamic>>? ?? [];
+
       // Create dummy report with user-edited data directly to Firestore
       final report = GroundReportModel(
         reportId: '', // Will be assigned by repo
@@ -67,28 +77,27 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
         volunteerId: volunteer.uid,
         volunteerName: volunteer.displayName,
         reportType: widget.reportType,
-        audioUrl: 'mock_audio_url', 
-        transcript: 'Multiple references to illness symptoms, contaminated water sources, and affected residents were identified.',
-        supportingImages: widget.supportingImages.map((f) => {
-          'url': f.path, // Mocking URL with local path for demo
-          'uploadedAt': DateTime.now().toIso8601String()
-        }).toList(),
+        audioUrl: audioUrl, 
+        transcript: aiData['summary'] ?? '',
+        supportingImages: uploadedImages,
         location: {
-          'latitude': 19.8762, 
-          'longitude': 75.3433, 
-          'address': 'Mahananda Colony, Sector 4'
+          'latitude': 0.0, 
+          'longitude': 0.0, 
+          'address': widget.appLocation
         },
         aiAnalysis: {
           'summary': _summaryController.text.trim(),
-          'urgency': 'critical',
+          'urgency': aiData['severity'] ?? 'medium',
           'estimatedImpact': int.tryParse(_impactController.text.trim()) ?? 0,
-          'suggestedResources': ['Medical Team', 'Clean Water Supply', 'Mobile Clinic', 'Essential Medicines'],
-          'crisisType': 'medical',
-          'confidenceScore': 0.94,
+          'suggestedResources': aiData['requiredResources'] ?? [],
+          'crisisType': aiData['recommendedCategory'] ?? 'other',
+          'confidenceScore': aiData['confidenceScore'] ?? 90,
+          'detectedRisks': aiData['detectedRisks'] ?? [],
+          'recommendedActions': aiData['recommendedActions'] ?? [],
         },
         status: 'submitted',
         missionStatusAtReportTime: 'active',
-        urgencyAtReportTime: 'high',
+        urgencyAtReportTime: aiData['severity'] ?? 'high',
       );
 
       await ref.read(groundReportRepositoryProvider).createReport(report);
@@ -149,6 +158,10 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
                   children: [
                     _buildTopSection(),
                     const SizedBox(height: 32),
+                    if (widget.aiAnalysisResult != null) ...[
+                      _buildEvidenceVerificationSection(),
+                      const SizedBox(height: 32),
+                    ],
                     _buildImpactSection(),
                     const SizedBox(height: 32),
                     _buildResourcesSection(),
@@ -167,7 +180,121 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
     );
   }
 
+  Widget _buildEvidenceVerificationSection() {
+    final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
+    final bool evidenceMatched = aiData['evidenceMatched'] == true;
+    final String evidenceReason = aiData['evidenceReason']?.toString() ?? '';
+
+    if (evidenceMatched) {
+      return GestureDetector(
+        onTap: () => setState(() => _isEvidenceExpanded = !_isEvidenceExpanded),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFBBF7D0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 20),
+                      const SizedBox(width: 8),
+                      Text('Matched Evidence', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF16A34A), fontSize: 14)),
+                      const SizedBox(width: 4),
+                      Icon(_isEvidenceExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: const Color(0xFF16A34A), size: 16),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('Powered by Gemma', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF15803D))),
+                  ),
+                ],
+              ),
+              if (_isEvidenceExpanded) ...[
+                const SizedBox(height: 12),
+                Text(evidenceReason.isNotEmpty ? evidenceReason : 'Voice observations align with uploaded evidence perfectly.', style: GoogleFonts.inter(color: const Color(0xFF15803D), fontSize: 13, height: 1.4)),
+              ],
+            ],
+          ),
+        ),
+      );
+    } else {
+      return GestureDetector(
+        onTap: () => setState(() => _isEvidenceExpanded = !_isEvidenceExpanded),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFECACA)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 20),
+                      const SizedBox(width: 8),
+                      Text('Evidence Mismatch', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFFDC2626), fontSize: 14)),
+                      const SizedBox(width: 4),
+                      Icon(_isEvidenceExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: const Color(0xFFDC2626), size: 16),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('Powered by Gemma', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFFB91C1C))),
+                  ),
+                ],
+              ),
+              if (_isEvidenceExpanded) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Inconsistent evidence detected:\n${evidenceReason.isNotEmpty ? evidenceReason : 'Uploaded evidence is entirely irrelevant to the voice observation. Please review.'}',
+                  style: GoogleFonts.inter(color: const Color(0xFFB91C1C), fontSize: 13, height: 1.4),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildTopSection() {
+    final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
+    final severity = (aiData['severity']?.toString() ?? 'medium').toLowerCase();
+    
+    Color severityBg = const Color(0xFFFFFBEB);
+    Color severityBorder = const Color(0xFFFDE68A);
+    Color severityText = const Color(0xFFD97706);
+    
+    if (severity == 'critical' || severity == 'high') {
+       severityBg = const Color(0xFFFEF2F2);
+       severityBorder = const Color(0xFFFECACA);
+       severityText = const Color(0xFFDC2626);
+    } else if (severity == 'low') {
+       severityBg = const Color(0xFFF0FDF4);
+       severityBorder = const Color(0xFFBBF7D0);
+       severityText = const Color(0xFF16A34A);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -200,16 +327,16 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
+                color: severityBg,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFFECACA)),
+                border: Border.all(color: severityBorder),
               ),
               child: Text(
-                'Critical',
+                severity[0].toUpperCase() + severity.substring(1),
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFFDC2626),
+                  color: severityText,
                 ),
               ),
             ),
@@ -279,14 +406,18 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
           children: [
             const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF64748B)),
             const SizedBox(width: 6),
-            Text(
-              'Mahananda Colony, Sector 4',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: const Color(0xFF475569),
+            Expanded(
+              child: Text(
+                widget.appLocation,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: const Color(0xFF475569),
+                ),
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             Text(
               'Just now',
               style: GoogleFonts.inter(
@@ -388,12 +519,12 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
   }
 
   Widget _buildResourcesSection() {
-    final resources = [
-      'Medical Team',
-      'Clean Water Supply',
-      'Mobile Clinic',
-      'Essential Medicines',
-    ];
+    final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
+    final List<dynamic> rawResources = aiData['requiredResources'] ?? [];
+    final List<String> resources = rawResources.map((e) => e.toString()).toList();
+    if (resources.isEmpty) {
+      resources.addAll(['Medical Team', 'Clean Water Supply']); // Fallback
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,6 +542,24 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
           spacing: 8,
           runSpacing: 8,
           children: resources.map((res) {
+            IconData iconData = Icons.inventory_2_rounded;
+            final lowerRes = res.toLowerCase();
+            if (lowerRes.contains('medical') || lowerRes.contains('first aid') || lowerRes.contains('medicine') || lowerRes.contains('doctor') || lowerRes.contains('ambulance') || lowerRes.contains('clinic')) {
+              iconData = Icons.medical_services_rounded;
+            } else if (lowerRes.contains('water') || lowerRes.contains('hydration')) {
+              iconData = Icons.water_drop_rounded;
+            } else if (lowerRes.contains('food') || lowerRes.contains('meal') || lowerRes.contains('ration')) {
+              iconData = Icons.restaurant_rounded;
+            } else if (lowerRes.contains('fire')) {
+              iconData = Icons.local_fire_department_rounded;
+            } else if (lowerRes.contains('police') || lowerRes.contains('security')) {
+              iconData = Icons.local_police_rounded;
+            } else if (lowerRes.contains('shelter') || lowerRes.contains('tent') || lowerRes.contains('blanket')) {
+              iconData = Icons.house_rounded;
+            } else if (lowerRes.contains('power') || lowerRes.contains('electricity') || lowerRes.contains('generator')) {
+              iconData = Icons.electrical_services_rounded;
+            }
+
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
@@ -421,7 +570,7 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.inventory_2_rounded, size: 14, color: Color(0xFF64748B)),
+                  Icon(iconData, size: 14, color: const Color(0xFF64748B)),
                   const SizedBox(width: 6),
                   Text(
                     res,
@@ -452,38 +601,40 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.analytics_rounded, size: 18, color: Color(0xFF4F46E5)),
-                  const SizedBox(width: 8),
-                  Text(
-                    'AI Summary',
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1E293B),
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+              const Icon(Icons.analytics_rounded, size: 18, color: Color(0xFF4F46E5)),
+              const SizedBox(width: 8),
+              Text(
+                'Incident Report',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1E293B),
                 ),
-                child: Text(
-                  'Confidence: 94%',
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Builder(
+              builder: (context) {
+                final score = widget.aiAnalysisResult?['aiData']?['confidenceScore'] as int? ?? 90;
+                final text = score >= 85 ? 'Confidence: $score%' : 'Confidence: Moderate ($score%)';
+                return Text(
+                  text,
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF4F46E5),
                   ),
-                ),
-              ),
-            ],
+                );
+              },
+            ),
           ),
           const SizedBox(height: 12),
           _isEditing
