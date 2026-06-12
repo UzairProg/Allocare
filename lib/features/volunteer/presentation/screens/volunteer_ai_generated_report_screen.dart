@@ -32,18 +32,37 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
   bool _isSubmitting = false;
   bool _isEditing = false;
   bool _isEvidenceExpanded = false;
+  bool _isEnglishTranslated = false;
 
   late TextEditingController _titleController;
   late TextEditingController _impactController;
   late TextEditingController _summaryController;
 
+  String _getTranslatedText(String key) {
+    final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
+    if (_isEnglishTranslated && aiData['englishTranslation'] != null) {
+      return aiData['englishTranslation'][key]?.toString() ?? aiData[key]?.toString() ?? '';
+    }
+    return aiData[key]?.toString() ?? '';
+  }
+
+  List<String> _getTranslatedList(String key) {
+    final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
+    if (_isEnglishTranslated && aiData['englishTranslation'] != null) {
+      final list = aiData['englishTranslation'][key] as List<dynamic>?;
+      if (list != null) return list.map((e) => e.toString()).toList();
+    }
+    final list = aiData[key] as List<dynamic>?;
+    return list?.map((e) => e.toString()).toList() ?? [];
+  }
+
   @override
   void initState() {
     super.initState();
     final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
-    _titleController = TextEditingController(text: aiData['incidentType']?.toString() ?? 'Report');
+    _titleController = TextEditingController(text: _getTranslatedText('incidentType').isNotEmpty ? _getTranslatedText('incidentType') : 'Report');
     _impactController = TextEditingController(text: aiData['estimatedAffected']?.toString() ?? '0');
-    _summaryController = TextEditingController(text: aiData['summary']?.toString() ?? '');
+    _summaryController = TextEditingController(text: _getTranslatedText('summary'));
   }
 
   @override
@@ -101,6 +120,7 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
       );
 
       await ref.read(groundReportRepositoryProvider).createReport(report);
+      await ref.read(volunteerServiceProvider).incrementReportsSubmitted(volunteer.uid);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -156,6 +176,7 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildTranslationToggle(),
                     _buildTopSection(),
                     const SizedBox(height: 32),
                     if (widget.aiAnalysisResult != null) ...[
@@ -180,10 +201,43 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
     );
   }
 
+  Widget _buildTranslationToggle() {
+    final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
+    final lang = aiData['detectedLanguage']?.toString().toLowerCase() ?? 'english';
+    if (lang == 'english' || lang.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text(
+            _isEnglishTranslated ? 'Translated to English' : 'Detected: ${aiData['detectedLanguage']}',
+            style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(width: 8),
+          Switch(
+            value: _isEnglishTranslated,
+            onChanged: (val) {
+              setState(() {
+                _isEnglishTranslated = val;
+                if (!_isEditing) {
+                  _titleController.text = _getTranslatedText('incidentType').isNotEmpty ? _getTranslatedText('incidentType') : 'Report';
+                  _summaryController.text = _getTranslatedText('summary');
+                }
+              });
+            },
+            activeColor: const Color(0xFF4F46E5),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEvidenceVerificationSection() {
     final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
     final bool evidenceMatched = aiData['evidenceMatched'] == true;
-    final String evidenceReason = aiData['evidenceReason']?.toString() ?? '';
+    final String evidenceReason = _getTranslatedText('evidenceReason');
 
     if (evidenceMatched) {
       return GestureDetector(
@@ -519,9 +573,7 @@ class _VolunteerAIGeneratedReportScreenState extends ConsumerState<VolunteerAIGe
   }
 
   Widget _buildResourcesSection() {
-    final aiData = widget.aiAnalysisResult?['aiData'] as Map<String, dynamic>? ?? {};
-    final List<dynamic> rawResources = aiData['requiredResources'] ?? [];
-    final List<String> resources = rawResources.map((e) => e.toString()).toList();
+    final List<String> resources = _getTranslatedList('requiredResources');
     if (resources.isEmpty) {
       resources.addAll(['Medical Team', 'Clean Water Supply']); // Fallback
     }

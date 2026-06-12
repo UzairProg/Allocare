@@ -285,4 +285,12 @@ class VolunteerService {
       'updatedAt': Timestamp.now(),
     });
   }
+
+  /// Increment the number of reports submitted by the volunteer.
+  Future<void> incrementReportsSubmitted(String uid) async {
+    await _volunteers.doc(uid).update({
+      'reportsSubmitted': FieldValue.increment(1),
+      'updatedAt': Timestamp.now(),
+    });
+  }
 }

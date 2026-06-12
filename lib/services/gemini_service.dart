@@ -206,19 +206,24 @@ $context
 
 First, determine if the provided evidence (audio vs images) is consistent. For example, if audio mentions a medical emergency but images show food distribution, that is a mismatch. If only one type of evidence is provided, it is automatically matched.
 
+Crucially: Detect the primary language used in the audio or context (e.g., Hindi, Marathi, English). The main text fields in the root JSON MUST be returned in that exact same detected language.
+
 Return strict JSON with exactly these keys:
+- detectedLanguage (string, e.g., "Hindi", "Marathi", "English")
 - evidenceMatched (boolean)
 - evidenceConfidence (integer 0-100)
-- evidenceReason (string explaining the match or mismatch)
-- incidentType (string, e.g., "Medical Emergency", "Fire", "Traffic Accident")
-- severity (string: "low", "medium", "high", "critical")
-- summary (string, detailed summary of the situation. DO NOT include the location or address in this summary, as it is displayed separately.)
+- evidenceReason (string explaining the match or mismatch, in detected language)
+- incidentType (string, e.g., "Medical Emergency", "Fire", in detected language)
+- severity (string: "low", "medium", "high", "critical" - keep this exact string in English)
+- summary (string, detailed summary of the situation. DO NOT include the location or address in this summary, as it is displayed separately. In detected language)
 - estimatedAffected (integer)
-- requiredResources (array of strings)
+- requiredResources (array of strings, in detected language)
 - recommendedCategory (strictly one of: medical, fire, police, accident, infrastructure, natural_disaster, other)
 - confidenceScore (integer 0-100)
-- detectedRisks (array of strings)
-- recommendedActions (array of strings)
+- detectedRisks (array of strings, in detected language)
+- recommendedActions (array of strings, in detected language)
+- englishTranslation (object containing exact English translations of the text fields):
+    { "incidentType": "", "summary": "", "evidenceReason": "", "requiredResources": [], "detectedRisks": [], "recommendedActions": [] }
 
 Return ONLY a single valid JSON object.
 Do not add markdown code fences.

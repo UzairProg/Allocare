@@ -85,8 +85,8 @@ class _VolunteerGroundReportsHistoryPageState extends ConsumerState<VolunteerGro
           docs.sort((a, b) {
             final aData = a.data() as Map<String, dynamic>;
             final bData = b.data() as Map<String, dynamic>;
-            final aTs = aData['timestamp'] as Timestamp?;
-            final bTs = bData['timestamp'] as Timestamp?;
+            final aTs = aData['createdAt'] as Timestamp?;
+            final bTs = bData['createdAt'] as Timestamp?;
             if (aTs == null && bTs == null) return 0;
             if (aTs == null) return 1;
             if (bTs == null) return -1;
