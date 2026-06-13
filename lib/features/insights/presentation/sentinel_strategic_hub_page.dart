@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import '../../home/presentation/main_navigation_screen.dart';
-import '../../map/presentation/map_screen.dart';
+import 'dart:ui';
 
 class SentinelStrategicHubPage extends StatefulWidget {
   const SentinelStrategicHubPage({super.key});
@@ -11,776 +10,1032 @@ class SentinelStrategicHubPage extends StatefulWidget {
       _SentinelStrategicHubPageState();
 }
 
-class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage> {
-  int _selectedTabIndex = 0; // 0 for Wellness, 1 for Waterborne, 2 for Airborne
+class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _sheetAnimationController;
 
-  void _onTabChanged(int index) {
-    if (_selectedTabIndex != index) {
-      setState(() {
-        _selectedTabIndex = index;
-      });
+  @override
+  void initState() {
+    super.initState();
+    // 1.0 = fully hidden at the bottom, 0.05 = fully expanded leaving 5% top margin
+    _sheetAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+      value: 1.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _sheetAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    double delta = details.primaryDelta! / MediaQuery.of(context).size.height;
+    _sheetAnimationController.value += delta;
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (details.primaryVelocity! < -300) {
+      _sheetAnimationController.animateTo(0.05, curve: Curves.easeOutCubic);
+    } else if (details.primaryVelocity! > 300) {
+      _sheetAnimationController.animateTo(1.0, curve: Curves.easeOutCubic);
+    } else {
+      if (_sheetAnimationController.value < 0.6) {
+        _sheetAnimationController.animateTo(0.05, curve: Curves.easeOutCubic);
+      } else {
+        _sheetAnimationController.animateTo(1.0, curve: Curves.easeOutCubic);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF1E293B),
-        centerTitle: true,
-        title: const Text(
-          'AI Recommendations Hub',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-      ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-          child: Column(
-            children: [
-              // 1. Data Synthesis Core with Convergence Animation
-              const _ContinuousDataSynthesisCore(),
-              const SizedBox(height: 24),
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onVerticalDragUpdate: _handleDragUpdate,
+        onVerticalDragEnd: _handleDragEnd,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedBuilder(
+          animation: _sheetAnimationController,
+          builder: (context, child) {
+            double pos = _sheetAnimationController.value.clamp(0.05, 1.0);
+            double progress = 1.0 - pos; 
+            
+            double backgroundScale = 1.0 - (0.06 * progress); // Shrinks to 94%
+            double blur = 12.0 * progress;
+            double dim = 0.5 * progress;
 
-              // 2. The Proactive Narrative Tabs
-              _buildSegmentNavigator(),
-              const SizedBox(height: 24),
-
-              // 3. The Briefing Cards (Animated Switch)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 600),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                layoutBuilder: (currentChild, previousChildren) {
-                  return Stack(
-                    alignment: Alignment.topCenter,
-                    children: <Widget>[
-                      ...previousChildren,
-                      if (currentChild != null) currentChild,
-                    ],
-                  );
-                },
-                transitionBuilder: (child, animation) {
-                  final isNew = child.key == ValueKey('tab_$_selectedTabIndex');
-                  final offsetAnim = Tween<Offset>(
-                    begin: Offset(isNew ? 0.1 : -0.1, 0),
-                    end: Offset.zero,
-                  ).animate(animation);
-
-                  return SlideTransition(
-                    position: offsetAnim,
-                    child: FadeTransition(opacity: animation, child: child),
-                  );
-                },
-                child: _selectedTabIndex == 0
-                    ? _buildMentalHealthBriefing(key: const ValueKey('tab_0'))
-                    : _selectedTabIndex == 1
-                    ? _buildWaterborneBriefing(key: const ValueKey('tab_1'))
-                    : _buildAirborneBriefing(key: const ValueKey('tab_2')),
-              ),
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSegmentNavigator() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          _buildNavItem(0, 'WELLNESS', const Color(0xFF0D9488)),
-          _buildNavItem(1, 'WATERBORNE', const Color(0xFF0284C7)),
-          _buildNavItem(2, 'AIRBORNE', const Color(0xFF9333EA)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, String label, Color activeColor) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _onTabChanged(index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: _selectedTabIndex == index
-                ? Colors.white
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: _selectedTabIndex == index
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
+            return Stack(
+              children: [
+                // 1. MAIN BACKGROUND
+                Transform.scale(
+                  scale: backgroundScale,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(progress * 32),
+                    child: Container(
+                      color: const Color(0xFFF8F9FA),
+                      child: Column(
+                        children: [
+                          SafeArea(
+                            bottom: false,
+                            child: Container(
+                              height: 56,
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'Community Intelligence',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildMainIntelligenceScreen(),
+                          ),
+                        ],
+                      ),
                     ),
-                  ]
-                : [],
-          ),
-          child: Center(
-            child: Text(
-              label,
+                  ),
+                ),
+
+                // 2. DIM / BLUR OVERLAY
+                if (progress > 0)
+                  Positioned.fill(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+                      child: Container(
+                        color: const Color(0xFF0F172A).withOpacity(dim),
+                      ),
+                    ),
+                  ),
+
+                // 3. THE RISK BRIEFINGS SHEET
+                Positioned(
+                  top: MediaQuery.of(context).size.height * pos,
+                  left: 0,
+                  right: 0,
+                  height: MediaQuery.of(context).size.height * 0.95, // 95% screen height
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC), // Pure white background for the sheet
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3 * progress),
+                          blurRadius: 40,
+                          spreadRadius: 0,
+                          offset: const Offset(0, -10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Grab Handle
+                        Center(
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 12, bottom: 4),
+                            width: 48,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFCBD5E1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+
+                        // Briefing Deck inside Sheet
+                        const Expanded(
+                          child: _RiskBriefingsDeck(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainIntelligenceScreen() {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(), // Let GestureDetector capture all vertical swipes
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          children: [
+            const SizedBox(height: 4),
+            const _ContinuousDataSynthesisCoreV4(),
+            const SizedBox(height: 8),
+            const Text(
+              'Monitoring community and environmental signals to identify emerging risks & turn it into actionable intelligence.',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: _selectedTabIndex == index
-                    ? activeColor
-                    : const Color(0xFF64748B),
-                letterSpacing: 0.5,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF94A3B8),
+                letterSpacing: 0.2,
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWaterborneBriefing({Key? key}) {
-    return Column(
-      key: key,
-      children: [
-        // Briefing Card
-        Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 8,
-                child: Container(
-                  decoration: const BoxDecoration(color: Color(0xFF0EA5E9)),
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top Animated Header Banner
-                  SizedBox(
-                    height: 110,
-                    child: Stack(
-                      children: [
-                        // Background Image - small and to the right
-                        const Positioned(
-                          right: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: 160,
-                          child: _CardPulsingBackgroundLayer(),
-                        ),
-                        // Heatmap Animation (Restored Dot)
-                        const Positioned(
-                          right: 24,
-                          top: 0,
-                          bottom: 0,
-                          child: _WaterborneHeatmapVisualizer(),
-                        ),
-                        // Icon
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 24.0),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE0F2FE),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF0EA5E9,
-                                    ).withOpacity(0.2),
-                                    blurRadius: 8,
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.water_drop_rounded,
-                                color: Color(0xFF0284C7),
-                                size: 28,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Text Content
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(24.0, 0, 24.0, 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Predicted Waterborne Outbreak (SDG 3/11)',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
-                            height: 1.3,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'Based on AI Analysis of 18 fragmented enteric reports, a pattern has been identified in Sector 4.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF475569),
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Resource Readiness Score Card
-        _buildResourceReadinessCard(
-          score: 91,
-          color: const Color(0xFF16A34A),
-          title:
-              'Strategic Alignment: NGO Inventory (Water Tablets) matches 91% of projected demand for Sector 4.',
-          layerName: 'Waterborne',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAirborneBriefing({Key? key}) {
-    return Column(
-      key: key,
-      children: [
-        // Briefing Card
-        Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 8,
-                child: Container(
-                  decoration: const BoxDecoration(color: Color(0xFF9333EA)),
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top Animated Header Banner
-                  SizedBox(
-                    height: 110,
-                    child: Stack(
-                      children: [
-                        // Vector Lines Animation (Started after the icon)
-                        const Positioned(
-                          left: 85,
-                          right: 0,
-                          top: 0,
-                          bottom: 0,
-                          child: RepaintBoundary(
-                            child: _AirborneVectorVisualizer(),
-                          ),
-                        ),
-                        // Icon
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 24.0),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF3E8FF).withOpacity(0.9),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF9333EA,
-                                    ).withOpacity(0.2),
-                                    blurRadius: 8,
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.air_rounded,
-                                color: Color(0xFF7E22CE),
-                                size: 28,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Text Content
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(24.0, 0, 24.0, 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Predicted Airborne Cluster Risk (SDG 3/11)',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
-                            height: 1.3,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'Respiratory reports intersecting with population density in Zone B.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF475569),
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Resource Readiness Score Card
-        _buildResourceReadinessCard(
-          score: 72,
-          color: const Color(0xFFD97706), // Amber
-          title:
-              'Strategic Alignment: NGO Inventory (N95 Masks) matches 72% of projected demand for Zone B.',
-          layerName: 'Airborne',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMentalHealthBriefing({Key? key}) {
-    return Column(
-      key: key,
-      children: [
-        // Briefing Card
-        Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 8,
-                child: Container(
-                  decoration: const BoxDecoration(color: Color(0xFF0D9488)),
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top Animated Header Banner
-                  SizedBox(
-                    height: 110,
-                    child: Stack(
-                      children: [
-                        const Positioned(
-                          right: 24,
-                          top: 0,
-                          bottom: 0,
-                          child: _MentalHealthPulseVisualizer(),
-                        ),
-                        // Icon
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 24.0),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0FDFA),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF0D9488,
-                                    ).withOpacity(0.2),
-                                    blurRadius: 8,
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.psychology_rounded,
-                                color: Color(0xFF0D9488),
-                                size: 28,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Text Content
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(24.0, 0, 24.0, 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Predicted Wellness Demand (SDG 3)',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
-                            height: 1.3,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        const Text(
-                          'Aggregated sentiment reports indicating high stress-levels and support needs in Zone B.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF475569),
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Resource Readiness Score Card
-        _buildResourceReadinessCard(
-          score: 64,
-          color: const Color(0xFF0D9488),
-          title:
-              'Strategic Alignment: Mental Health counselor availability matches 64% of projected crisis support needs for Zone B.',
-          layerName: 'Mental Health',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildResourceReadinessCard({
-    required int score,
-    required Color color,
-    required String title,
-    required String layerName,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Resource Readiness Score',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              SizedBox(
-                width: 80,
-                height: 80,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: score / 100.0),
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, value, child) {
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: CircularProgressIndicator(
-                            value: value,
-                            strokeWidth: 6,
-                            backgroundColor: Colors.grey.shade100,
-                            color: color,
-                            strokeCap: StrokeCap.round,
-                          ),
-                        ),
-                        Text(
-                          '${(value * 100).toInt()}%',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: color,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF334155),
-                    height: 1.5,
+            const SizedBox(height: 20),
+            Container(
+              decoration: const BoxDecoration(
+                border: Border.symmetric(
+                  horizontal: BorderSide(
+                    color: Color(0xFFE2E8F0),
+                    width: 1.5,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 28),
-
-          // Button Polish: Glowing/Breathing Button
-          SizedBox(
-            width: double.infinity,
-            child: _GlowingMapButton(layerName: layerName),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF64748B),
-                side: BorderSide(color: Colors.grey.shade300, width: 2),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(100),
-                ),
-              ),
-              child: const Text(
-                'Deploy Support',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'COMMUNITY INTELLIGENCE',
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 0.5),
+                          ),
+                          SizedBox(height: 12),
+                          _VerifiedSourceItem('Volunteer Reports'),
+                          _VerifiedSourceItem('NGO Reports'),
+                          _VerifiedSourceItem('Community Reports'),
+                        ],
+                      ),
+                    ),
+                    const VerticalDivider(color: Color(0xFFE2E8F0), width: 24, thickness: 1.5),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'VERIFIED PUBLIC SIGNALS',
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 0.5),
+                          ),
+                          SizedBox(height: 12),
+                          _VerifiedSourceItem('Google Weather'),
+                          _VerifiedSourceItem('Government Alerts'),
+                          _VerifiedSourceItem('Historical Trends'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('How AlloCare Works', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                  SizedBox(height: 8),
+                  Text(
+                    'AlloCare combines community reports, weather intelligence, government alerts, and historical patterns to identify risks before they escalate and recommend proactive response actions.',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF64748B), height: 1.5),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            const _AnimatedBottomCTA(),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _GlowingMapButton extends StatefulWidget {
-  final String layerName;
-  const _GlowingMapButton({required this.layerName});
+// ---------------------------------------------------------
+// COMPONENT: Risk Briefings Deck
+// ---------------------------------------------------------
+class _RiskBriefingsDeck extends StatefulWidget {
+  const _RiskBriefingsDeck();
 
   @override
-  State<_GlowingMapButton> createState() => _GlowingMapButtonState();
+  State<_RiskBriefingsDeck> createState() => _RiskBriefingsDeckState();
 }
 
-class _GlowingMapButtonState extends State<_GlowingMapButton>
-    with TickerProviderStateMixin {
-  late AnimationController _glowController;
-  late Animation<double> _glowAnimation;
+class _RiskBriefingsDeckState extends State<_RiskBriefingsDeck> {
+  final PageController _pageController = PageController(viewportFraction: 0.95);
+  int _currentPage = 0;
 
-  late AnimationController _scaleController;
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: PageView(
+            controller: _pageController,
+            physics: const BouncingScrollPhysics(),
+            onPageChanged: (idx) => setState(() => _currentPage = idx),
+            children: const [
+              _RiskBriefingCardContent(
+                isPrimary: true,
+                badge: 'PRIMARY AI INSIGHT',
+                title: 'Flood Risk Detected',
+                location: 'Aurangabad, Maharashtra',
+                updatedAt: 'Updated 9:26 AM • 15 May 2025',
+                alertExplanation: 'High probability of localized flooding due to heavy rainfall and verified community reports.',
+                impactNumber: '3,500+',
+                impactDescription: 'Residents',
+                radiusNumber: '2.3 km',
+                radiusDescription: 'Radius',
+                whyAlertRows: [
+                  {'icon': Icons.water_drop_outlined, 'label': 'Rainfall Intensity', 'value': '102 mm', 'subValue': '(Last 6 hrs)'},
+                  {'icon': Icons.waves_rounded, 'label': 'Water Level Rise', 'value': '+38 cm', 'subValue': '(Past 3 hrs)'},
+                  {'icon': Icons.chat_bubble_outline_rounded, 'label': 'Community Reports', 'value': '34', 'subValue': 'Verified'},
+                  {'icon': Icons.bar_chart_rounded, 'label': 'Risk Zone Match', 'value': '82%', 'subValue': 'Historical Match'},
+                ],
+                immediateAction: 'Deploy response teams',
+                next4HoursAction: 'Issue evacuation advisory',
+                preparednessAction: 'Mobilize extraction pumps',
+              ),
+              _RiskBriefingCardContent(
+                isPrimary: false,
+                badge: 'WATER SCARCITY',
+                title: 'Water Scarcity Warning',
+                location: 'Beed Bypass Region',
+                updatedAt: 'Updated 10:15 AM • 15 May 2025',
+                alertExplanation: 'Low reservoir levels and high consumption rates indicate potential water shortage in 3-5 days.',
+                impactNumber: '8,200',
+                impactDescription: 'Residents',
+                radiusNumber: '12 km',
+                radiusDescription: 'Radius',
+                whyAlertRows: [
+                  {'icon': Icons.thermostat_outlined, 'label': 'Temperature', 'value': '42°C', 'subValue': '(Last 24 hrs)'},
+                  {'icon': Icons.water_drop_outlined, 'label': 'Reservoir Level', 'value': '-15%', 'subValue': '(Past 3 days)'},
+                  {'icon': Icons.chat_bubble_outline_rounded, 'label': 'Community Reports', 'value': '42', 'subValue': 'Verified'},
+                  {'icon': Icons.bar_chart_rounded, 'label': 'Risk Zone Match', 'value': '76%', 'subValue': 'Historical Match'},
+                ],
+                immediateAction: 'Implement water rationing',
+                next4HoursAction: 'Activate supply tanks',
+                preparednessAction: 'Monitor groundwater',
+              ),
+              _RiskBriefingCardContent(
+                isPrimary: false,
+                badge: 'AIRBORNE DISEASE',
+                title: 'Respiratory Illness Trend',
+                location: 'Waluj Industrial Area',
+                updatedAt: 'Updated 11:30 AM • 15 May 2025',
+                alertExplanation: 'Spike in respiratory distress reports correlating with sudden drop in air quality index.',
+                impactNumber: '1,200',
+                impactDescription: 'Workers',
+                radiusNumber: '5.5 km',
+                radiusDescription: 'Radius',
+                whyAlertRows: [
+                  {'icon': Icons.air_outlined, 'label': 'AQI Level', 'value': '340', 'subValue': '(Last 12 hrs)'},
+                  {'icon': Icons.local_hospital_outlined, 'label': 'Clinic Admissions', 'value': '+24%', 'subValue': '(Past 24 hrs)'},
+                  {'icon': Icons.chat_bubble_outline_rounded, 'label': 'Community Reports', 'value': '18', 'subValue': 'Verified'},
+                  {'icon': Icons.compare_arrows_rounded, 'label': 'Wind Shift', 'value': 'NW', 'subValue': '15km/h'},
+                ],
+                immediateAction: 'Distribute N95 masks',
+                next4HoursAction: 'Alert respiratory clinics',
+                preparednessAction: 'Issue indoors advisory',
+              ),
+            ],
+          ),
+        ),
+        
+        // Pagination (Below CTA)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 24, top: 4),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: _currentPage == index ? 6 : 4,
+                    height: _currentPage == index ? 6 : 4,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index ? const Color(0xFF0F172A) : const Color(0xFFCBD5E1),
+                      shape: BoxShape.circle,
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// COMPONENT: Final No-Scroll Premium Briefing Card
+// ---------------------------------------------------------
+class _RiskBriefingCardContent extends StatefulWidget {
+  final bool isPrimary;
+  final String badge;
+  final String title;
+  final String location;
+  final String updatedAt;
+  final String alertExplanation;
+  final String impactNumber;
+  final String impactDescription;
+  final String radiusNumber;
+  final String radiusDescription;
+  final List<Map<String, dynamic>> whyAlertRows;
+  final String immediateAction;
+  final String next4HoursAction;
+  final String preparednessAction;
+
+  const _RiskBriefingCardContent({
+    required this.isPrimary,
+    required this.badge,
+    required this.title,
+    required this.location,
+    required this.updatedAt,
+    required this.alertExplanation,
+    required this.impactNumber,
+    required this.impactDescription,
+    required this.radiusNumber,
+    required this.radiusDescription,
+    required this.whyAlertRows,
+    required this.immediateAction,
+    required this.next4HoursAction,
+    required this.preparednessAction,
+  });
+
+  @override
+  State<_RiskBriefingCardContent> createState() => _RiskBriefingCardContentState();
+}
+
+class _RiskBriefingCardContentState extends State<_RiskBriefingCardContent> with SingleTickerProviderStateMixin {
+  late AnimationController _likeController;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
 
   @override
   void initState() {
     super.initState();
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    _likeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 60,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeInBack)),
+        weight: 40,
+      ),
+    ]).animate(_likeController);
 
-    _glowAnimation = Tween<double>(begin: 0.0, end: 8.0).animate(
-      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    _opacityAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 80),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 20,
+      ),
+    ]).animate(_likeController);
+  }
+
+  @override
+  void dispose() {
+    _likeController.dispose();
+    super.dispose();
+  }
+
+  void _handleDoubleTap() {
+    if (_likeController.isAnimating) return;
+    _likeController.forward(from: 0.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = widget.badge;
+    final title = widget.title;
+    final location = widget.location;
+    final updatedAt = widget.updatedAt;
+    final alertExplanation = widget.alertExplanation;
+    final impactNumber = widget.impactNumber;
+    final impactDescription = widget.impactDescription;
+    final radiusNumber = widget.radiusNumber;
+    final radiusDescription = widget.radiusDescription;
+    final whyAlertRows = widget.whyAlertRows;
+    final immediateAction = widget.immediateAction;
+    final next4HoursAction = widget.next4HoursAction;
+    final preparednessAction = widget.preparednessAction;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: GestureDetector(
+        onDoubleTap: _handleDoubleTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          margin: const EdgeInsets.only(left: 6, right: 6, top: 0, bottom: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 14, right: 14, top: 16, bottom: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+            // 1. Badge & 3-Dot Menu
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Text(
+                    badge, 
+                    style: const TextStyle(
+                      fontSize: 10, 
+                      fontWeight: FontWeight.w800, 
+                      color: Color(0xFF2563EB)
+                    )
+                  ),
+                ),
+                SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.more_vert, size: 20, color: Color(0xFF0F172A)),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'share', child: Text('Share Alert', style: TextStyle(fontSize: 13))),
+                      const PopupMenuItem(value: 'save', child: Text('Save Brief', style: TextStyle(fontSize: 13))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 10),
+            
+            // 2. Title
+            Text(
+              title, 
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), letterSpacing: -0.5)
+            ),
+            const SizedBox(height: 6),
+            
+            // 3. Location & Time
+            Row(
+              children: [
+                const Icon(Icons.location_on, size: 14, color: Color(0xFF64748B)),
+                const SizedBox(width: 4),
+                Text(location, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(updatedAt, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF94A3B8))),
+            
+            const SizedBox(height: 12),
+            
+            // 4. Alert Explanation Banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.insights_rounded, color: Color(0xFFDC2626), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      alertExplanation,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A), height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // 5. Combined Stats & Why This Alert Card
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+              ),
+              child: Column(
+                children: [
+                  // Top Half: Stats
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Row(
+                      children: [
+                        // Left Column
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.people_outline, size: 14, color: Color(0xFF64748B)),
+                                  SizedBox(width: 6),
+                                  Text('Potentially Affected', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(impactNumber, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Color(0xFF2563EB), height: 1.0)),
+                              const SizedBox(height: 2),
+                              Text(impactDescription, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+                            ],
+                          ),
+                        ),
+                        Container(width: 1.5, height: 60, color: const Color(0xFFF1F5F9)),
+                        // Right Column
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.adjust_rounded, size: 14, color: Color(0xFF64748B)),
+                                  SizedBox(width: 6),
+                                  Text('Affected Radius', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              _InteractiveRadiusMapWidget(
+                                radiusNumber: radiusNumber,
+                                radiusDescription: radiusDescription,
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Text('Tap to view map', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFFDC2626))),
+                                  SizedBox(width: 2),
+                                  Icon(Icons.arrow_forward_ios_rounded, size: 8, color: Color(0xFFDC2626)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Divider
+                  Container(height: 1.5, width: double.infinity, color: const Color(0xFFF1F5F9)),
+                  
+                  // Bottom Half: Why This Alert?
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Why This Alert?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text('AI', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF2563EB))),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ...whyAlertRows.map((row) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFEFF6FF),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(row['icon'] as IconData, size: 14, color: const Color(0xFF2563EB)),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(row['label'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                              ),
+                              Text(row['value'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF2563EB))),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                width: 80,
+                                child: Text(row['subValue'] as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF64748B)), textAlign: TextAlign.right),
+                              ),
+                            ],
+                          ),
+                        )).toList(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // 7. Recommended Next Steps (Clean & Compact)
+            const Text('Recommended Next Steps', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+            const SizedBox(height: 10),
+            _buildCompactActionRow(Icons.flash_on_rounded, 'NOW', immediateAction, const Color(0xFF2563EB)),
+            _buildCompactActionRow(Icons.schedule_rounded, 'NEXT 4 HRS', next4HoursAction, const Color(0xFF0F172A)),
+            _buildCompactActionRow(Icons.shield_rounded, 'PREPARE', preparednessAction, const Color(0xFF64748B)),
+            
+            // Map button uniquely integrated into Affected Radius above.
+            const SizedBox(height: 20),
+          ],
+        ),
+        ),
+        
+        // The animated overlay perfectly bounded to the card's rounded borders
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _likeController,
+              builder: (context, child) {
+                if (_likeController.value == 0.0 || _likeController.value == 1.0) {
+                  return const SizedBox.shrink();
+                }
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    BackdropFilter(
+                      filter: ImageFilter.blur(
+                        sigmaX: _opacityAnimation.value * 1.2,
+                        sigmaY: _opacityAnimation.value * 1.2,
+                      ),
+                      child: Container(
+                        color: Colors.black.withOpacity(_opacityAnimation.value * 0.04),
+                      ),
+                    ),
+                    Transform.scale(
+                      scale: _scaleAnimation.value,
+                      child: Opacity(
+                        opacity: _opacityAnimation.value,
+                        child: const Icon(
+                          Icons.bookmark_rounded,
+                          color: Color(0xFF2563EB),
+                          size: 76,
+                          shadows: [
+                            Shadow(color: Colors.white, blurRadius: 24),
+                            Shadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 6)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+      ),
+      ),
+      ),
+      ),
     );
+  }
 
-    _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
+  Widget _buildCompactActionRow(IconData icon, String label, String action, Color themeColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 85,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(icon, size: 12, color: themeColor),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: themeColor, letterSpacing: 0.2),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Text(
+              action,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A), height: 1.2),
+            ),
+          ),
+        ],
+      ),
     );
+  }
+}
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+// ---------------------------------------------------------
+// COMPONENT: Interactive Radius Map Flipper
+// ---------------------------------------------------------
+class _InteractiveRadiusMapWidget extends StatefulWidget {
+  final String radiusNumber;
+  final String radiusDescription;
+
+  const _InteractiveRadiusMapWidget({
+    required this.radiusNumber,
+    required this.radiusDescription,
+  });
+
+  @override
+  State<_InteractiveRadiusMapWidget> createState() => _InteractiveRadiusMapWidgetState();
+}
+
+class _InteractiveRadiusMapWidgetState extends State<_InteractiveRadiusMapWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  bool _isFlipping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _animation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
 
   @override
   void dispose() {
-    _glowController.dispose();
-    _scaleController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _handleTapDown(TapDownDetails details) {
-    _scaleController.forward();
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    _scaleController.reverse();
-    _triggerAction();
-  }
-
-  void _handleTapCancel() {
-    _scaleController.reverse();
-  }
-
-  void _triggerAction() {
-    final normalizedLayer = widget.layerName.trim().toLowerCase();
-    final mapLayer = normalizedLayer.contains('airborne')
-        ? MapLayerCategory.airborne
-        : normalizedLayer.contains('waterborne')
-        ? MapLayerCategory.waterborne
-        : MapLayerCategory.mentalHealth;
-
-    final nav = MainNavigationScreen.of(context);
-    if (nav != null) {
-      nav.openStrategicMap(layer: mapLayer);
-      return;
-    }
-
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => MapScreen(
-          initialLayer: mapLayer,
-          initialZoom: 14.8,
-          lockInitialFocus: true,
+  void _handleTap() async {
+    if (_isFlipping) return;
+    _isFlipping = true;
+    
+    // 1. Flip to Map icon
+    await _controller.forward();
+    
+    // 2. Add a tiny delay for user to see the map icon.
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    // 3. Navigate (Simulated with SnackBar for now)
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opening Risk Zone Map...'), 
+          duration: Duration(milliseconds: 1500),
+          behavior: SnackBarBehavior.floating,
         ),
+      );
+    }
+    
+    // 4. Flip back after brief moment so it's ready when user returns
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (mounted) {
+      _controller.reverse();
+    }
+    _isFlipping = false;
+  }
+
+  Widget _buildFront() {
+    return SizedBox(
+      width: 72,
+      height: 72,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: CircularProgressIndicator(
+              value: 0.65,
+              strokeWidth: 5,
+              backgroundColor: const Color(0xFFFEF2F2),
+              color: const Color(0xFFDC2626),
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(widget.radiusNumber, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+              Text(widget.radiusDescription, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBack() {
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFFDC2626),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFDC2626).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.map_rounded, size: 20, color: Colors.white),
+          SizedBox(height: 2),
+          Text('MAP', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5)),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_glowAnimation, _scaleAnimation]),
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _scaleAnimation.value,
-          child: GestureDetector(
-            onTapDown: _handleTapDown,
-            onTapUp: _handleTapUp,
-            onTapCancel: _handleTapCancel,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(100),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF475569).withOpacity(0.3),
-                    blurRadius: _glowAnimation.value + 4.0,
-                    spreadRadius: _glowAnimation.value * 0.5,
-                  ),
-                ],
-              ),
-              child: FilledButton.icon(
-                onPressed: _triggerAction,
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF475569),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  // Disable the internal ink splash to rely completely on our scale haptics
-                  splashFactory: NoSplash.splashFactory,
-                ),
-                icon: const Icon(Icons.location_on_outlined, size: 20),
-                label: const Text(
-                  'View Priority Map',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    return GestureDetector(
+      onTap: _handleTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          final angle = _animation.value * math.pi;
+          bool isBack = angle > math.pi / 2;
+
+          return Transform(
+            transform: Matrix4.rotationY(angle),
+            alignment: Alignment.center,
+            child: isBack
+                ? Transform(
+                    transform: Matrix4.rotationY(math.pi),
+                    alignment: Alignment.center,
+                    child: _buildBack(),
+                  )
+                : _buildFront(),
+          );
+        },
+      ),
     );
   }
 }
 
 // ---------------------------------------------------------
-// 1. The 'Synthesis' Convergence Animations
+// COMPONENT: Verified Source Item
 // ---------------------------------------------------------
-
-class _ContinuousDataSynthesisCore extends StatefulWidget {
-  const _ContinuousDataSynthesisCore();
+class _VerifiedSourceItem extends StatelessWidget {
+  final String label;
+  final String? tooltip;
+  
+  const _VerifiedSourceItem(this.label, {this.tooltip});
 
   @override
-  State<_ContinuousDataSynthesisCore> createState() =>
-      _ContinuousDataSynthesisCoreState();
+  Widget build(BuildContext context) {
+    Widget content = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 14),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (tooltip != null) ...[
+          const SizedBox(width: 4),
+          const Icon(
+            Icons.info_outline_rounded,
+            color: Color(0xFF94A3B8),
+            size: 14,
+          ),
+        ],
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: tooltip != null
+          ? Tooltip(
+              message: tooltip!,
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(12),
+              textStyle: const TextStyle(
+                fontSize: 12,
+                color: Colors.white,
+                height: 1.4,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A).withOpacity(0.9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              triggerMode: TooltipTriggerMode.tap,
+              showDuration: const Duration(seconds: 3),
+              child: content,
+            )
+          : content,
+    );
+  }
 }
 
-class _ContinuousDataSynthesisCoreState
-    extends State<_ContinuousDataSynthesisCore>
+// ---------------------------------------------------------
+// COMPONENT: Continuous Data Synthesis Core
+// ---------------------------------------------------------
+class _ContinuousDataSynthesisCoreV4 extends StatefulWidget {
+  const _ContinuousDataSynthesisCoreV4();
+
+  @override
+  State<_ContinuousDataSynthesisCoreV4> createState() =>
+      _ContinuousDataSynthesisCoreV4State();
+}
+
+class _ContinuousDataSynthesisCoreV4State
+    extends State<_ContinuousDataSynthesisCoreV4>
     with TickerProviderStateMixin {
   late AnimationController _loopController;
   late AnimationController _entranceController;
@@ -794,7 +1049,7 @@ class _ContinuousDataSynthesisCoreState
     super.initState();
     _loopController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 5),
     )..repeat();
 
     _entranceController = AnimationController(
@@ -806,27 +1061,34 @@ class _ContinuousDataSynthesisCoreState
       CurvedAnimation(parent: _entranceController, curve: Curves.elasticOut),
     );
 
-    // Initialize 8 floating particles
-    for (int i = 0; i < 8; i++) {
-      _particles.add(_generateParticle());
+    for (int i = 0; i < 6; i++) {
+      _particles.add(_generateParticle(i));
     }
 
     _entranceController.forward();
   }
 
-  _Particle _generateParticle() {
-    final angle = _rand.nextDouble() * 2 * math.pi;
-    final iconChoices = [
-      Icons.description_outlined,
-      Icons.insert_chart_outlined,
-      Icons.chat_bubble_outline,
-      Icons.image_outlined,
-      Icons.sms_outlined,
+  _Particle _generateParticle(int index) {
+    final baseAngle = (index / 6) * 2 * math.pi;
+    final jitter = (_rand.nextDouble() - 0.5) * (math.pi / 8);
+    final angle = baseAngle + jitter;
+    
+    final sourceConfigs = [
+      {'icon': Icons.description_outlined, 'label': 'Reports'},
+      {'icon': Icons.health_and_safety_rounded, 'label': 'NGO'},
+      {'icon': Icons.cloud_queue_rounded, 'label': 'Weather'},
+      {'icon': Icons.campaign_rounded, 'label': 'Alerts'},
+      {'icon': Icons.location_on_rounded, 'label': 'Community'},
+      {'icon': Icons.bar_chart_rounded, 'label': 'Trends'},
     ];
-    final icon = iconChoices[_rand.nextInt(iconChoices.length)];
-    // Random phase so they don't all start at the edge
+    final config = sourceConfigs[index % sourceConfigs.length];
     final phase = _rand.nextDouble();
-    return _Particle(angle: angle, icon: icon, phase: phase);
+    return _Particle(
+      angle: angle,
+      icon: config['icon'] as IconData,
+      label: config['label'] as String,
+      phase: phase,
+    );
   }
 
   @override
@@ -838,146 +1100,124 @@ class _ContinuousDataSynthesisCoreState
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE0F2FE),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            'DATA SYNTHESIS: ACTIVE',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0284C7),
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          height: 280,
-          child: AnimatedBuilder(
-            animation: Listenable.merge([_loopController, _entranceController]),
-            builder: (context, child) {
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Static mesh background for texture
-                  CustomPaint(
-                    size: const Size(280, 280),
-                    painter: _StaticMeshPainter(),
-                  ),
+    return SizedBox(
+      height: 280,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_loopController, _entranceController]),
+        builder: (context, child) {
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              CustomPaint(
+                size: const Size(280, 280),
+                painter: _StaticMeshPainter(),
+              ),
+              ..._particles.map((p) {
+                double life = (_loopController.value + p.phase) % 1.0;
+                final maxRadius = 135.0;
+                final minRadius = 65.0;
+                final currentRadius =
+                    maxRadius - (life * (maxRadius - minRadius));
 
-                  // Continuously drifting particles
-                  ..._particles.map((p) {
-                    // Calculate life (0.0 at edge, 1.0 at center)
-                    double life = (_loopController.value + p.phase) % 1.0;
+                final pos = Offset(
+                  math.cos(p.angle) * currentRadius,
+                  math.sin(p.angle) * currentRadius,
+                );
 
-                    final maxRadius = 140.0;
-                    final minRadius = 60.0; // Stop when hitting core
-                    final currentRadius =
-                        maxRadius - (life * (maxRadius - minRadius));
+                final opacity = (1.0 - math.pow(life, 2))
+                    .clamp(0.0, 1.0)
+                    .toDouble();
 
-                    final pos = Offset(
-                      math.cos(p.angle) * currentRadius,
-                      math.sin(p.angle) * currentRadius,
-                    );
-
-                    // Fade out as it reaches the center
-                    final opacity = (1.0 - math.pow(life, 2))
-                        .clamp(0.0, 1.0)
-                        .toDouble();
-
-                    return Transform.translate(
-                      offset: pos,
-                      child: Opacity(
-                        opacity: opacity,
-                        child: Transform.scale(
-                          scale: 0.6 + (0.4 * opacity),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              p.icon,
-                              size: 14,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
+                return Transform.translate(
+                  offset: pos,
+                  child: Opacity(
+                    opacity: opacity,
+                    child: Transform.scale(
+                      scale: 0.7 + (0.3 * opacity),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
                         ),
-                      ),
-                    );
-                  }),
-
-                  // The Synthesis Core Bubble
-                  Transform.scale(
-                    scale: _coreFadeScale.value,
-                    child: Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 24,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '214',
-                            style: TextStyle(
-                              fontSize: 42,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
-                              height: 1.1,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 6,
                             ),
-                          ),
-                          Text(
-                            'Data Points',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF64748B),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              p.icon,
+                              size: 16,
+                              color: const Color(0xFF475569),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 2),
+                            Text(
+                              p.label,
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF475569),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ],
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          '214 fragmented inputs (field notes, logs, paper surveys) successfully unified into 3 strategic patterns.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF334155),
-            height: 1.4,
-          ),
-        ),
-      ],
+                );
+              }),
+              Transform.scale(
+                scale: _coreFadeScale.value,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 24,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '214',
+                        style: TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          height: 1.1,
+                        ),
+                      ),
+                      Text(
+                        'Signals Analyzed',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -985,8 +1225,14 @@ class _ContinuousDataSynthesisCoreState
 class _Particle {
   final double angle;
   final IconData icon;
+  final String label;
   final double phase;
-  _Particle({required this.angle, required this.icon, required this.phase});
+  _Particle({
+    required this.angle,
+    required this.icon,
+    required this.label,
+    required this.phase,
+  });
 }
 
 class _StaticMeshPainter extends CustomPainter {
@@ -1001,7 +1247,8 @@ class _StaticMeshPainter extends CustomPainter {
     final random = math.Random(42);
     for (int i = 0; i < 30; i++) {
       final angle = random.nextDouble() * 2 * math.pi;
-      final endRadius = 70.0 + (random.nextDouble() * 70.0);
+
+      final endRadius = 70.0 + (random.nextDouble() * 65.0);
 
       final startPoint = Offset(
         center.dx + 70.0 * math.cos(angle),
@@ -1021,29 +1268,44 @@ class _StaticMeshPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------
-// 2. The 'Live Pattern' Visualizations
+// COMPONENT: Animated Bottom CTA
 // ---------------------------------------------------------
-
-class _WaterborneHeatmapVisualizer extends StatefulWidget {
-  const _WaterborneHeatmapVisualizer();
+class _AnimatedBottomCTA extends StatefulWidget {
+  const _AnimatedBottomCTA();
 
   @override
-  State<_WaterborneHeatmapVisualizer> createState() =>
-      _WaterborneHeatmapVisualizerState();
+  State<_AnimatedBottomCTA> createState() => _AnimatedBottomCTAState();
 }
 
-class _WaterborneHeatmapVisualizerState
-    extends State<_WaterborneHeatmapVisualizer>
+class _AnimatedBottomCTAState extends State<_AnimatedBottomCTA>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  late Animation<double> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+
+    _slideAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 0.0,
+          end: -6.0,
+        ).chain(CurveTween(curve: Curves.easeInOutSine)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: -6.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeInOutSine)),
+        weight: 50,
+      ),
+    ]).animate(_controller);
   }
 
   @override
@@ -1057,315 +1319,50 @@ class _WaterborneHeatmapVisualizerState
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        // Moving to and fro (left and right) further
-        final offsetX = (_controller.value * 90.0) - 45.0;
-
-        // Faded, dimming effect
-        final opacity =
-            0.1 + (_controller.value * 0.25); // Very faded: 0.1 to 0.35
-
-        return SizedBox(
-          width: 140,
-          height: double.infinity,
-          child: Transform.translate(
-            offset: Offset(offsetX, 0),
-            child: Stack(
-              alignment: Alignment.center,
+        return Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Primary soft blob
-                Container(
-                  width: 90,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(50),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0EA5E9).withOpacity(opacity),
-                        blurRadius: 40.0,
-                        spreadRadius: 10.0,
-                      ),
-                    ],
+                Transform.translate(
+                  offset: Offset(0, _slideAnimation.value),
+                  child: const Icon(
+                    Icons.keyboard_double_arrow_up_rounded,
+                    color: Color(0xFFD97706),
+                    size: 18,
                   ),
                 ),
-                // Secondary offset blob to create an uneven 'heatmap' shape
+                const SizedBox(width: 8),
+                const Text(
+                  '3 Emerging Risks Identified',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Transform.translate(
-                  offset: const Offset(-20, 15),
-                  child: Container(
-                    width: 60,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(
-                            0xFF38BDF8,
-                          ).withOpacity(opacity * 0.8),
-                          blurRadius: 30.0,
-                          spreadRadius: 5.0,
-                        ),
-                      ],
-                    ),
+                  offset: Offset(0, _slideAnimation.value),
+                  child: const Icon(
+                    Icons.keyboard_double_arrow_up_rounded,
+                    color: Color(0xFFD97706),
+                    size: 18,
                   ),
                 ),
               ],
             ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _AirborneVectorVisualizer extends StatefulWidget {
-  const _AirborneVectorVisualizer();
-
-  @override
-  State<_AirborneVectorVisualizer> createState() =>
-      _AirborneVectorVisualizerState();
-}
-
-class _AirborneVectorVisualizerState extends State<_AirborneVectorVisualizer>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: double.infinity,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return CustomPaint(
-            painter: _VectorFlowPainter(progress: _controller.value),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _VectorFlowPainter extends CustomPainter {
-  final double progress;
-  _VectorFlowPainter({required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    // Draw 4 distinct extended vector lines spanning the width of the card
-    for (int i = 0; i < 4; i++) {
-      final path = Path();
-
-      final startY = (size.height * 0.3) + (i * 20.0);
-      final amplitude = 15.0 + (i * 5.0);
-      final frequency = 0.02 + (i * 0.005);
-
-      // Phase offset based on continuous progress
-      final phaseOffset = progress * 2 * math.pi + (i * math.pi / 3);
-
-      paint.color = const Color(0xFF9333EA).withOpacity(0.2 - (i * 0.02));
-
-      // Start slightly off-screen left and flow to the right
-      for (double x = -20; x <= size.width + 20; x++) {
-        final y = startY + math.sin((x * frequency) + phaseOffset) * amplitude;
-
-        if (x == -20) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
-      }
-
-      // Gradient shader so they fade out smoothly at edges
-      paint.shader = LinearGradient(
-        colors: [
-          Colors.transparent,
-          const Color(0xFF9333EA).withOpacity(0.4),
-          const Color(0xFFA855F7).withOpacity(0.8),
-          const Color(0xFF9333EA).withOpacity(0.4),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.2, 0.6, 0.9, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-      paint.strokeWidth = 2.0 + (i % 2);
-
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _VectorFlowPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
-}
-
-class _MentalHealthPulseVisualizer extends StatefulWidget {
-  const _MentalHealthPulseVisualizer();
-
-  @override
-  State<_MentalHealthPulseVisualizer> createState() =>
-      _MentalHealthPulseVisualizerState();
-}
-
-class _MentalHealthPulseVisualizerState
-    extends State<_MentalHealthPulseVisualizer>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return CustomPaint(
-          size: const Size(140, 110),
-          painter: _MentalHealthPulsePainter(progress: _controller.value),
-        );
-      },
-    );
-  }
-}
-
-class _MentalHealthPulsePainter extends CustomPainter {
-  final double progress;
-  _MentalHealthPulsePainter({required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-
-    final centerY = size.height / 2;
-    final width = size.width;
-
-    for (int i = 0; i < 3; i++) {
-      final path = Path();
-      final lineProgress = (progress + (i * 0.33)) % 1.0;
-      final opacity = (1.0 - lineProgress).clamp(0.0, 0.6);
-
-      paint.color = const Color(0xFF0D9488).withOpacity(opacity);
-
-      for (double x = 0; x <= width; x += 2) {
-        // Brain-wave like multi-sine pattern
-        final y =
-            centerY +
-            math.sin((x / width * 4 * math.pi) + (progress * 2 * math.pi)) *
-                15 *
-                (1 - lineProgress) +
-            math.sin((x / width * 8 * math.pi) - (progress * 4 * math.pi)) *
-                8 *
-                lineProgress;
-
-        if (x == 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
-      }
-
-      // Add a glow shader
-      paint.shader = LinearGradient(
-        colors: [
-          const Color(0xFF0D9488).withOpacity(0),
-          const Color(0xFF0D9488).withOpacity(opacity),
-          const Color(0xFF5EEAD4).withOpacity(opacity),
-          const Color(0xFF0D9488).withOpacity(opacity),
-          const Color(0xFF0D9488).withOpacity(0),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, width, size.height));
-
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _MentalHealthPulsePainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
-}
-
-class _CardPulsingBackgroundLayer extends StatefulWidget {
-  const _CardPulsingBackgroundLayer();
-
-  @override
-  State<_CardPulsingBackgroundLayer> createState() =>
-      _CardPulsingBackgroundLayerState();
-}
-
-class _CardPulsingBackgroundLayerState
-    extends State<_CardPulsingBackgroundLayer>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _bgPulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _bgPulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 5),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _bgPulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _bgPulseController,
-      builder: (context, child) {
-        // Slow scale from 1.0 to 1.05
-        final scale = 1.0 + (_bgPulseController.value * 0.05);
-        return Transform.scale(
-          scale: scale,
-          child: Opacity(
-            opacity:
-                0.15, // Made slightly lower opacity so it acts strictly as texture inside the white card
-            // child: Image.asset(
-            // 'assets/bg_img.png',
-            // fit: BoxFit.cover,
-            // alignment: Alignment.centerRight,
-            // errorBuilder: (context, error, stackTrace) => const SizedBox(),
-            // ),
-          ),
+            const SizedBox(height: 10),
+            const Text(
+              'Swipe Up To Explore Briefings',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF94A3B8),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
         );
       },
     );
