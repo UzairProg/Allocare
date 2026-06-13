@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 class SentinelStrategicHubPage extends StatefulWidget {
   const SentinelStrategicHubPage({super.key});
 
@@ -299,6 +302,7 @@ class _RiskBriefingsDeckState extends State<_RiskBriefingsDeck> {
             onPageChanged: (idx) => setState(() => _currentPage = idx),
             children: const [
               _RiskBriefingCardContent(
+                insightId: 'insight_flood_001',
                 isPrimary: true,
                 badge: 'PRIMARY AI INSIGHT',
                 title: 'Flood Risk Detected',
@@ -320,6 +324,7 @@ class _RiskBriefingsDeckState extends State<_RiskBriefingsDeck> {
                 preparednessAction: 'Mobilize extraction pumps',
               ),
               _RiskBriefingCardContent(
+                insightId: 'insight_scarcity_001',
                 isPrimary: false,
                 badge: 'WATER SCARCITY',
                 title: 'Water Scarcity Warning',
@@ -341,6 +346,7 @@ class _RiskBriefingsDeckState extends State<_RiskBriefingsDeck> {
                 preparednessAction: 'Monitor groundwater',
               ),
               _RiskBriefingCardContent(
+                insightId: 'insight_airborne_001',
                 isPrimary: false,
                 badge: 'AIRBORNE DISEASE',
                 title: 'Respiratory Illness Trend',
@@ -396,6 +402,7 @@ class _RiskBriefingsDeckState extends State<_RiskBriefingsDeck> {
 // COMPONENT: Final No-Scroll Premium Briefing Card
 // ---------------------------------------------------------
 class _RiskBriefingCardContent extends StatefulWidget {
+  final String insightId;
   final bool isPrimary;
   final String badge;
   final String title;
@@ -412,6 +419,7 @@ class _RiskBriefingCardContent extends StatefulWidget {
   final String preparednessAction;
 
   const _RiskBriefingCardContent({
+    required this.insightId,
     required this.isPrimary,
     required this.badge,
     required this.title,
@@ -471,6 +479,46 @@ class _RiskBriefingCardContentState extends State<_RiskBriefingCardContent> with
   void _handleDoubleTap() {
     if (_likeController.isAnimating) return;
     _likeController.forward(from: 0.0);
+    _saveInsightToFirebase();
+  }
+
+  Future<void> _saveInsightToFirebase() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final firestore = FirebaseFirestore.instance;
+
+      final userDoc = await firestore.collection('users').doc(user.uid).get();
+      final ngoId = userDoc.data()?['ngoId'] as String?;
+
+      // 1. Add insight ID to user's savedInsights
+      await firestore.collection('users').doc(user.uid).update({
+        'ngoProfile.savedInsights': FieldValue.arrayUnion([widget.insightId])
+      });
+
+      // 2. Add insight ID to NGO's savedInsights
+      if (ngoId != null && ngoId.trim().isNotEmpty) {
+        await firestore.collection('ngos').doc(ngoId).set({
+          'savedInsights': FieldValue.arrayUnion([widget.insightId])
+        }, SetOptions(merge: true));
+      }
+
+      // 3. Increment saveCount and link NGO on the insight itself
+      final insightUpdates = <String, dynamic>{
+        'saveCount': FieldValue.increment(1),
+      };
+      if (ngoId != null && ngoId.trim().isNotEmpty) {
+        insightUpdates['savedByNgoIds'] = FieldValue.arrayUnion([ngoId]);
+      }
+
+      await firestore.collection('insights').doc(widget.insightId).set(
+        insightUpdates, 
+        SetOptions(merge: true)
+      );
+    } catch (e) {
+      debugPrint('Error saving insight: \$e');
+    }
   }
 
   @override

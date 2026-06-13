@@ -7,6 +7,7 @@ class InsightModel {
     required this.score,
     required this.recommendation,
     this.ngoId,
+    this.saveCount = 0,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class InsightModel {
   final double score;
   final String recommendation;
   final String? ngoId;
+  final int saveCount;
 
   factory InsightModel.fromMap(String id, Map<String, dynamic> map) {
     return InsightModel(
@@ -26,6 +28,7 @@ class InsightModel {
       ngoId:
           _readOptionalString(map, 'ngoId') ??
           _readOptionalString(map, 'ngo_id'),
+      saveCount: (map['saveCount'] as int?) ?? 0,
     );
   }
 
@@ -35,6 +38,7 @@ class InsightModel {
       'score': score,
       'recommendation': recommendation,
       if (ngoId != null && ngoId!.trim().isNotEmpty) 'ngoId': ngoId,
+      'saveCount': saveCount,
       'updatedAt': Timestamp.now(),
     };
   }

@@ -15,6 +15,7 @@ class AppUser {
     required this.updatedAt,
     this.ngoId,
     this.inventoryItems = const [],
+    this.savedInsights = const [],
   });
 
   final String id;
@@ -29,6 +30,7 @@ class AppUser {
   final String? ngoId;
 
   final List<NgoInventoryItem> inventoryItems;
+  final List<String> savedInsights;
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) {
     final source = (map['ngoProfile'] as Map?)?.cast<String, dynamic>() ?? map;
@@ -56,6 +58,10 @@ class AppUser {
               })
               .toList() ??
           const [],
+      savedInsights: (source['savedInsights'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 
@@ -67,6 +73,7 @@ class AppUser {
     DateTime? updatedAt,
     String? ngoId,
     List<NgoInventoryItem>? inventoryItems,
+    List<String>? savedInsights,
   }) {
     return AppUser(
       id: id,
@@ -78,6 +85,7 @@ class AppUser {
       updatedAt: updatedAt ?? this.updatedAt,
       ngoId: ngoId ?? this.ngoId,
       inventoryItems: inventoryItems ?? this.inventoryItems,
+      savedInsights: savedInsights ?? this.savedInsights,
     );
   }
 
@@ -90,6 +98,7 @@ class AppUser {
         'phoneNumber': phoneNumber,
         'role': role.name,
         'inventoryItems': inventoryItems.map((item) => item.toMap()).toList(),
+        'savedInsights': savedInsights,
         'createdAt': Timestamp.fromDate(createdAt),
         'updatedAt': Timestamp.fromDate(updatedAt),
       },

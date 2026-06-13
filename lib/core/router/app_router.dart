@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,13 +22,25 @@ import 'ngo_route_guard.dart';
 import 'volunteer_route_guard.dart';
 import 'route_paths.dart';
 
+class _RouterNotifier extends ChangeNotifier {
+  _RouterNotifier(this.ref) {
+    ref.listen(authStateProvider, (_, __) => notifyListeners());
+    ref.listen(currentUserProfileProvider, (_, __) => notifyListeners());
+    ref.listen(currentNgoProvider, (_, __) => notifyListeners());
+    ref.listen(currentVolunteerProvider, (_, __) => notifyListeners());
+  }
+  final Ref ref;
+}
+
+final routerRefreshProvider = Provider<_RouterNotifier>((ref) {
+  return _RouterNotifier(ref);
+});
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final profileState = ref.watch(currentUserProfileProvider);
-  final ngoState = ref.watch(currentNgoProvider);
-  final volunteerState = ref.watch(currentVolunteerProvider);
+  final notifier = ref.watch(routerRefreshProvider);
 
   return GoRouter(
+    refreshListenable: notifier,
     initialLocation: RoutePaths.login,
     routes: [
       GoRoute(
@@ -80,6 +93,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
     redirect: (context, state) {
+      final authState = ref.read(authStateProvider);
+      final profileState = ref.read(currentUserProfileProvider);
+      final ngoState = ref.read(currentNgoProvider);
+      final volunteerState = ref.read(currentVolunteerProvider);
+
       if (authState.isLoading || profileState.isLoading) {
         return null;
       }

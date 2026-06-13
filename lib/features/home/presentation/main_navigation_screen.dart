@@ -2,7 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import '../../../services/user_profile_service.dart';
+import '../../../services/ngo_service.dart';
 
 import '../../insights/presentation/sentinel_strategic_hub_page.dart';
 import '../../map/presentation/map_screen.dart';
@@ -82,7 +86,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-class _PremiumBottomNav extends StatelessWidget {
+class _PremiumBottomNav extends ConsumerWidget {
   const _PremiumBottomNav({
     required this.currentIndex,
     required this.onChanged,
@@ -92,7 +96,13 @@ class _PremiumBottomNav extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ngo = ref.watch(currentNgoProvider).value;
+    final profile = ref.watch(currentUserProfileProvider).value;
+    
+    // Fallback to user profile if NGO is not found, but prefer NGO count
+    final savedInsightsCount = ngo?.savedInsights.length ?? profile?.savedInsights.length ?? 0;
+
     final isWeb = kIsWeb;
     final scheme = Theme.of(context).colorScheme;
 
@@ -157,6 +167,7 @@ class _PremiumBottomNav extends StatelessWidget {
                 icon: Icons.person_rounded,
                 selected: currentIndex == 4,
                 onTap: () => onChanged(4),
+                badgeCount: savedInsightsCount,
               ),
             ],
           ),
@@ -187,12 +198,14 @@ class _NavItem extends StatelessWidget {
     required this.icon,
     required this.selected,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final String label;
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -228,12 +241,39 @@ class _NavItem extends StatelessWidget {
                     duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOutCubic,
                     scale: selected ? 1.08 : 1,
-                    child: Icon(
-                      icon,
-                      size: isWeb ? 26 : 22,
-                      color: selected
-                          ? scheme.primary
-                          : scheme.onSurfaceVariant,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          icon,
+                          size: isWeb ? 26 : 22,
+                          color: selected
+                              ? scheme.primary
+                              : scheme.onSurfaceVariant,
+                        ),
+                        if (badgeCount > 0)
+                          Positioned(
+                            right: -6,
+                            top: -6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDC2626),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 1.5),
+                              ),
+                              child: Text(
+                                badgeCount.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
