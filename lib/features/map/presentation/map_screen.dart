@@ -29,7 +29,14 @@ Color _colorForUrgency(double score) {
   return const Color(0xFF388E3C);
 }
 
-enum MapLayerCategory { myMission, medical, food, airborne, waterborne, mentalHealth }
+enum MapLayerCategory {
+  myMission,
+  medical,
+  food,
+  airborne,
+  waterborne,
+  mentalHealth,
+}
 
 class MapScreen extends ConsumerWidget {
   const MapScreen({
@@ -179,7 +186,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.isVolunteer ? _LayerCategory.myMission : _fromMapLayer(widget.initialLayer);
+    _selectedCategory = _fromMapLayer(widget.initialLayer);
     unawaited(_resolveLocationPermission());
     unawaited(_loadMarkerIcons());
     _reportsSubscription = _reportsStream.listen(
@@ -551,7 +558,10 @@ class _MapPageState extends ConsumerState<MapPage> {
 
     if (assigned || isMyMission) {
       final badgeCenter = Offset(markerSize - s(34), s(34));
-      final badgePaint = Paint()..color = isMyMission ? const Color(0xFFEC4899) : const Color(0xFF16A34A);
+      final badgePaint = Paint()
+        ..color = isMyMission
+            ? const Color(0xFFEC4899)
+            : const Color(0xFF16A34A);
       canvas.drawCircle(badgeCenter, s(16), badgePaint);
 
       final borderPaint = Paint()
@@ -649,11 +659,13 @@ class _MapPageState extends ConsumerState<MapPage> {
     for (final doc in snapshot.docs) {
       final data = doc.data();
       if (data['matchedVolunteerId'] == volunteer.uid &&
-          (data['status'] == 'pending_acceptance' || data['status'] == 'assigned')) {
+          (data['status'] == 'pending_acceptance' ||
+              data['status'] == 'assigned')) {
         return doc;
       }
       if (data['assigned_volunteer_id'] == volunteer.uid &&
-          (data['status'] == 'pending_acceptance' || data['status'] == 'assigned')) {
+          (data['status'] == 'pending_acceptance' ||
+              data['status'] == 'assigned')) {
         return doc;
       }
     }
@@ -682,9 +694,7 @@ class _MapPageState extends ConsumerState<MapPage> {
         math.max(volunteerLatLng.longitude, missionLatLng.longitude),
       ),
     );
-    _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 100),
-    );
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
   String _formatDistance(LatLng? p1, LatLng? p2) {
@@ -1381,7 +1391,8 @@ class _MapPageState extends ConsumerState<MapPage> {
           );
 
           // Auto-center map on first encounter of this mission
-          if (_autoCenteredMissionId != missionDoc.id && _mapController != null) {
+          if (_autoCenteredMissionId != missionDoc.id &&
+              _mapController != null) {
             _autoCenteredMissionId = missionDoc.id;
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               final myLatLng = await _getCurrentLatLng();
@@ -1575,250 +1586,285 @@ class _MapPageState extends ConsumerState<MapPage> {
   Widget build(BuildContext context) {
     final showLoader = _isPermissionLoading || _isMapInitializing;
 
-    return Stack(
-      children: [
-        GoogleMap(
-          initialCameraPosition: _initialCameraPosition,
-          onMapCreated: _onMapCreated,
-          onTap: (_) {
-            _infoWindowController.hideInfoWindow!();
-            if (_selectedMarkerPosition != null) {
-              setState(() {
-                _selectedMarkerPosition = null;
-              });
-            }
-          },
-          onCameraMove: (_) => _infoWindowController.onCameraMove!(),
-          myLocationEnabled: _hasLocationPermission,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: false,
-          mapToolbarEnabled: false,
-          markers: _markers,
-          heatmaps: _heatmaps,
-          circles: _circles,
-        ),
-        CustomInfoWindow(
-          controller: _infoWindowController,
-          width: 250,
-          height: 200,
-          offset: 42,
-        ),
-        if (_missionDispatchAlert != null)
-          Positioned(
-            top: 12,
-            left: 16,
-            right: 16,
-            child: SafeArea(
-              bottom: false,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0, end: 1),
-                duration: const Duration(milliseconds: 340),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, -22 * (1 - value)),
-                    child: Opacity(opacity: value, child: child),
-                  );
-                },
-                child: _MissionDispatchCard(
-                  alert: _missionDispatchAlert!,
-                  urgencyColor: _colorForUrgency(
-                    _toDouble(
-                          _missionDispatchAlert!.reportData['urgency_score'],
-                        ) ??
-                        _extractUrgencyScore(_missionDispatchAlert!.reportData),
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: Navigator.canPop(context) && !widget.isVolunteer
+          ? AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Material(
+                  color: Colors.white,
+                  shape: const CircleBorder(),
+                  elevation: 2,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
-                  onViewOnMap: () {
-                    final alert = _missionDispatchAlert;
-                    if (alert == null) {
-                      return;
-                    }
-                    _infoWindowController.hideInfoWindow!();
-                    _mapController?.animateCamera(
-                      CameraUpdate.newCameraPosition(
-                        CameraPosition(target: alert.position, zoom: 16),
-                      ),
-                    );
-                    _showReportBriefing(
-                      reportId: alert.reportId,
-                      reportData: alert.reportData,
-                      position: alert.position,
+                ),
+              ),
+            )
+          : null,
+      body: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: _initialCameraPosition,
+            onMapCreated: _onMapCreated,
+            onTap: (_) {
+              _infoWindowController.hideInfoWindow!();
+              if (_selectedMarkerPosition != null) {
+                setState(() {
+                  _selectedMarkerPosition = null;
+                });
+              }
+            },
+            onCameraMove: (_) => _infoWindowController.onCameraMove!(),
+            myLocationEnabled: _hasLocationPermission,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            mapToolbarEnabled: false,
+            markers: _markers,
+            heatmaps: _heatmaps,
+            circles: _circles,
+          ),
+          CustomInfoWindow(
+            controller: _infoWindowController,
+            width: 250,
+            height: 200,
+            offset: 42,
+          ),
+          if (_missionDispatchAlert != null)
+            Positioned(
+              top: 12,
+              left: 16,
+              right: 16,
+              child: SafeArea(
+                bottom: false,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 340),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, child) {
+                    return Transform.translate(
+                      offset: Offset(0, -22 * (1 - value)),
+                      child: Opacity(opacity: value, child: child),
                     );
                   },
+                  child: _MissionDispatchCard(
+                    alert: _missionDispatchAlert!,
+                    urgencyColor: _colorForUrgency(
+                      _toDouble(
+                            _missionDispatchAlert!.reportData['urgency_score'],
+                          ) ??
+                          _extractUrgencyScore(
+                            _missionDispatchAlert!.reportData,
+                          ),
+                    ),
+                    onViewOnMap: () {
+                      final alert = _missionDispatchAlert;
+                      if (alert == null) {
+                        return;
+                      }
+                      _infoWindowController.hideInfoWindow!();
+                      _mapController?.animateCamera(
+                        CameraUpdate.newCameraPosition(
+                          CameraPosition(target: alert.position, zoom: 16),
+                        ),
+                      );
+                      _showReportBriefing(
+                        reportId: alert.reportId,
+                        reportData: alert.reportData,
+                        position: alert.position,
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
-        if (showLoader)
-          const ColoredBox(
-            color: Color(0x33000000),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-        if (_permissionMessage != null)
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Material(
-              borderRadius: BorderRadius.circular(12),
-              color: const Color(0xFF202124).withValues(alpha: 0.9),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _permissionMessage!,
-                        style: const TextStyle(color: Colors.white),
+          if (showLoader)
+            const ColoredBox(
+              color: Color(0x33000000),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          if (_permissionMessage != null)
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: Material(
+                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFF202124).withValues(alpha: 0.9),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: Colors.white,
+                        size: 18,
                       ),
-                    ),
-                    if (!_hasLocationPermission)
-                      TextButton(
-                        onPressed: Geolocator.openAppSettings,
-                        child: const Text('Settings'),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _permissionMessage!,
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ),
-                  ],
+                      if (!_hasLocationPermission)
+                        TextButton(
+                          onPressed: Geolocator.openAppSettings,
+                          child: const Text('Settings'),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        // ── Top Bar Elements ──────────
-        if (widget.isVolunteer)
+          // ── Top Bar Elements ──────────
+          if (widget.isVolunteer)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: _buildVolunteerMissionBanner(),
+              ),
+            ),
+
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
               bottom: false,
-              child: _buildVolunteerMissionBanner(),
-            ),
-          ),
-        
-        Positioned(
-          top: widget.isVolunteer ? 74 : 16,
-          right: 16,
-          child: SafeArea(
-            child: _LayerControlButton(
-              selectedCategory: _selectedCategory,
-              onSelected: _onLayerChanged,
-            ),
-          ),
-        ),
-        Positioned(
-          left: 16,
-          bottom: 24,
-          child: !kIsWeb
-              ? _LayerDebugChip(
-                  category: _selectedCategory,
-                  docsInSnapshot: _docsInSnapshot,
-                  docsWithCoordinates: _docsWithCoordinates,
-                  markersCount: _markers.length,
-                  heatPointsCount: _heatPointsCount,
-                )
-              : const SizedBox.shrink(),
-        ),
-        if (_selectedMarkerPosition != null)
-          Positioned(
-            left: 24,
-            right: 24,
-            bottom: 92,
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _openSelectedLocationInMaps,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 11,
-                          horizontal: 11,
-                        ),
-                        backgroundColor: const Color(0xFF0F766E),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/open_maps.svg',
-                            width: 31,
-                            height: 31,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Text(
-                              'Open Maps',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: widget.isVolunteer ? 74 : 16,
+                    right: 16,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _openDirectionsToSelectedLocation,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 12,
-                        ),
-                        backgroundColor: const Color(0xFF1D4ED8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SvgPicture.asset(
-                            'assets/directions_maps.svg',
-                            width: 29,
-                            height: 29,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Text(
-                              'Directions',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: _LayerControlButton(
+                    selectedCategory: _selectedCategory,
+                    onSelected: _onLayerChanged,
+                    isVolunteer: widget.isVolunteer,
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        if (_dispatchAlert != null)
-          CommandCenterDispatchAlert(
-            volunteerName: _dispatchAlert!.volunteerName,
-            crisisType: _dispatchAlert!.crisisType,
-            areaName: _dispatchAlert!.areaName,
-            reportPosition: _dispatchAlert!.reportPosition,
-            onViewOnMap: _onViewDispatchOnMap,
-            onDismiss: _hideDispatchAlert,
+          Positioned(
+            left: 16,
+            bottom: 24,
+            child: !kIsWeb
+                ? _LayerDebugChip(
+                    category: _selectedCategory,
+                    docsInSnapshot: _docsInSnapshot,
+                    docsWithCoordinates: _docsWithCoordinates,
+                    markersCount: _markers.length,
+                    heatPointsCount: _heatPointsCount,
+                  )
+                : const SizedBox.shrink(),
           ),
-      ],
+          if (_selectedMarkerPosition != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 92,
+              child: SafeArea(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _openSelectedLocationInMaps,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 11,
+                            horizontal: 11,
+                          ),
+                          backgroundColor: const Color(0xFF0F766E),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SvgPicture.asset(
+                              'assets/open_maps.svg',
+                              width: 31,
+                              height: 31,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                'Open Maps',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _openDirectionsToSelectedLocation,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 12,
+                          ),
+                          backgroundColor: const Color(0xFF1D4ED8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SvgPicture.asset(
+                              'assets/directions_maps.svg',
+                              width: 29,
+                              height: 29,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                'Directions',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_dispatchAlert != null)
+            CommandCenterDispatchAlert(
+              volunteerName: _dispatchAlert!.volunteerName,
+              crisisType: _dispatchAlert!.crisisType,
+              areaName: _dispatchAlert!.areaName,
+              reportPosition: _dispatchAlert!.reportPosition,
+              onViewOnMap: _onViewDispatchOnMap,
+              onDismiss: _hideDispatchAlert,
+            ),
+        ],
+      ),
     );
   }
 
@@ -1841,7 +1887,11 @@ class _MapPageState extends ConsumerState<MapPage> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.radar_rounded, color: Color(0xFF38BDF8), size: 18),
+              const Icon(
+                Icons.radar_rounded,
+                color: Color(0xFF38BDF8),
+                size: 18,
+              ),
               const SizedBox(width: 10),
               Text(
                 'Scanning for missions…',
@@ -1863,8 +1913,10 @@ class _MapPageState extends ConsumerState<MapPage> {
         tween: Tween<double>(begin: 0, end: 1),
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeOutCubic,
-        builder: (context, value, child) =>
-            Transform.translate(offset: Offset(0, -16 * (1 - value)), child: Opacity(opacity: value, child: child)),
+        builder: (context, value, child) => Transform.translate(
+          offset: Offset(0, -16 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        ),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
@@ -1893,7 +1945,11 @@ class _MapPageState extends ConsumerState<MapPage> {
                   color: const Color(0xFF4F46E5).withOpacity(0.3),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.my_location_rounded, color: Color(0xFFA5B4FC), size: 18),
+                child: const Icon(
+                  Icons.my_location_rounded,
+                  color: Color(0xFFA5B4FC),
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1924,7 +1980,10 @@ class _MapPageState extends ConsumerState<MapPage> {
               GestureDetector(
                 onTap: () {
                   if (_latestReportsSnapshot != null) {
-                    final doc = _findActiveMissionDoc(volunteer, _latestReportsSnapshot!);
+                    final doc = _findActiveMissionDoc(
+                      volunteer,
+                      _latestReportsSnapshot!,
+                    );
                     if (doc != null) {
                       final data = doc.data() ?? <String, dynamic>{};
                       final pos = _extractLatLng(data);
@@ -1939,7 +1998,10 @@ class _MapPageState extends ConsumerState<MapPage> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF4F46E5),
                     borderRadius: BorderRadius.circular(20),
@@ -1979,13 +2041,23 @@ class _MapPageState extends ConsumerState<MapPage> {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: isSelected ? cat.indicatorColor : const Color(0xDD1E293B),
+                color: isSelected
+                    ? cat.indicatorColor
+                    : const Color(0xDD1E293B),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isSelected ? cat.indicatorColor : const Color(0xFF334155),
+                  color: isSelected
+                      ? cat.indicatorColor
+                      : const Color(0xFF334155),
                 ),
                 boxShadow: isSelected
-                    ? [BoxShadow(color: cat.indicatorColor.withOpacity(0.35), blurRadius: 10, spreadRadius: -2)]
+                    ? [
+                        BoxShadow(
+                          color: cat.indicatorColor.withOpacity(0.35),
+                          blurRadius: 10,
+                          spreadRadius: -2,
+                        ),
+                      ]
                     : [],
               ),
               child: Text(
@@ -2004,7 +2076,14 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 }
 
-enum _LayerCategory { myMission, medical, food, airborne, waterborne, mentalHealth }
+enum _LayerCategory {
+  myMission,
+  medical,
+  food,
+  airborne,
+  waterborne,
+  mentalHealth,
+}
 
 extension _LayerCategoryPresentation on _LayerCategory {
   String get label {
@@ -2063,10 +2142,12 @@ class _LayerControlButton extends StatelessWidget {
   const _LayerControlButton({
     required this.selectedCategory,
     required this.onSelected,
+    this.isVolunteer = false,
   });
 
   final _LayerCategory selectedCategory;
   final ValueChanged<_LayerCategory> onSelected;
+  final bool isVolunteer;
 
   @override
   Widget build(BuildContext context) {
@@ -2083,11 +2164,18 @@ class _LayerControlButton extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<_LayerCategory>(
           value: selectedCategory,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
+          isDense: true,
+          icon: const Padding(
+            padding: EdgeInsets.only(left: 4.0),
+            child: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF64748B),
+            ),
+          ),
           elevation: 16,
           style: GoogleFonts.inter(
             color: const Color(0xFF0F172A),
@@ -2097,25 +2185,30 @@ class _LayerControlButton extends StatelessWidget {
           onChanged: (newValue) {
             if (newValue != null) onSelected(newValue);
           },
-          items: _LayerCategory.values.map((category) {
-            return DropdownMenuItem(
-              value: category,
-              child: Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: category.indicatorColor,
-                      shape: BoxShape.circle,
-                    ),
+          items: _LayerCategory.values
+              .where((c) => isVolunteer || c != _LayerCategory.myMission)
+              .map((category) {
+                return DropdownMenuItem(
+                  value: category,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: category.indicatorColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(category.label),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(category.label),
-                ],
-              ),
-            );
-          }).toList(),
+                );
+              })
+              .toList(),
         ),
       ),
     );

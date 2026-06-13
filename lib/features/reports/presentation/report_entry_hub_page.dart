@@ -16,7 +16,7 @@ class ReportEntryHubPage extends StatelessWidget {
         foregroundColor: const Color(0xFF202124),
         elevation: 0,
         title: const Text(
-          'Report Entry Hub',
+          'Submit Report',
           style: TextStyle(fontWeight: FontWeight.w500),
         ),
       ),
@@ -31,7 +31,7 @@ class ReportEntryHubPage extends StatelessWidget {
               final manualCard = _SplitCard(
                 height: cardHeight,
                 imageAsset: 'assets/manual_bg.png',
-                title: 'Structured Report Entry',
+                title: 'Manual Entry',
                 body:
                     'NGO-Verified Input. Transform field observations into precise, structured strategic data for high-stakes resource allocation.',
                 icon: const Icon(
@@ -51,7 +51,7 @@ class ReportEntryHubPage extends StatelessWidget {
               final aiCard = _SplitCard(
                 height: cardHeight,
                 imageAsset: 'assets/ai_bg.png',
-                title: 'Sentinel Intelligence Scan',
+                title: 'Document Analysis',
                 body:
                     'From Fragmented to Actionable. Upload handwritten logs or messy field notes. Gemini extracts and structures the intelligence instantly.',
                 icon: SvgPicture.asset(

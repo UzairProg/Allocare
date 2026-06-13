@@ -340,7 +340,7 @@ class _NgoReportsCenterPageState extends ConsumerState<NgoReportsCenterPage> {
         'geminiSummary': '',
       });
 
-      _showSuccessSnackBar('Intelligence report uploaded successfully!');
+      _showSuccessSnackBar('Field report uploaded successfully!');
     } catch (e) {
       _showErrorSnackBar('Upload failed: $e');
     } finally {

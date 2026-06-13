@@ -116,8 +116,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               ],
                             ),
                             GestureDetector(
-                              onTap: () => MainNavigationScreen.of(context)
-                                  ?.setIndex(4),
+                              onTap: () =>
+                                  MainNavigationScreen.of(context)?.setIndex(4),
                               child: CircleAvatar(
                                 radius: isWeb ? 28 : 22,
                                 backgroundImage: photoUrl != null
@@ -293,7 +293,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                       const SizedBox(height: 32),
 
-                      // 5. Hyper-Local Live Feed
+                      // 5. Hyper-Local Live Updates
                       _Reveal(
                         controller: _controller,
                         interval: const Interval(
@@ -308,14 +308,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Priority-Based Allocation',
+                                  'Resource Priorities',
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFF1D2A30),
                                   ),
                                 ),
                                 Text(
-                                  'LIVE FEED',
+                                  'LIVE UPDATES',
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: theme.colorScheme.primary,
                                     fontWeight: FontWeight.w900,
@@ -341,16 +341,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (_) => _MissionLogPage(activities: recent)),
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          _MissionLogPage(activities: recent),
+                                    ),
                                   );
                                 },
-                                icon: const Icon(Icons.terminal_rounded, size: 16),
-                                label: const Text('VIEW FULL TACTICAL LOG'),
+                                icon: const Icon(
+                                  Icons.terminal_rounded,
+                                  size: 16,
+                                ),
+                                label: const Text('VIEW LIVE INSIGHTS'),
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  side: const BorderSide(color: Color(0xFFE4ECF9)),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  side: const BorderSide(
+                                    color: Color(0xFFE4ECF9),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.0,
+                                  ),
                                 ),
                               ),
                             ),
@@ -450,7 +466,7 @@ class _AllocationProgressCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Strategically\nPositioned',
+                        'Available for\nDeployment',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: isWeb ? 9 : 6.5,
@@ -830,11 +846,14 @@ class _ActivityListTileState extends State<_ActivityListTile> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Text(
-                            '${item.subtitle} · ${item.timeAgo}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                              fontSize: isWeb ? 12 : 10,
+                          Expanded(
+                            child: Text(
+                              '${item.subtitle} · ${item.timeAgo}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                                fontSize: isWeb ? 12 : 10,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -851,7 +870,9 @@ class _ActivityListTileState extends State<_ActivityListTile> {
           ),
           if (_isExpanded)
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(16),
+              ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
@@ -861,7 +882,11 @@ class _ActivityListTileState extends State<_ActivityListTile> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.psychology_rounded, size: 16, color: item.accentColor),
+                      Icon(
+                        Icons.psychology_rounded,
+                        size: 16,
+                        color: item.accentColor,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -919,10 +944,14 @@ class _ActivityListTileState extends State<_ActivityListTile> {
 
   Widget _buildSourceTray(RecentActivityItem item) {
     return Row(
-      children: item.dataSources.map((icon) => Padding(
-        padding: const EdgeInsets.only(right: 4),
-        child: Icon(icon, size: 12, color: Colors.grey.withOpacity(0.4)),
-      )).toList(),
+      children: item.dataSources
+          .map(
+            (icon) => Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Icon(icon, size: 12, color: Colors.grey.withOpacity(0.4)),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -935,11 +964,16 @@ class _ActivityListTileState extends State<_ActivityListTile> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFFDCFCE7)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 6,
+          runSpacing: 6,
           children: [
-            const Icon(Icons.verified_rounded, size: 12, color: Color(0xFF16A34A)),
-            const SizedBox(width: 6),
+            const Icon(
+              Icons.verified_rounded,
+              size: 12,
+              color: Color(0xFF16A34A),
+            ),
             Text(
               'STRATEGIC MATCH: ${item.assignedVolunteer}',
               style: const TextStyle(
@@ -947,9 +981,9 @@ class _ActivityListTileState extends State<_ActivityListTile> {
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF16A34A),
               ),
+              overflow: TextOverflow.ellipsis,
             ),
-            if (item.proximity != null) ...[
-              const SizedBox(width: 6),
+            if (item.proximity != null)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
@@ -958,17 +992,22 @@ class _ActivityListTileState extends State<_ActivityListTile> {
                 ),
                 child: Text(
                   item.proximity!,
-                  style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
+                  style: const TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF16A34A),
+                  ),
                 ),
               ),
-            ],
-            if (item.volunteerRank != null) ...[
-              const SizedBox(width: 6),
+            if (item.volunteerRank != null)
               Text(
                 '· ${item.volunteerRank}',
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: const Color(0xFF16A34A).withOpacity(0.7)),
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF16A34A).withOpacity(0.7),
+                ),
               ),
-            ],
           ],
         ),
       );
@@ -976,15 +1015,22 @@ class _ActivityListTileState extends State<_ActivityListTile> {
 
     return Row(
       children: [
-        Icon(Icons.auto_awesome_rounded, size: 12, color: item.accentColor.withOpacity(0.5)),
+        Icon(
+          Icons.auto_awesome_rounded,
+          size: 12,
+          color: item.accentColor.withOpacity(0.5),
+        ),
         const SizedBox(width: 8),
-        Text(
-          'OPTIMIZING HUMANITY FORCE RESPONSE...',
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w900,
-            color: item.accentColor.withOpacity(0.8),
-            letterSpacing: 0.8,
+        Expanded(
+          child: Text(
+            'PRIORITY RESPONSE ACTIVATED...',
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              color: item.accentColor.withOpacity(0.8),
+              letterSpacing: 0.8,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -1000,7 +1046,8 @@ class _PulsingDot extends StatefulWidget {
   State<_PulsingDot> createState() => _PulsingDotState();
 }
 
-class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -1025,10 +1072,7 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
       child: Container(
         width: 6,
         height: 6,
-        decoration: BoxDecoration(
-          color: widget.color,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
       ),
     );
   }
@@ -1045,9 +1089,21 @@ class _MissionLogPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('TACTICAL MISSION LOG', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.white)),
+        title: const Text(
+          'LIVE MISSION INSIGHTS',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+            color: Colors.white,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -1064,13 +1120,32 @@ class _MissionLogPage extends StatelessWidget {
               color: item.accentColor,
             );
           }
-          
+
           final extraIndex = index - activities.length;
           final extras = [
-            {'time': 'SYSTEM', 'msg': 'Syncing with Global Sentinel Inventory...', 'type': 'system'},
-            {'time': 'AI', 'msg': 'Density clusters updated in Kranti Chowk. Re-routing unassigned guardians.', 'type': 'ai'},
-            {'time': 'IOT', 'msg': 'Water Quality sensors in CIDCO Sector 4 reporting improvement.', 'type': 'iot'},
-            {'time': 'MATCH', 'msg': 'Optimizing 12 pending reports for 100% strategic coverage.', 'type': 'match'},
+            {
+              'time': 'SYSTEM',
+              'msg': 'Syncing with Global Sentinel Inventory...',
+              'type': 'system',
+            },
+            {
+              'time': 'AI',
+              'msg':
+                  'Density clusters updated in Kranti Chowk. Re-routing unassigned guardians.',
+              'type': 'ai',
+            },
+            {
+              'time': 'IOT',
+              'msg':
+                  'Water Quality sensors in CIDCO Sector 4 reporting improvement.',
+              'type': 'iot',
+            },
+            {
+              'time': 'MATCH',
+              'msg':
+                  'Optimizing 12 pending reports for 100% strategic coverage.',
+              'type': 'match',
+            },
           ];
           final e = extras[extraIndex];
           return _buildLogEntry(
@@ -1083,7 +1158,12 @@ class _MissionLogPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLogEntry({required String time, required String msg, required String type, Color? color}) {
+  Widget _buildLogEntry({
+    required String time,
+    required String msg,
+    required String type,
+    Color? color,
+  }) {
     Color msgColor = Colors.white70;
     if (type == 'ai') msgColor = const Color(0xFF3B82F6);
     if (type == 'report') msgColor = color ?? Colors.white;
@@ -1098,7 +1178,12 @@ class _MissionLogPage extends StatelessWidget {
             width: 70,
             child: Text(
               '[$time]',
-              style: const TextStyle(color: Color(0xFF64748B), fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontFamily: 'monospace',
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(width: 12),

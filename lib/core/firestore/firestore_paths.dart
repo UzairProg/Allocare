@@ -10,6 +10,7 @@ class FirestorePaths {
   static const String allocations = 'allocations';
   static const String insights = 'insights';
   static const String reports = 'reports';
+  static const String groundReports = 'ground_reports';
 
   static String user(String uid) => '$users/$uid';
   static String ngo(String ngoId) => '$ngos/$ngoId';

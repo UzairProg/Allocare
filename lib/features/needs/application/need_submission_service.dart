@@ -22,6 +22,39 @@ class NeedSubmissionService {
     return uploadImageToCloudinary(image);
   }
 
+  Future<String> uploadAudioToCloudinary(File audio) async {
+    if (!await audio.exists()) {
+      throw Exception('Selected audio file does not exist.');
+    }
+
+    final request =
+        http.MultipartRequest(
+            'POST',
+            Uri.parse('https://api.cloudinary.com/v1_1/dsuwvrile/video/upload'),
+          )
+          ..fields['upload_preset'] = 'allocare_preset'
+          ..fields['folder'] = 'reports/audio'
+          ..files.add(await http.MultipartFile.fromPath('file', audio.path));
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Cloudinary audio upload failed (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final secureUrl = (body['secure_url'] as String?)?.trim();
+    if (secureUrl == null || secureUrl.isEmpty) {
+      throw Exception('Cloudinary did not return a secure_url for audio.');
+    }
+
+    return secureUrl;
+  }
+
+
   Future<String> uploadImageToCloudinary(File image) async {
     if (!await image.exists()) {
       throw Exception('Selected image file does not exist.');
@@ -77,6 +110,34 @@ class NeedSubmissionService {
     final secureUrl = (body['secure_url'] as String?)?.trim();
     if (secureUrl == null || secureUrl.isEmpty) {
       throw Exception('Cloudinary did not return a secure_url.');
+    }
+
+    return secureUrl;
+  }
+
+  Future<String> uploadAudioBytesToCloudinary(List<int> bytes, String filename) async {
+    final request =
+        http.MultipartRequest(
+            'POST',
+            Uri.parse('https://api.cloudinary.com/v1_1/dsuwvrile/video/upload'),
+          )
+          ..fields['upload_preset'] = 'allocare_preset'
+          ..fields['folder'] = 'reports/audio'
+          ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Cloudinary audio upload failed (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final secureUrl = (body['secure_url'] as String?)?.trim();
+    if (secureUrl == null || secureUrl.isEmpty) {
+      throw Exception('Cloudinary did not return a secure_url for audio.');
     }
 
     return secureUrl;

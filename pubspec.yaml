@@ -57,6 +57,7 @@ dependencies:
   google_fonts: ^8.0.2
   libphonenumber_plugin: ^0.3.3
   country_picker: ^2.0.27
+  record: ^6.2.1
 
 dev_dependencies:
   flutter_test:

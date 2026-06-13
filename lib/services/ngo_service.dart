@@ -6,6 +6,7 @@ import '../models/app_user.dart';
 import '../models/ngo_model.dart';
 import 'auth_service.dart';
 import 'user_profile_service.dart';
+import 'volunteer_service.dart';
 
 final ngosCollectionProvider = Provider<CollectionReference<NgoModel>>((ref) {
   return ref
@@ -39,6 +40,10 @@ final currentNgoProvider = StreamProvider<NgoModel?>((ref) {
 final effectiveNgoIdProvider = Provider<String?>((ref) {
   final ngo = ref.watch(currentNgoProvider).asData?.value;
   if (ngo != null) return ngo.ngoId;
+  
+  final volunteer = ref.watch(currentVolunteerProvider).asData?.value;
+  if (volunteer != null && volunteer.ngoId.isNotEmpty) return volunteer.ngoId;
+
   final authUser = ref.watch(authStateProvider).asData?.value;
   return authUser?.uid;
 });

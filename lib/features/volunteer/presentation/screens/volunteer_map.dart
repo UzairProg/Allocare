@@ -8,6 +8,7 @@ class VolunteerMapScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MapScreen(
       isVolunteer: true,
+      initialLayer: MapLayerCategory.myMission,
     );
   }
 }

@@ -45,6 +45,7 @@ class NgoModel {
     this.completedMissionCount = 0,
     this.reportsReceived = 0,
     this.supportedCategories = const [],
+    this.savedInsights = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -76,6 +77,7 @@ class NgoModel {
   final int completedMissionCount;
   final int reportsReceived;
   final List<String> supportedCategories;
+  final List<String> savedInsights;
 
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -111,6 +113,7 @@ class NgoModel {
     int? completedMissionCount,
     int? reportsReceived,
     List<String>? supportedCategories,
+    List<String>? savedInsights,
     DateTime? updatedAt,
   }) {
     return NgoModel(
@@ -136,6 +139,7 @@ class NgoModel {
           completedMissionCount ?? this.completedMissionCount,
       reportsReceived: reportsReceived ?? this.reportsReceived,
       supportedCategories: supportedCategories ?? this.supportedCategories,
+      savedInsights: savedInsights ?? this.savedInsights,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -177,6 +181,7 @@ class NgoModel {
       ),
       reportsReceived: _readInt(map, 'reportsReceived'),
       supportedCategories: _readStringList(map['supportedCategories']),
+      savedInsights: _readStringList(map['savedInsights']),
       createdAt: _asDateTime(map['createdAt']) ?? DateTime.now(),
       updatedAt: _asDateTime(map['updatedAt']) ?? DateTime.now(),
     );
@@ -203,6 +208,7 @@ class NgoModel {
       'completedMissionCount': completedMissionCount,
       'reportsReceived': reportsReceived,
       'supportedCategories': supportedCategories,
+      'savedInsights': savedInsights,
       'activeVolunteers': activeVolunteerCount,
       'activeMissions': activeMissionCount,
       'completedMissions': completedMissionCount,

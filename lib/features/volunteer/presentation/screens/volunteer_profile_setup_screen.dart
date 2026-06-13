@@ -228,10 +228,17 @@ class _VolunteerProfileSetupScreenState
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Volunteer profile created successfully.')),
-        );
-        context.go(RoutePaths.volunteerVerificationPending);
+        if (existingVolunteer != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully.')),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Volunteer profile created successfully.')),
+          );
+          context.go(RoutePaths.volunteerVerificationPending);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -249,12 +256,13 @@ class _VolunteerProfileSetupScreenState
   @override
   Widget build(BuildContext context) {
     final ngosStream = ref.watch(approvedNgosProvider);
+    final isEditing = ref.watch(currentVolunteerProvider).asData?.value != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          'Volunteer Onboarding',
+          isEditing ? 'Edit Profile' : 'Volunteer Onboarding',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -283,7 +291,7 @@ class _VolunteerProfileSetupScreenState
               children: [
                 // Welcome Header
                 Text(
-                  'Complete Your Profile',
+                  isEditing ? 'Update Your Details' : 'Complete Your Profile',
                   style: GoogleFonts.poppins(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -292,7 +300,9 @@ class _VolunteerProfileSetupScreenState
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Join the emergency response network. Enter your personal and contact details to get verified.',
+                  isEditing
+                      ? 'Keep your personal and emergency details up to date to ensure operational readiness.'
+                      : 'Join the emergency response network. Enter your personal and contact details to get verified.',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: const Color(0xFF64748B),
@@ -548,7 +558,7 @@ class _VolunteerProfileSetupScreenState
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text('SUBMIT PROFILE FOR REVIEW'),
+                      : Text(isEditing ? 'SAVE CHANGES' : 'SUBMIT PROFILE FOR REVIEW'),
                 ),
               ],
             ),

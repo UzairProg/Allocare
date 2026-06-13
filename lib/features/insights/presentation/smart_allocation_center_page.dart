@@ -1837,7 +1837,7 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Mission intel unavailable.',
+            'Mission details unavailable.',
             style: TextStyle(color: Colors.red),
           ),
           const SizedBox(height: 16),

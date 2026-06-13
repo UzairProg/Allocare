@@ -17,6 +17,7 @@ import '../../../services/user_profile_service.dart';
 import 'manage_volunteer_page.dart';
 import 'volunteer_registry_page.dart';
 import '../../insights/presentation/sentinel_strategic_hub_page.dart';
+import '../../insights/presentation/gemini_action_plan_page.dart';
 import '../../insights/presentation/smart_allocation_center_page.dart';
 import '../../reports/presentation/reports_center_page.dart';
 import '../../reports/presentation/ngo_reports_center_page.dart';
@@ -233,7 +234,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 24),
 
                 // SECTION 3: Gemini Intelligence Brief
-                _buildGeminiBrief(ngoId),
+                _buildGeminiBrief(ngo),
                 const SizedBox(height: 24),
 
                 // SECTION 4: Impact Force Leaderboard
@@ -885,23 +886,40 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildGeminiBrief(String ngoId) {
+  Widget _buildGeminiBrief(NgoModel ngo) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('ngo_reports')
-          .where('ngoId', isEqualTo: ngoId)
+          .where('ngoId', isEqualTo: ngo.ngoId)
           .snapshots(),
       builder: (context, reportsSnapshot) {
         final reportsCount = reportsSnapshot.data?.docs.length ?? 0;
-        return StreamBuilder<QuerySnapshot>(
+
+        if (ngo.savedInsights.isEmpty) {
+          return _GeminiBriefCard(
+            insight: null,
+            reportsCount: reportsCount,
+            updatedAt: null,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SentinelStrategicHubPage(),
+                ),
+              );
+            },
+          );
+        }
+
+        final savedInsightId = ngo.savedInsights.last;
+
+        return StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('insights')
-              .where('ngoId', isEqualTo: ngoId)
-              .limit(1)
+              .doc(savedInsightId)
               .snapshots(),
           builder: (context, snapshot) {
-            final docs = snapshot.data?.docs ?? [];
-            if (docs.isEmpty) {
+            final doc = snapshot.data;
+            if (doc == null || !doc.exists) {
               return _GeminiBriefCard(
                 insight: null,
                 reportsCount: reportsCount,
@@ -916,7 +934,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               );
             }
 
-            final doc = docs.first;
             final insight = InsightModel.fromMap(
               doc.id,
               doc.data() as Map<String, dynamic>? ?? {},
@@ -931,7 +948,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const SentinelStrategicHubPage(),
+                    builder: (_) => GeminiActionPlanPage(insight: insight),
                   ),
                 );
               },
@@ -1464,8 +1481,10 @@ class _GeminiBriefCard extends StatelessWidget {
         ? _timeAgo(updatedAt!.toDate())
         : 'Recently';
 
+    final isSaved = insight != null;
+
     return Material(
-      color: const Color.fromARGB(255, 28, 41, 71),
+      color: isSaved ? const Color(0xFFFEF2F2) : Colors.white,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -1474,22 +1493,43 @@ class _GeminiBriefCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF334155)),
+            border: Border.all(
+              color: isSaved ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0),
+              width: isSaved ? 1.5 : 1.0,
+            ),
+            boxShadow: isSaved
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFDC2626).withValues(alpha: 0.08),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.015),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
+                      color: isSaved
+                          ? const Color(0xFFDC2626).withValues(alpha: 0.1)
+                          : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
-                      Icons.auto_awesome_rounded,
-                      color: Color(0xFF38BDF8),
+                    child: Icon(
+                      isSaved ? Icons.auto_awesome_rounded : Icons.auto_awesome_outlined,
+                      color: isSaved ? const Color(0xFFDC2626) : const Color(0xFF64748B),
                       size: 18,
                     ),
                   ),
@@ -1498,130 +1538,121 @@ class _GeminiBriefCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 6,
+                          runSpacing: 4,
                           children: [
                             Text(
-                              'Gemini Intelligence Brief',
+                              isSaved ? 'Saved AI Action Plan' : 'Gemini Intelligence',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: isSaved ? const Color(0xFF7F1D1D) : const Color(0xFF1E293B),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0C4A6E),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'AI',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF38BDF8),
+                            if (isSaved)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFDC2626), Color(0xFFB91C1C)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'GEMINI',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
+                        const SizedBox(height: 2),
                         Text(
-                          insight != null
-                              ? 'Last analyzed $timeStr'
+                          isSaved
+                              ? 'Detailed brief & actionable plans • $timeStr'
                               : 'Active Analysis Engine',
                           style: GoogleFonts.inter(
                             fontSize: 11,
-                            color: const Color(0xFF94A3B8),
+                            color: isSaved ? const Color(0xFF991B1B) : const Color(0xFF64748B),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  if (insight != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0C4A6E),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFF0284C7).withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.psychology_alt_rounded,
-                            color: Color(0xFF38BDF8),
-                            size: 12,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${(insight!.score * 100).toStringAsFixed(0)}% Conf.',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF38BDF8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
               ),
               const SizedBox(height: 16),
-              if (insight != null) ...[
+              if (isSaved) ...[
                 Text(
                   insight!.title,
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: const Color(0xFF450A0A),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  insight!.recommendation,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: const Color(0xFFCBD5E1),
-                    height: 1.4,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.insights_rounded, color: Color(0xFFDC2626), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          insight!.recommendation,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: const Color(0xFF7F1D1D),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ] else ...[
                 Text(
-                  'Gemini has not generated an intelligence brief yet.',
+                  'No intelligence briefs saved.',
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: const Color(0xFF0F172A),
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Upload reports or create incidents to trigger AI analysis.',
+                  'Double-tap insights in the Sentinel Hub to save high-priority briefings here for quick access.',
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: const Color(0xFFCBD5E1),
+                    color: const Color(0xFF475569),
                     height: 1.4,
                   ),
                 ),
               ],
-              const Divider(height: 24, color: Color(0xFF334155)),
+              Divider(height: 24, color: isSaved ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0)),
               Row(
                 children: [
                   Text(
-                    'Reports Synthesized: $reportsCount',
+                    'Based on $reportsCount Reports',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF94A3B8),
+                      color: isSaved ? const Color(0xFF991B1B) : const Color(0xFF64748B),
                     ),
                   ),
                   const Spacer(),
@@ -1629,17 +1660,17 @@ class _GeminiBriefCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'View AI Insights',
+                        isSaved ? 'View Full Action Plan' : 'Enter Strategic Hub',
                         style: GoogleFonts.poppins(
-                          color: const Color(0xFF38BDF8),
+                          color: isSaved ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(
+                      Icon(
                         Icons.arrow_forward_rounded,
-                        color: Color(0xFF38BDF8),
+                        color: isSaved ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
                         size: 14,
                       ),
                     ],

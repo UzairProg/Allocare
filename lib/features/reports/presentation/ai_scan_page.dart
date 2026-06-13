@@ -954,7 +954,7 @@ class _StructuredPreviewCard extends StatelessWidget {
                               colors: [Color(0xFF4285F4), Color(0xFF9B72CB)],
                             ).createShader(bounds),
                             child: Text(
-                              'Intelligence Report',
+                              'Field Report',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
