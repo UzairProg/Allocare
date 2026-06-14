@@ -107,8 +107,8 @@ Return strict JSON with these keys:
 - urgency (low, medium, high)
 - urgency_score (1 to 5)
 - location (city/address name)
-- latitude (double, you MUST provide an estimated latitude for the location)
-- longitude (double, you MUST provide an estimated longitude for the location)
+- latitude (double, if the text contains a pin point location or explicit coordinates, use those exactly. Otherwise, provide an estimated latitude.)
+- longitude (double, if the text contains a pin point location or explicit coordinates, use those exactly. Otherwise, provide an estimated longitude.)
 - description
 - peopleAffected (integer)
 - contactName
@@ -160,8 +160,8 @@ Return strict JSON with these keys:
 - urgency (low, medium, high)
 - urgency_score (1 to 5)
 - location (city/address name)
-- latitude (double, you MUST provide an estimated latitude for the location)
-- longitude (double, you MUST provide an estimated longitude for the location)
+- latitude (double, if the image contains a pin point location or explicit coordinates, use those exactly. Otherwise, provide an estimated latitude.)
+- longitude (double, if the image contains a pin point location or explicit coordinates, use those exactly. Otherwise, provide an estimated longitude.)
 - description
 - peopleAffected (integer)
 - contactName

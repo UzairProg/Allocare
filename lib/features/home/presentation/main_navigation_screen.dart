@@ -12,6 +12,8 @@ import '../../insights/presentation/sentinel_strategic_hub_page.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../needs/presentation/needs_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../reports/presentation/report_entry_hub_page.dart';
 import 'home_screen.dart';
 
@@ -97,12 +99,6 @@ class _PremiumBottomNav extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ngo = ref.watch(currentNgoProvider).value;
-    final profile = ref.watch(currentUserProfileProvider).value;
-    
-    // Fallback to user profile if NGO is not found, but prefer NGO count
-    final savedInsightsCount = ngo?.savedInsights.length ?? profile?.savedInsights.length ?? 0;
-
     final isWeb = kIsWeb;
     final scheme = Theme.of(context).colorScheme;
 
@@ -162,12 +158,30 @@ class _PremiumBottomNav extends ConsumerWidget {
                 selected: currentIndex == 3,
                 onTap: () => onChanged(3),
               ),
-              _NavItem(
-                label: 'Profile',
-                icon: Icons.person_rounded,
-                selected: currentIndex == 4,
-                onTap: () => onChanged(4),
-                badgeCount: savedInsightsCount,
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('ngos')
+                    .doc(ref.watch(effectiveNgoIdProvider) ?? '')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  int badgeCount = 0;
+                  if (snapshot.hasData && snapshot.data?.data() != null) {
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+                    if (data.containsKey('savedInsights')) {
+                      final savedList = data['savedInsights'] as List<dynamic>?;
+                      badgeCount = savedList?.length ?? 0;
+                    }
+                  }
+                  
+                  return _NavItem(
+                    label: 'Profile',
+                    icon: Icons.person_rounded,
+                    selected: currentIndex == 4,
+                    onTap: () => onChanged(4),
+                    showRedDotOnly: true,
+                    badgeCount: badgeCount,
+                  );
+                },
               ),
             ],
           ),
@@ -199,6 +213,7 @@ class _NavItem extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.badgeCount = 0,
+    this.showRedDotOnly = false,
   });
 
   final String label;
@@ -206,6 +221,7 @@ class _NavItem extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final int badgeCount;
+  final bool showRedDotOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -253,24 +269,26 @@ class _NavItem extends StatelessWidget {
                         ),
                         if (badgeCount > 0)
                           Positioned(
-                            right: -6,
-                            top: -6,
+                            right: showRedDotOnly ? -2 : -6,
+                            top: showRedDotOnly ? -2 : -6,
                             child: Container(
-                              padding: const EdgeInsets.all(4),
+                              padding: EdgeInsets.all(showRedDotOnly ? 4 : 4),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFDC2626),
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white, width: 1.5),
                               ),
-                              child: Text(
-                                badgeCount.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w900,
-                                  height: 1.0,
-                                ),
-                              ),
+                              child: showRedDotOnly
+                                  ? const SizedBox(width: 4, height: 4)
+                                  : Text(
+                                      badgeCount.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w900,
+                                        height: 1.0,
+                                      ),
+                                    ),
                             ),
                           ),
                       ],

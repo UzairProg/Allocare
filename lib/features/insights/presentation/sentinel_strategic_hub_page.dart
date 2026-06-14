@@ -41,12 +41,12 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage>
 
   void _handleDragEnd(DragEndDetails details) {
     if (details.primaryVelocity! < -300) {
-      _sheetAnimationController.animateTo(0.05, curve: Curves.easeOutCubic);
+      _sheetAnimationController.animateTo(0.02, curve: Curves.easeOutCubic);
     } else if (details.primaryVelocity! > 300) {
       _sheetAnimationController.animateTo(1.0, curve: Curves.easeOutCubic);
     } else {
       if (_sheetAnimationController.value < 0.6) {
-        _sheetAnimationController.animateTo(0.05, curve: Curves.easeOutCubic);
+        _sheetAnimationController.animateTo(0.02, curve: Curves.easeOutCubic);
       } else {
         _sheetAnimationController.animateTo(1.0, curve: Curves.easeOutCubic);
       }
@@ -64,7 +64,7 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage>
         child: AnimatedBuilder(
           animation: _sheetAnimationController,
           builder: (context, child) {
-            double pos = _sheetAnimationController.value.clamp(0.05, 1.0);
+            double pos = _sheetAnimationController.value.clamp(0.02, 1.0);
             double progress = 1.0 - pos; 
             
             double backgroundScale = 1.0 - (0.06 * progress); // Shrinks to 94%
@@ -122,7 +122,7 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage>
                   top: MediaQuery.of(context).size.height * pos,
                   left: 0,
                   right: 0,
-                  height: MediaQuery.of(context).size.height * 0.95, // 95% screen height
+                  height: MediaQuery.of(context).size.height * 0.98, // 98% screen height
                   child: Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC), // Pure white background for the sheet
@@ -227,9 +227,18 @@ class _SentinelStrategicHubPageState extends State<SentinelStrategicHubPage>
                             style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 0.5),
                           ),
                           SizedBox(height: 12),
-                          _VerifiedSourceItem('Google Weather'),
-                          _VerifiedSourceItem('Government Alerts'),
-                          _VerifiedSourceItem('Historical Trends'),
+                          _VerifiedSourceItem(
+                            'Google Weather',
+                            tooltip: 'Climate data helps predict major events (droughts, floods, storms) before they escalate.',
+                          ),
+                          _VerifiedSourceItem(
+                            'Government Alerts',
+                            tooltip: 'Official advisories provide a highly trusted baseline for predictive hazard warnings.',
+                          ),
+                          _VerifiedSourceItem(
+                            'Historical Trends',
+                            tooltip: 'Analysis of past incidents reveals patterns to forecast upcoming resource demands.',
+                          ),
                         ],
                       ),
                     ),
@@ -302,26 +311,26 @@ class _RiskBriefingsDeckState extends State<_RiskBriefingsDeck> {
             onPageChanged: (idx) => setState(() => _currentPage = idx),
             children: const [
               _RiskBriefingCardContent(
-                insightId: 'insight_flood_001',
+                insightId: 'insight_resource_shortage_001',
                 isPrimary: true,
                 badge: 'PRIMARY AI INSIGHT',
-                title: 'Flood Risk Detected',
+                title: 'Resource Shortage Risk Detected',
                 location: 'Aurangabad, Maharashtra',
-                updatedAt: 'Updated 9:26 AM • 15 May 2025',
-                alertExplanation: 'High probability of localized flooding due to heavy rainfall and verified community reports.',
-                impactNumber: '3,500+',
+                updatedAt: 'Updated Just Now • 14 June 2026',
+                alertExplanation: 'Ongoing flood response operations are increasing demand for volunteers and emergency supplies across affected sectors.',
+                impactNumber: '4,100+',
                 impactDescription: 'Residents',
-                radiusNumber: '2.3 km',
+                radiusNumber: '3.1 km',
                 radiusDescription: 'Radius',
                 whyAlertRows: [
-                  {'icon': Icons.water_drop_outlined, 'label': 'Rainfall Intensity', 'value': '102 mm', 'subValue': '(Last 6 hrs)'},
-                  {'icon': Icons.waves_rounded, 'label': 'Water Level Rise', 'value': '+38 cm', 'subValue': '(Past 3 hrs)'},
-                  {'icon': Icons.chat_bubble_outline_rounded, 'label': 'Community Reports', 'value': '34', 'subValue': 'Verified'},
-                  {'icon': Icons.bar_chart_rounded, 'label': 'Risk Zone Match', 'value': '82%', 'subValue': 'Historical Match'},
+                  {'icon': Icons.warning_amber_rounded, 'label': 'Active Flood Sectors', 'value': '3', 'subValue': 'Relief Zones'},
+                  {'icon': Icons.groups_rounded, 'label': 'Volunteer Availability', 'value': '68%', 'subValue': 'Remaining'},
+                  {'icon': Icons.fact_check_rounded, 'label': 'Community Reports', 'value': '47', 'subValue': 'Verified'},
+                  {'icon': Icons.inventory_2_rounded, 'label': 'Resource Utilization', 'value': '86%', 'subValue': 'Allocated'},
                 ],
-                immediateAction: 'Deploy response teams',
-                next4HoursAction: 'Issue evacuation advisory',
-                preparednessAction: 'Mobilize extraction pumps',
+                immediateAction: 'Deploy additional volunteers to high-demand sectors',
+                next4HoursAction: 'Mobilize emergency supplies and medical kits',
+                preparednessAction: 'Activate reserve volunteer network',
               ),
               _RiskBriefingCardContent(
                 insightId: 'insight_scarcity_001',
@@ -329,7 +338,7 @@ class _RiskBriefingsDeckState extends State<_RiskBriefingsDeck> {
                 badge: 'WATER SCARCITY',
                 title: 'Water Scarcity Warning',
                 location: 'Beed Bypass Region',
-                updatedAt: 'Updated 10:15 AM • 15 May 2025',
+                updatedAt: 'Updated 10:15 AM • 13 June 2026',
                 alertExplanation: 'Low reservoir levels and high consumption rates indicate potential water shortage in 3-5 days.',
                 impactNumber: '8,200',
                 impactDescription: 'Residents',
@@ -351,7 +360,7 @@ class _RiskBriefingsDeckState extends State<_RiskBriefingsDeck> {
                 badge: 'AIRBORNE DISEASE',
                 title: 'Respiratory Illness Trend',
                 location: 'Waluj Industrial Area',
-                updatedAt: 'Updated 11:30 AM • 15 May 2025',
+                updatedAt: 'Updated 11:30 AM • 12 June 2026',
                 alertExplanation: 'Spike in respiratory distress reports correlating with sudden drop in air quality index.',
                 impactNumber: '1,200',
                 impactDescription: 'Workers',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,6 +34,577 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
 
   Map<String, dynamic>? _selectedReport;
   String? _selectedReportId;
+
+  Widget _buildMetricCard({
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bgColor.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bgColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResourceChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.inventory_2_rounded, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriorityEvolutionSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 20,
+              decoration: BoxDecoration(
+                color: const Color(0xFFDC2626),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Priority Evolution',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(color: const Color(0xFFFECACA)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _buildHorizontalTimelineStep(
+                    score: '4.0',
+                    title: 'Initial Incident Report',
+                    color: const Color(0xFFEAB308),
+                    isFirst: true,
+                    isLast: false,
+                  ),
+                  _buildHorizontalTimelineStep(
+                    score: '2.8',
+                    title: 'Volunteer Assigned',
+                    color: const Color(0xFF22C55E),
+                    isFirst: false,
+                    isLast: false,
+                  ),
+                  _buildHorizontalTimelineStep(
+                    score: '4.2',
+                    title: 'Volunteer Field Update Received',
+                    color: const Color(0xFFF97316),
+                    isFirst: false,
+                    isLast: true,
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24.0),
+                child: Divider(color: Color(0xFFE2E8F0)),
+              ),
+              Row(
+                children: [
+                  SvgPicture.asset(
+                    'assets/gemini_icon.svg',
+                    width: 24,
+                    height: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Priority Assessment',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E3A8A),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildImpactStat('Previous Score', '2.8', const Color(0xFF64748B)),
+                  ),
+                  const Icon(Icons.arrow_forward_rounded, color: Color(0xFFCBD5E1), size: 16),
+                  Expanded(
+                    child: _buildImpactStat('Current Score', '4.2', const Color(0xFFF97316)),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text('Net Change', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF7ED),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFFEDD5)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.trending_up_rounded, color: Color(0xFFEA580C), size: 14),
+                              const SizedBox(width: 4),
+                              const Text('+1.4', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFFEA580C))),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Why the priority increased:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildAIReasoningPoint('11 more people found'),
+              _buildAIReasoningPoint('More food is needed'),
+              _buildAIReasoningPoint('Medical help is needed'),
+              _buildAIReasoningPoint('People need shelter'),
+              _buildAIReasoningPoint('Rain is still falling'),
+              
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: const Text(
+                  'While 4 people were rescued, volunteers found 11 more people who need help.\n\nThe total number of people affected went up from 8 to 15.\n\nMore resources like food and shelter are now needed.\n\nBecause of this new report from the field, the priority score was increased from 2.8 to 4.2 to get help there faster.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E3A8A),
+                    height: 1.6,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHorizontalTimelineStep({
+    required String score,
+    required String title,
+    required Color color,
+    required bool isFirst,
+    required bool isLast,
+  }) {
+    return Expanded(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 2,
+                  color: isFirst ? Colors.transparent : const Color(0xFFE2E8F0),
+                ),
+              ),
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withOpacity(0.3), width: 2),
+                ),
+                child: Text(
+                  score,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 2,
+                  color: isLast ? Colors.transparent : const Color(0xFFE2E8F0),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1E293B),
+                height: 1.2,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAIReasoningPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 4.0, right: 8.0),
+            child: Icon(Icons.arrow_right_rounded, size: 16, color: Color(0xFF6366F1)),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF334155),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetadataTag(String label, String value, IconData icon, {Color color = const Color(0xFF64748B)}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF94A3B8),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: color == const Color(0xFF64748B) ? const Color(0xFF334155) : color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFieldIntelligenceUpdate(int originalAffected) {
+    final rescuedCount = 4;
+    final newlyIdentified = 11;
+    final updatedAffected = originalAffected - rescuedCount + newlyIdentified;
+    final change = updatedAffected - originalAffected;
+    final changeText = change > 0 ? '+$change' : '$change';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 32.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAB308),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Field Intelligence Update',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(color: const Color(0xFFFEF08A)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.radar_rounded, color: Color(0xFFCA8A04), size: 24),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Volunteer Update',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF854D0E),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Metadata block
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: [
+                          _buildMetadataTag('Source:', 'Verified Volunteer Report', Icons.verified_user_rounded),
+                          _buildMetadataTag('Confidence:', '94%', Icons.check_circle_rounded, color: const Color(0xFF10B981)),
+                          _buildMetadataTag('Language:', 'Hindi → Auto Translated', Icons.translate_rounded),
+                          _buildMetadataTag('Photos:', '3 Attached', Icons.image_rounded),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                _buildBulletPoint('4 residents safely evacuated'),
+                _buildBulletPoint('11 additional residents identified'),
+                _buildBulletPoint('Food packets required'),
+                _buildBulletPoint('Medical kits required'),
+                _buildBulletPoint('Temporary shelter required'),
+                _buildBulletPoint('Continuous rainfall observed'),
+                
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20.0),
+                  child: Divider(color: Color(0xFFFEF08A)),
+                ),
+                
+                Row(
+                  children: [
+                    const Icon(Icons.show_chart_rounded, color: Color(0xFFDC2626), size: 24),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Mission Impact',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF991B1B),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildImpactStat('Previous Affected', '8', const Color(0xFF64748B)),
+                    ),
+                    const Icon(Icons.arrow_forward_rounded, color: Color(0xFFCBD5E1), size: 20),
+                    Expanded(
+                      child: _buildImpactStat('Current Affected', '15', const Color(0xFF0F172A)),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Text('Net Change', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFFECACA)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.trending_up_rounded, color: Color(0xFFDC2626), size: 14),
+                                const SizedBox(width: 4),
+                                const Text('+7', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFFDC2626))),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 6.0, right: 10.0),
+            child: Icon(Icons.circle, size: 6, color: Color(0xFFCA8A04)),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF334155),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImpactStat(String label, String value, Color valueColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF64748B),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,29 +698,168 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 22,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFF64748B)),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        locationStr,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                                ),
+                                child: const Text(
+                                  'ACTIVE RESPONSE',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF1D4ED8),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFFECACA)),
+                                ),
+                                child: const Text(
+                                  'ELEVATED',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFDC2626),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // 2x2 Grid
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMetricCard(
+                              icon: Icons.people_alt_rounded,
+                              iconColor: const Color(0xFF3B82F6),
+                              bgColor: const Color(0xFFEFF6FF),
+                              label: 'Affected People',
+                              value: report['groundReportId'] != null ? '15' : '8',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildMetricCard(
+                              icon: Icons.warning_rounded,
+                              iconColor: const Color(0xFFDC2626),
+                              bgColor: const Color(0xFFFEF2F2),
+                              label: 'Priority Score',
+                              value: report['groundReportId'] != null ? '4.2 / 10' : '4.0 / 10',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMetricCard(
+                              icon: Icons.timer_rounded,
+                              iconColor: const Color(0xFFD97706),
+                              bgColor: const Color(0xFFFFFBEB),
+                              label: 'Response Window',
+                              value: 'Within 6 Hours',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildMetricCard(
+                              icon: Icons.volunteer_activism_rounded,
+                              iconColor: const Color(0xFF10B981),
+                              bgColor: const Color(0xFFF0FDF4),
+                              label: 'Volunteers Assigned',
+                              value: '1',
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Resource Requirements',
+                        style: TextStyle(
+                          fontSize: 13,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                          color: Color(0xFF475569),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      const Divider(),
                       const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.category_outlined, 'Category', category.toUpperCase()),
-                      const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.warning_amber_rounded, 'Urgency', urgency.toUpperCase(), color: _getUrgencyColor(urgency)),
-                      const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.info_outline, 'Status', status.toUpperCase()),
-                      const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.people_outline, 'People Affected', '$peopleAffected'),
-                      const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.location_on_outlined, 'Location', locationStr),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildResourceChip('Food Packets', const Color(0xFFF59E0B)),
+                          _buildResourceChip('Medical Kits', const Color(0xFFEF4444)),
+                          _buildResourceChip('Temporary Shelter', const Color(0xFF6366F1)),
+                        ],
+                      ),
                     ],
                   ),
                 ),
+                
+                if (report['groundReportId'] != null) ...[
+                  const SizedBox(height: 32),
+                  _buildPriorityEvolutionSection(),
+                ],
+                
+                if (report['groundReportId'] != null)
+                  _buildFieldIntelligenceUpdate(peopleAffected),
                 
                 const SizedBox(height: 32),
                 
@@ -831,21 +1542,30 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
   Widget _buildRecommendationRow(String label, String value, {Color? valueColor}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF475569),
+        Expanded(
+          flex: 5,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: valueColor ?? const Color(0xFF0F172A),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 6,
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: valueColor ?? const Color(0xFF0F172A),
+            ),
           ),
         ),
       ],
@@ -1127,6 +1847,9 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
     if (cat.contains('mental') || cat.contains('psycho') || cat.contains('counsel')) {
       return MapLayerCategory.mentalHealth;
     }
+    if (cat.contains('disaster') || cat.contains('storm') || cat.contains('earthquake')) {
+      return MapLayerCategory.naturalDisaster;
+    }
     return MapLayerCategory.medical;
   }
 
@@ -1310,24 +2033,31 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Icon(
-                                _getCrisisIcon(crisisType),
-                                color: const Color(0xFF0F172A),
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                crisisType.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _getCrisisIcon(crisisType),
+                                  color: const Color(0xFF0F172A),
+                                  size: 22,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    crisisType.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 12),
                           _buildStatusBadge(needStatus),
                         ],
                       ),

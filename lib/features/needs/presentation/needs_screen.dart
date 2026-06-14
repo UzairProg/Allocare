@@ -226,6 +226,9 @@ class _NeedsScreenState extends ConsumerState<NeedsScreen> {
       case 'mental':
         layer = MapLayerCategory.mentalHealth;
         break;
+      case 'natural_disaster':
+        layer = MapLayerCategory.naturalDisaster;
+        break;
       default:
         layer = MapLayerCategory.medical;
     }

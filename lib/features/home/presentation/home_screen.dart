@@ -93,28 +93,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Good morning, $userName!',
-                                  style: theme.textTheme.headlineSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF1D2A30),
-                                        fontSize: isWeb ? 34 : null,
-                                      ),
-                                ),
-                                Text(
-                                  'Chhatrapati Sambhajinagar Operation Hub',
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: isWeb ? 16 : null,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    userName,
+                                    style: theme.textTheme.headlineSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF1D2A30),
+                                          fontSize: isWeb ? 34 : null,
+                                        ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Chhatrapati Sambhajinagar Operation Hub',
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: isWeb ? 16 : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 16),
                             GestureDetector(
                               onTap: () =>
                                   MainNavigationScreen.of(context)?.setIndex(4),
