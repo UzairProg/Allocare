@@ -21,8 +21,10 @@ Every year, communities across India frequently face heatwaves, floods, disease 
 
 India recorded 300+ suspected heat-related illness cases in 2026 as temperatures surged across multiple states.
 https://www.reuters.com/world/india/india-records-over-300-suspected-heatstroke-cases-summer-temperatures-spike-2026-05-22
+
 53% experienced water contamination and 52% faced water shortages/droughts.
 https://climatecommunication.yale.edu/publications/climate-impacts-india/
+
 57% of Indian districts are at high or very high heatwave risk, affecting 76% of the population.
 https://www.reuters.com/sustainability/climate-energy/majority-indian-districts-face-high-heatwave-risk-study-shows-2025-05-20/
 
