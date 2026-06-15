@@ -114,14 +114,9 @@ Updates system in real-time
   <img src="assets/screens/Screens/IMG_7840 2.PNG" width="120" title="Need Category Selection"/>
   <img src="assets/screens/Screens/IMG_7898 2.jpg" width="120" title="Urgency Selection"/>
   <img src="assets/screens/Screens/Screenshot_20260426-221839.png" width="120" title="Impact Details"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-221902.png" width="120" title="Supporting Evidence"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-221907.png" width="120" title="Crisis Map"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-221911.png" width="120" title="Crisis Heatmap Filter"/>
 </p>
 <p align="center">
-  <img src="assets/screens/Screens/Screenshot_20260426-221924.png" width="120" title="Allocare Intelligence"/>
   <img src="assets/screens/Screens/Screenshot_20260426-221930.png" width="120" title="Active Force"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-221956.png" width="120" title="Mission Dispatch"/>
   <img src="assets/screens/Screens/Screenshot_20260426-222001.png" width="120" title="Volunteer Assigned"/>
   <img src="assets/screens/Screens/Screenshot_20260426-222036.png" width="120" title="Smart Allocation Center"/>
   <img src="assets/screens/Screens/Screenshot_20260426-222045.png" width="120" title="Multi-Mission Tracking"/>
