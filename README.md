@@ -1,6 +1,6 @@
 #  ALLOCARE
 
-ALLOCARE transforms fragmented community data into real-time intelligence, enabling early risk detection, targeted awareness, and smarter resource allocation for faster humanitarian response.
+ALLOCARE unifies scattered community data into actionable intelligence, smart volunteer matching, enabling early risk detection of crises, targeted awareness, and equitable resource allocation for faster humanitarian response.
 
 <p align="center">
   <img src="assets/ALLOCARE.png" alt="Allocare Logo" width="120"/>
