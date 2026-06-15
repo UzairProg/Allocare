@@ -76,7 +76,15 @@ This inspired us to build Allocare—an intelligent humanitarian coordination pl
 | **Evidence Verification** | Checks whether uploaded photos match the report details |
 
 ---
+## ⭐ Key Highlights
 
+- AI-powered crisis intelligence using Gemini
+- Smart volunteer matching based on skills and proximity
+- Multilingual voice-to-intelligence reporting
+- Real-time priority reassessment from field feedback
+- Predictive risk detection and actionable response plans
+- Fair resource allocation with over-allocation prevention
+---
 ## 📱 Screen Showcase
 
 <table align="center">
