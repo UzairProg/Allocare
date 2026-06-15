@@ -245,38 +245,35 @@ class VolunteerStats {
 
 final homeVolunteerStatsProvider = StreamProvider<VolunteerStats>((ref) {
   final firestore = ref.watch(firestoreProvider);
+  final userProfile = ref.watch(currentUserProfileProvider).asData?.value;
+  
+  if (userProfile == null || userProfile.id.isEmpty) {
+    return Stream.value(const VolunteerStats(total: 0, assigned: 0));
+  }
   
   return firestore
-      .collection('users')
-      .where('role', isEqualTo: 'volunteer')
+      .collection('volunteers')
+      .where('ngoId', isEqualTo: userProfile.id)
       .snapshots()
       .map((snapshot) {
     if (snapshot.docs.isEmpty) {
       return const VolunteerStats(total: 0, assigned: 0);
     }
     
-    int total = snapshot.docs.length;
+    int total = 0;
     int assigned = 0;
     
     for (final doc in snapshot.docs) {
       final data = doc.data();
-      final volProfile = data['volunteerProfile'] as Map<String, dynamic>?;
-      if (volProfile != null) {
-        final status = volProfile['status'] as String?;
-        if (status == 'deployed' || status == 'assigned' || status == 'active') {
-          assigned++;
-        }
-      } else {
-        // Fallback check
-        final status = data['status'] as String?;
-        if (status == 'deployed' || status == 'assigned') {
+      bool isApproved = data['verificationStatus'] == 'approved' || data['verificationStatus'] == 'VolunteerVerificationStatus.approved';
+      if (isApproved) {
+        total++;
+        if (data['isActiveOnField'] == true) {
           assigned++;
         }
       }
     }
     
-    // Fallback logic for demo if all 0 to still show some data instead of 0 if they don't have active volunteers, 
-    // actually user said "keep things realtime! abd that count too.." so if it's 0 it's 0.
     return VolunteerStats(total: total, assigned: assigned);
   });
 });

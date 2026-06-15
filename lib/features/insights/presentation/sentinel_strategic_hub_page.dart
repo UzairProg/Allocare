@@ -581,20 +581,35 @@ class _RiskBriefingCardContentState extends State<_RiskBriefingCardContent> with
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: Text(
-                    badge, 
-                    style: const TextStyle(
-                      fontSize: 10, 
-                      fontWeight: FontWeight.w800, 
-                      color: Color(0xFF2563EB)
-                    )
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Text(
+                        badge, 
+                        style: const TextStyle(
+                          fontSize: 10, 
+                          fontWeight: FontWeight.w800, 
+                          color: Color(0xFF2563EB)
+                        )
+                      ),
+                    ),
+                    if (widget.isPrimary) ...[
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Double tap to save & generate brief',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 SizedBox(
                   height: 24,

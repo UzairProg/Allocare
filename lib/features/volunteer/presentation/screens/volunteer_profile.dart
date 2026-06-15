@@ -11,6 +11,7 @@ import 'volunteer_profile_setup_screen.dart';
 import '../../../profile/presentation/volunteer_registry_page.dart';
 import 'volunteer_mission_history_page.dart';
 import 'volunteer_ground_reports_history.dart';
+import 'volunteer_ngo_directory_sheet.dart';
 
 final volunteerMissionsStreamProvider = StreamProvider.autoDispose<QuerySnapshot>((ref) {
   final volunteerId = ref.watch(currentVolunteerProvider).asData?.value?.uid;
@@ -189,6 +190,8 @@ class VolunteerProfileScreen extends ConsumerWidget {
                 isOnDuty,
                 volunteerDb?.photoUrl ?? authUser?.photoURL,
               ),
+              const SizedBox(height: 24),
+              _buildNgoNotification(context),
               const SizedBox(height: 32),
 
               Row(
@@ -384,6 +387,78 @@ class VolunteerProfileScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNgoNotification(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        showVerifiedNgosBottomSheet(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEEF2FF), Color(0xFFE0E7FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFC7D2FE)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF4F46E5).withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.verified_user_rounded,
+                color: Color(0xFF4F46E5),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Verified NGO Network',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF312E81),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'See all onboarded organizations.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFF4338CA),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: Color(0xFF4F46E5),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

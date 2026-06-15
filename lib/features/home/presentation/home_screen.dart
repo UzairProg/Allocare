@@ -47,11 +47,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final authUser = ref.watch(authStateProvider).asData?.value;
     final profile = ref.watch(currentUserProfileProvider).asData?.value;
     final recent =
-        ref.watch(homeRecentActivityProvider).asData?.value ?? <RecentActivityItem>[];
+        ref.watch(homeRecentActivityProvider).asData?.value ??
+        <RecentActivityItem>[];
     final needsSummary =
-        ref.watch(homeNeedsSummaryProvider).asData?.value ?? <NeedCategorySummary>[];
+        ref.watch(homeNeedsSummaryProvider).asData?.value ??
+        <NeedCategorySummary>[];
     final volunteerStats =
-        ref.watch(homeVolunteerStatsProvider).asData?.value ?? const VolunteerStats(total: 0, assigned: 0);
+        ref.watch(homeVolunteerStatsProvider).asData?.value ??
+        const VolunteerStats(total: 0, assigned: 0);
 
     final userName = profile?.displayName.trim().isNotEmpty == true
         ? profile!.displayName
@@ -251,7 +254,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         child: const _PriorityBridgeBanner(
                           message:
-                              'Strategic Priority Alignment: Diverting Waluj Medical Team to Pundlik Nagar based on Active Cluster Detection.',
+                              'Strategic Priority Alignment: Mobilize Food, Water and Medical kits and supplies to Satara to prevent imminent shortage of resources.',
                         ),
                       ),
                       const SizedBox(height: 16),

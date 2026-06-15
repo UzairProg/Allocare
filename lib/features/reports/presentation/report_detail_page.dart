@@ -298,10 +298,14 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> {
         if (kIsWeb) {
           final ext = fileName.split('.').last.toLowerCase();
           String mimeType = 'application/octet-stream';
-          if (ext == 'pdf') mimeType = 'application/pdf';
-          else if (ext == 'png') mimeType = 'image/png';
-          else if (ext == 'jpg' || ext == 'jpeg') mimeType = 'image/jpeg';
-          else if (ext == 'txt') mimeType = 'text/plain';
+          if (ext == 'pdf')
+            mimeType = 'application/pdf';
+          else if (ext == 'png')
+            mimeType = 'image/png';
+          else if (ext == 'jpg' || ext == 'jpeg')
+            mimeType = 'image/jpeg';
+          else if (ext == 'txt')
+            mimeType = 'text/plain';
 
           final uri = Uri.parse('data:$mimeType;base64,$base64Data');
           if (await canLaunchUrl(uri)) {
