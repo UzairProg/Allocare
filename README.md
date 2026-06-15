@@ -13,15 +13,18 @@ ALLOCARE unifies scattered community data into actionable intelligence, smart vo
 
 ##  Problem
 
-Communities across the World frequently face heatwaves, floods, disease outbreaks, water contamination, and resource shortages. However, critical information collected by NGOs and volunteers often remains fragmented across reports, spreadsheets, messaging platforms, and disconnected systems. This fragmented data leads to delayed responses, duplicate aid, underserved communities, and missed opportunities for early intervention.
+Every year, communities across India frequently face heatwaves, floods, disease outbreaks, water contamination, and resource shortages. However, critical information collected by NGOs and volunteers often remains fragmented across reports, spreadsheets, messaging platforms, and disconnected systems. This fragmented data leads to delayed responses, duplicate aid, underserved communities, and missed opportunities for early intervention.
 
 ---
 
 ##  Why ALLOCARE Matters
 
-According to the [Global Humanitarian Overview 2025](https://humanitarianaction.info/global-humanitarian-overview-2025), over 305 million people worldwide require humanitarian assistance and protection.
-
-The [World Health Organization's Early Warning, Alert and Response System (EWARS)](https://www.who.int/emergencies/surveillance/early-warning-alert-and-response-system-ewars) emphasizes the importance of early risk detection during humanitarian emergencies.
+India recorded 300+ suspected heat-related illness cases in 2026 as temperatures surged across multiple states.
+https://www.reuters.com/world/india/india-records-over-300-suspected-heatstroke-cases-summer-temperatures-spike-2026-05-22
+53% experienced water contamination and 52% faced water shortages/droughts.
+https://climatecommunication.yale.edu/publications/climate-impacts-india/
+57% of Indian districts are at high or very high heatwave risk, affecting 76% of the population.
+https://www.reuters.com/sustainability/climate-energy/majority-indian-districts-face-high-heatwave-risk-study-shows-2025-05-20/
 
 ---
 
@@ -369,14 +372,14 @@ flutter test
 
 ## 📚 References
 
-1. Global Humanitarian Overview 2025 (OCHA)
-   https://humanitarianaction.info/global-humanitarian-overview-2025
+1. National Disaster Management Authority (NDMA)
+https://ndma.gov.in
 
-2. WHO Early Warning Alert and Response System (EWARS)
-   https://www.who.int/emergencies/surveillance/early-warning-alert-and-response-system-ewars
+2. India Meteorological Department (IMD) – Heatwave & Weather Alerts
+https://mausam.imd.gov.in
 
-3. UN Climate and Humanitarian Action
-   https://www.unocha.org/climate-change
+3. National Centre for Disease Control (NCDC) – Disease Surveillance & Outbreak Monitoring
+https://ncdc.mohfw.gov.in
 
 ---
 
