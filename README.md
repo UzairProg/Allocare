@@ -111,8 +111,8 @@ Updates system in real-time
 <p align="center">
   <img src="assets/screens/Screens/Screenshot_20260426-221737.png" width="120" title="Sign In / Role Selection"/>
   <img src="assets/screens/Screens/IMG_7936.PNG" width="120" title="Home / Operations Dashboard"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-221815.png" width="120" title="Need Category Selection"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-221831.png" width="120" title="Urgency Selection"/>
+  <img src="assets/screens/Screens/IMG_7840 2.PNG" width="120" title="Need Category Selection"/>
+  <img src="assets/screens/Screens/IMG_7898 2.jpg" width="120" title="Urgency Selection"/>
   <img src="assets/screens/Screens/Screenshot_20260426-221839.png" width="120" title="Impact Details"/>
   <img src="assets/screens/Screens/Screenshot_20260426-221902.png" width="120" title="Supporting Evidence"/>
   <img src="assets/screens/Screens/Screenshot_20260426-221907.png" width="120" title="Crisis Map"/>
