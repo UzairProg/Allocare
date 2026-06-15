@@ -331,11 +331,11 @@ Gemini is accessed securely via `--dart-define` at build time — **no API key i
 
 ## 🗺️ Live Map Features
 
-- 📍 Real-time incident pins with category icons
-- 🔴 Airborne disease risk heatmap overlay
-- 💧 Waterborne disease risk heatmap overlay
-- 🎯 Deep-link navigation from AI briefing cards → filtered map view
-- 📡 Auto-centers on the operational zone (Chhatrapati Sambhaji Nagar)
+- Real-time incident pins with category icons
+- Airborne disease risk heatmap overlay
+- Waterborne disease risk heatmap overlay
+- Deep-link navigation from AI briefing cards → filtered map view
+- Auto-centers on the operational zone (Chhatrapati Sambhaji Nagar)
 
 ---
 
