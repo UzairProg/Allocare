@@ -158,28 +158,44 @@ class _PremiumBottomNav extends ConsumerWidget {
                 selected: currentIndex == 3,
                 onTap: () => onChanged(3),
               ),
-              StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('ngos')
-                    .doc(ref.watch(effectiveNgoIdProvider) ?? '')
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  int badgeCount = 0;
-                  if (snapshot.hasData && snapshot.data?.data() != null) {
-                    final data = snapshot.data!.data() as Map<String, dynamic>;
-                    if (data.containsKey('savedInsights')) {
-                      final savedList = data['savedInsights'] as List<dynamic>?;
-                      badgeCount = savedList?.length ?? 0;
-                    }
+              Builder(
+                builder: (context) {
+                  final ngoId = ref.watch(effectiveNgoIdProvider) ?? '';
+                  if (ngoId.isEmpty) {
+                    return _NavItem(
+                      label: 'Profile',
+                      icon: Icons.person_rounded,
+                      selected: currentIndex == 4,
+                      onTap: () => onChanged(4),
+                      showRedDotOnly: true,
+                      badgeCount: 0,
+                    );
                   }
                   
-                  return _NavItem(
-                    label: 'Profile',
-                    icon: Icons.person_rounded,
-                    selected: currentIndex == 4,
-                    onTap: () => onChanged(4),
-                    showRedDotOnly: true,
-                    badgeCount: badgeCount,
+                  return StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('ngos')
+                        .doc(ngoId)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      int badgeCount = 0;
+                      if (snapshot.hasData && snapshot.data?.data() != null) {
+                        final data = snapshot.data!.data() as Map<String, dynamic>;
+                        if (data.containsKey('savedInsights')) {
+                          final savedList = data['savedInsights'] as List<dynamic>?;
+                          badgeCount = savedList?.length ?? 0;
+                        }
+                      }
+                      
+                      return _NavItem(
+                        label: 'Profile',
+                        icon: Icons.person_rounded,
+                        selected: currentIndex == 4,
+                        onTap: () => onChanged(4),
+                        showRedDotOnly: true,
+                        badgeCount: badgeCount,
+                      );
+                    },
                   );
                 },
               ),

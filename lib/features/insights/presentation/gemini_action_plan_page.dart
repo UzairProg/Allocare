@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../models/insight_model.dart';
 
@@ -44,14 +47,47 @@ class GeminiActionPlanPage extends StatelessWidget {
           Container(
             margin: const EdgeInsets.only(right: 16),
             child: TextButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Exporting to Google Docs...'),
-                    backgroundColor: Color(0xFF10B981),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+              onPressed: () async {
+                try {
+                  final dir = await getApplicationDocumentsDirectory();
+                  final file = File('${dir.path}/Gemini_Intelligence_Brief.txt');
+                  
+                  final content = '''
+GEMINI INTELLIGENCE BRIEF
+=========================
+Title: ${insight.title}
+Confidence Score: ${(insight.score * 100).toStringAsFixed(0)}%
+
+RECOMMENDATION:
+${insight.recommendation}
+
+Please deploy resources accordingly.
+                  ''';
+                  
+                  await file.writeAsString(content);
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Brief Exported! Opening document...'),
+                        backgroundColor: Color(0xFF10B981),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                  
+                  await OpenFilex.open(file.path);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error exporting: $e'),
+                        backgroundColor: Colors.redAccent,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
               },
               icon: const Icon(
                 Icons.download_rounded,
@@ -377,8 +413,8 @@ class GeminiActionPlanPage extends StatelessWidget {
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Notifying Active Volunteers in zone...'),
-                      backgroundColor: Color(0xFF2563EB),
+                      content: Text('No active volunteers near that location!'),
+                      backgroundColor: Colors.redAccent,
                       behavior: SnackBarBehavior.floating,
                     ),
                   );

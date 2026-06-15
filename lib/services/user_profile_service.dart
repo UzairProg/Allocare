@@ -62,7 +62,7 @@ class UserProfileService {
       email: user.email ?? existing?.email ?? '',
       displayName: (user.displayName ?? fallbackDisplayName ?? existing?.displayName ?? '').trim(),
       phoneNumber: (existing?.phoneNumber ?? fallbackPhoneNumber ?? '').trim(),
-      role: requestedRole,
+      role: existing?.role ?? requestedRole,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
       ngoId: existing?.ngoId,

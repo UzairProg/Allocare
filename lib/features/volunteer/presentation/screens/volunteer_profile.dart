@@ -63,6 +63,9 @@ final volunteerRankProvider = StreamProvider.autoDispose<Map<String, dynamic>>((
       });
 });
 
+final _notificationsEnabledProvider = StateProvider<bool>((ref) => true);
+final _languageProvider = StateProvider<String>((ref) => 'English');
+
 class VolunteerProfileScreen extends ConsumerWidget {
   const VolunteerProfileScreen({super.key});
 
@@ -910,6 +913,9 @@ class VolunteerProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildSettings(BuildContext context, WidgetRef ref) {
+    final notificationsEnabled = ref.watch(_notificationsEnabledProvider);
+    final language = ref.watch(_languageProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -934,21 +940,37 @@ class VolunteerProfileScreen extends ConsumerWidget {
               _buildSettingsRow(
                 Icons.notifications_outlined,
                 'Notifications',
-                true,
-              ),
-              const Divider(height: 1, color: Color(0xFFF1F5F9)),
-              _buildSettingsRow(Icons.language_rounded, 'Language', false),
-              const Divider(height: 1, color: Color(0xFFF1F5F9)),
-              _buildSettingsRow(
-                Icons.lock_outline_rounded,
-                'Privacy & Security',
-                false,
+                isToggle: true,
+                toggleValue: notificationsEnabled,
+                onToggle: (val) {
+                  ref.read(_notificationsEnabledProvider.notifier).state = val;
+                },
               ),
               const Divider(height: 1, color: Color(0xFFF1F5F9)),
               _buildSettingsRow(
-                Icons.help_outline_rounded,
-                'Help & Support',
-                false,
+                Icons.language_rounded,
+                'Language ($language)',
+                isToggle: false,
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Select Language'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: ['English', 'Hindi', 'Marathi'].map((lang) {
+                          return ListTile(
+                            title: Text(lang),
+                            onTap: () {
+                              ref.read(_languageProvider.notifier).state = lang;
+                              Navigator.pop(ctx);
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  );
+                },
               ),
               const Divider(height: 1, color: Color(0xFFF1F5F9)),
               ListTile(
@@ -975,7 +997,7 @@ class VolunteerProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSettingsRow(IconData icon, String title, bool hasToggle) {
+  Widget _buildSettingsRow(IconData icon, String title, {bool isToggle = false, bool toggleValue = false, ValueChanged<bool>? onToggle, VoidCallback? onTap}) {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF475569)),
       title: Text(
@@ -986,10 +1008,11 @@ class VolunteerProfileScreen extends ConsumerWidget {
           color: const Color(0xFF1E293B),
         ),
       ),
-      trailing: hasToggle
+      onTap: onTap,
+      trailing: isToggle
           ? Switch(
-              value: true,
-              onChanged: (_) {},
+              value: toggleValue,
+              onChanged: onToggle,
               activeColor: Colors.white,
               activeTrackColor: const Color(0xFF10B981),
               inactiveThumbColor: Colors.white,

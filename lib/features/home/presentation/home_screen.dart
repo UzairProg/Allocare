@@ -47,13 +47,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final authUser = ref.watch(authStateProvider).asData?.value;
     final profile = ref.watch(currentUserProfileProvider).asData?.value;
     final recent =
-        ref.watch(homeRecentActivityProvider).asData?.value ?? homeDemoRecent;
+        ref.watch(homeRecentActivityProvider).asData?.value ?? <RecentActivityItem>[];
     final needsSummary =
-        ref.watch(homeNeedsSummaryProvider).asData?.value ?? homeDemoNeeds;
+        ref.watch(homeNeedsSummaryProvider).asData?.value ?? <NeedCategorySummary>[];
+    final volunteerStats =
+        ref.watch(homeVolunteerStatsProvider).asData?.value ?? const VolunteerStats(total: 0, assigned: 0);
 
     final userName = profile?.displayName.trim().isNotEmpty == true
         ? profile!.displayName
         : (authUser?.displayName?.trim() ?? 'Aditi');
+
+    String initials = '';
+    if (userName.isNotEmpty) {
+      final nameParts = userName.trim().split(RegExp(r'\s+'));
+      if (nameParts.length > 1) {
+        initials = '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+      } else {
+        initials = nameParts[0][0].toUpperCase();
+      }
+    }
 
     final photoUrl = authUser?.photoURL;
 
@@ -124,12 +136,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   MainNavigationScreen.of(context)?.setIndex(4),
                               child: CircleAvatar(
                                 radius: isWeb ? 28 : 22,
-                                backgroundImage: photoUrl != null
-                                    ? NetworkImage(photoUrl)
-                                    : const NetworkImage(
-                                        'https://i.pravatar.cc/150?u=aditi',
-                                      ),
-                                backgroundColor: const Color(0xFFF0F0F0),
+                                backgroundColor: theme.colorScheme.primary,
+                                child: Text(
+                                  initials,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onPrimary,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: isWeb ? 20 : 16,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -156,8 +171,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 children: [
                                   _AllocationProgressCard(
                                     title: 'Volunteer Deployment',
-                                    total: 58,
-                                    assigned: 42,
+                                    total: volunteerStats.total,
+                                    assigned: volunteerStats.assigned,
                                     onTap: () => Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -191,8 +206,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 Expanded(
                                   child: _AllocationProgressCard(
                                     title: 'Volunteer Deployment',
-                                    total: 58,
-                                    assigned: 42,
+                                    total: volunteerStats.total,
+                                    assigned: volunteerStats.assigned,
                                     onTap: () => Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -1111,54 +1126,26 @@ class _MissionLogPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(24),
-        itemCount: activities.length + 4,
-        itemBuilder: (context, index) {
-          if (index < activities.length) {
-            final item = activities[index];
-            return _buildLogEntry(
-              time: item.timeAgo,
-              msg: '${item.title} -> ${item.aiReasoning}',
-              type: 'report',
-              color: item.accentColor,
-            );
-          }
-
-          final extraIndex = index - activities.length;
-          final extras = [
-            {
-              'time': 'SYSTEM',
-              'msg': 'Syncing with Global Sentinel Inventory...',
-              'type': 'system',
-            },
-            {
-              'time': 'AI',
-              'msg':
-                  'Density clusters updated in Kranti Chowk. Re-routing unassigned guardians.',
-              'type': 'ai',
-            },
-            {
-              'time': 'IOT',
-              'msg':
-                  'Water Quality sensors in CIDCO Sector 4 reporting improvement.',
-              'type': 'iot',
-            },
-            {
-              'time': 'MATCH',
-              'msg':
-                  'Optimizing 12 pending reports for 100% strategic coverage.',
-              'type': 'match',
-            },
-          ];
-          final e = extras[extraIndex];
-          return _buildLogEntry(
-            time: e['time']!,
-            msg: e['msg']!,
-            type: e['type']!,
-          );
-        },
-      ),
+      body: activities.isEmpty
+          ? const Center(
+              child: Text(
+                'No live mission logs available yet.',
+                style: TextStyle(color: Colors.white54, fontSize: 16),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(24),
+              itemCount: activities.length,
+              itemBuilder: (context, index) {
+                final item = activities[index];
+                return _buildLogEntry(
+                  time: item.timeAgo,
+                  msg: '${item.title} -> ${item.aiReasoning}',
+                  type: 'report',
+                  color: item.accentColor,
+                );
+              },
+            ),
     );
   }
 

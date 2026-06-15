@@ -733,12 +733,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             size: 20,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            '$pendingRequests Volunteer${pendingRequests > 1 ? "s" : ""} Awaiting Approval',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFFEA580C),
+                          Expanded(
+                            child: Text(
+                              '$pendingRequests Volunteer${pendingRequests > 1 ? "s" : ""} Awaiting Approval',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFFEA580C),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

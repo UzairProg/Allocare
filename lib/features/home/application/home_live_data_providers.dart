@@ -138,7 +138,7 @@ final homeNeedsSummaryProvider = StreamProvider<List<NeedCategorySummary>>((ref)
 
   return firestore.collection(FirestorePaths.needs).snapshots().map((snapshot) {
     if (snapshot.docs.isEmpty) {
-      return homeDemoNeeds;
+      return <NeedCategorySummary>[];
     }
 
     final grouped = <String, _MutableNeedSummary>{};
@@ -179,7 +179,7 @@ final homeRecentActivityProvider = StreamProvider<List<RecentActivityItem>>((ref
       .snapshots()
       .map((snapshot) {
     if (snapshot.docs.isEmpty) {
-      return homeDemoRecent;
+      return <RecentActivityItem>[];
     }
 
     final items = snapshot.docs.map((doc) {
@@ -224,11 +224,60 @@ final homeTopInsightProvider = StreamProvider<InsightModel>((ref) {
 
   return firestore.collection(FirestorePaths.insights).limit(1).snapshots().map((snapshot) {
     if (snapshot.docs.isEmpty) {
-      return homeDemoInsight;
+      return const InsightModel(
+        id: 'no_insight',
+        title: 'Awaiting Intelligence',
+        score: 0.0,
+        recommendation: 'No live insights available currently.',
+      );
     }
 
     final doc = snapshot.docs.first;
     return InsightModel.fromMap(doc.id, doc.data());
+  });
+});
+
+class VolunteerStats {
+  const VolunteerStats({required this.total, required this.assigned});
+  final int total;
+  final int assigned;
+}
+
+final homeVolunteerStatsProvider = StreamProvider<VolunteerStats>((ref) {
+  final firestore = ref.watch(firestoreProvider);
+  
+  return firestore
+      .collection('users')
+      .where('role', isEqualTo: 'volunteer')
+      .snapshots()
+      .map((snapshot) {
+    if (snapshot.docs.isEmpty) {
+      return const VolunteerStats(total: 0, assigned: 0);
+    }
+    
+    int total = snapshot.docs.length;
+    int assigned = 0;
+    
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final volProfile = data['volunteerProfile'] as Map<String, dynamic>?;
+      if (volProfile != null) {
+        final status = volProfile['status'] as String?;
+        if (status == 'deployed' || status == 'assigned' || status == 'active') {
+          assigned++;
+        }
+      } else {
+        // Fallback check
+        final status = data['status'] as String?;
+        if (status == 'deployed' || status == 'assigned') {
+          assigned++;
+        }
+      }
+    }
+    
+    // Fallback logic for demo if all 0 to still show some data instead of 0 if they don't have active volunteers, 
+    // actually user said "keep things realtime! abd that count too.." so if it's 0 it's 0.
+    return VolunteerStats(total: total, assigned: assigned);
   });
 });
 
