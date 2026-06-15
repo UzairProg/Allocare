@@ -109,17 +109,21 @@ Updates system in real-time
 ## 📱 Screen Showcase
 
 <p align="center">
-  <img src="assets/screens/Screens/Screenshot_20260426-221737.png" width="120" title="Sign In / Role Selection"/>
+  <img src="assets/screens/Screens/IMG_7913 2.jpg" width="120" title="Sign In / Role Selection"/>
   <img src="assets/screens/Screens/IMG_7936.PNG" width="120" title="Home / Operations Dashboard"/>
   <img src="assets/screens/Screens/IMG_7840 2.PNG" width="120" title="Need Category Selection"/>
   <img src="assets/screens/Screens/IMG_7898 2.jpg" width="120" title="Urgency Selection"/>
   <img src="assets/screens/Screens/Screenshot_20260426-221839.png" width="120" title="Impact Details"/>
+  <img src="assets/screens/Screens/IMG_7902 2.PNG" width="120" title="Impact Details"/>
+  <img src="assets/screens/Screens/IMG_7919 2.jpg" width="120" title="Impact Details"/>
+
+
 </p>
 <p align="center">
   <img src="assets/screens/Screens/Screenshot_20260426-221930.png" width="120" title="Active Force"/>
   <img src="assets/screens/Screens/Screenshot_20260426-222001.png" width="120" title="Volunteer Assigned"/>
   <img src="assets/screens/Screens/Screenshot_20260426-222036.png" width="120" title="Smart Allocation Center"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-222045.png" width="120" title="Multi-Mission Tracking"/>
+  <img src="assets/screens/Screens/IMG_7899.jpg" width="120" title="Multi-Mission Tracking"/>
   <img src="assets/screens/Screens/Screenshot_20260426-222104.png" width="120" title="Leaderboard"/>
   <img src="assets/screens/Screens/Screenshot_20260426-222120.png" width="120" title="Profile / Resource Management"/>
 </p>
