@@ -138,7 +138,7 @@ final homeNeedsSummaryProvider = StreamProvider<List<NeedCategorySummary>>((ref)
 
   return firestore.collection(FirestorePaths.needs).snapshots().map((snapshot) {
     if (snapshot.docs.isEmpty) {
-      return homeDemoNeeds;
+      return <NeedCategorySummary>[];
     }
 
     final grouped = <String, _MutableNeedSummary>{};
@@ -179,7 +179,7 @@ final homeRecentActivityProvider = StreamProvider<List<RecentActivityItem>>((ref
       .snapshots()
       .map((snapshot) {
     if (snapshot.docs.isEmpty) {
-      return homeDemoRecent;
+      return <RecentActivityItem>[];
     }
 
     final items = snapshot.docs.map((doc) {
@@ -224,11 +224,57 @@ final homeTopInsightProvider = StreamProvider<InsightModel>((ref) {
 
   return firestore.collection(FirestorePaths.insights).limit(1).snapshots().map((snapshot) {
     if (snapshot.docs.isEmpty) {
-      return homeDemoInsight;
+      return const InsightModel(
+        id: 'no_insight',
+        title: 'Awaiting Intelligence',
+        score: 0.0,
+        recommendation: 'No live insights available currently.',
+      );
     }
 
     final doc = snapshot.docs.first;
     return InsightModel.fromMap(doc.id, doc.data());
+  });
+});
+
+class VolunteerStats {
+  const VolunteerStats({required this.total, required this.assigned});
+  final int total;
+  final int assigned;
+}
+
+final homeVolunteerStatsProvider = StreamProvider<VolunteerStats>((ref) {
+  final firestore = ref.watch(firestoreProvider);
+  final userProfile = ref.watch(currentUserProfileProvider).asData?.value;
+  
+  if (userProfile == null || userProfile.id.isEmpty) {
+    return Stream.value(const VolunteerStats(total: 0, assigned: 0));
+  }
+  
+  return firestore
+      .collection('volunteers')
+      .where('ngoId', isEqualTo: userProfile.id)
+      .snapshots()
+      .map((snapshot) {
+    if (snapshot.docs.isEmpty) {
+      return const VolunteerStats(total: 0, assigned: 0);
+    }
+    
+    int total = 0;
+    int assigned = 0;
+    
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      bool isApproved = data['verificationStatus'] == 'approved' || data['verificationStatus'] == 'VolunteerVerificationStatus.approved';
+      if (isApproved) {
+        total++;
+        if (data['isActiveOnField'] == true) {
+          assigned++;
+        }
+      }
+    }
+    
+    return VolunteerStats(total: total, assigned: assigned);
   });
 });
 

@@ -18,7 +18,8 @@ class ManageVolunteerPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ManageVolunteerPage> createState() => _ManageVolunteerPageState();
+  ConsumerState<ManageVolunteerPage> createState() =>
+      _ManageVolunteerPageState();
 }
 
 class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
@@ -59,8 +60,12 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
       );
     }
 
-    final pendingStream = ref.watch(volunteerServiceProvider).watchPendingByNgoId(ngoId);
-    final approvedStream = ref.watch(volunteerServiceProvider).watchApprovedByNgoId(ngoId);
+    final pendingStream = ref
+        .watch(volunteerServiceProvider)
+        .watchPendingByNgoId(ngoId);
+    final approvedStream = ref
+        .watch(volunteerServiceProvider)
+        .watchApprovedByNgoId(ngoId);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -81,8 +86,14 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
           indicatorWeight: 3,
           labelColor: const Color(0xFF0284C7),
           unselectedLabelColor: const Color(0xFF64748B),
-          labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
-          unselectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+          labelStyle: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+          unselectedLabelStyle: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
           tabs: const [
             Tab(text: 'ACTIVE TEAM'),
             Tab(text: 'PENDING REQUESTS'),
@@ -105,7 +116,9 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
 
               var volunteers = snapshot.data!;
               if (widget.filterActiveOnField) {
-                volunteers = volunteers.where((v) => v.isActiveOnField).toList();
+                volunteers = volunteers
+                    .where((v) => v.isActiveOnField)
+                    .toList();
               }
               if (volunteers.isEmpty) {
                 return _buildEmptyState(
@@ -208,7 +221,10 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
     );
   }
 
-  Widget _buildActiveVolunteerCard(BuildContext context, VolunteerModel volunteer) {
+  Widget _buildActiveVolunteerCard(
+    BuildContext context,
+    VolunteerModel volunteer,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -233,12 +249,17 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                 CircleAvatar(
                   backgroundColor: const Color(0xFFF0FDF4),
                   radius: 22,
-                  backgroundImage: volunteer.photoUrl != null && volunteer.photoUrl!.isNotEmpty
+                  backgroundImage:
+                      volunteer.photoUrl != null &&
+                          volunteer.photoUrl!.isNotEmpty
                       ? NetworkImage(volunteer.photoUrl!)
                       : null,
-                  child: volunteer.photoUrl == null || volunteer.photoUrl!.isEmpty
+                  child:
+                      volunteer.photoUrl == null || volunteer.photoUrl!.isEmpty
                       ? Text(
-                          volunteer.displayName.isNotEmpty ? volunteer.displayName[0].toUpperCase() : 'V',
+                          volunteer.displayName.isNotEmpty
+                              ? volunteer.displayName[0].toUpperCase()
+                              : 'V',
                           style: const TextStyle(
                             color: Color(0xFF15803D),
                             fontWeight: FontWeight.bold,
@@ -270,7 +291,8 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (volunteer.city.isNotEmpty || volunteer.state.isNotEmpty) ...[
+                      if (volunteer.city.isNotEmpty ||
+                          volunteer.state.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
                           '📍 ${[volunteer.city, volunteer.state].where((s) => s.isNotEmpty).join(", ")}',
@@ -287,7 +309,10 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                 if (volunteer.phoneNumber.isNotEmpty)
                   IconButton(
                     onPressed: () => _callContact(volunteer.phoneNumber),
-                    icon: const Icon(Icons.call_rounded, color: Color(0xFF0284C7)),
+                    icon: const Icon(
+                      Icons.call_rounded,
+                      color: Color(0xFF0284C7),
+                    ),
                     style: IconButton.styleFrom(
                       backgroundColor: const Color(0xFFF0F9FF),
                     ),
@@ -299,21 +324,26 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
               spacing: 6,
               runSpacing: 6,
               children: volunteer.skills
-                  .map((skill) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(20),
+                  .map(
+                    (skill) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        skill,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF475569),
                         ),
-                        child: Text(
-                          skill,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF475569),
-                          ),
-                        ),
-                      ))
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
             const SizedBox(height: 12),
@@ -323,17 +353,23 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: volunteer.isActiveOnField ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                    color: volunteer.isActiveOnField
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFF94A3B8),
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  volunteer.isActiveOnField ? 'Active On-Field' : 'Standby / Offline',
+                  volunteer.isActiveOnField
+                      ? 'Active On-Field'
+                      : 'Standby / Offline',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: volunteer.isActiveOnField ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                    color: volunteer.isActiveOnField
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFF64748B),
                   ),
                 ),
                 const Spacer(),
@@ -353,7 +389,10 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
     );
   }
 
-  Widget _buildPendingRequestCard(BuildContext context, VolunteerModel volunteer) {
+  Widget _buildPendingRequestCard(
+    BuildContext context,
+    VolunteerModel volunteer,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -379,12 +418,17 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                 CircleAvatar(
                   backgroundColor: const Color(0xFFEFF6FF),
                   radius: 24,
-                  backgroundImage: volunteer.photoUrl != null && volunteer.photoUrl!.isNotEmpty
+                  backgroundImage:
+                      volunteer.photoUrl != null &&
+                          volunteer.photoUrl!.isNotEmpty
                       ? NetworkImage(volunteer.photoUrl!)
                       : null,
-                  child: volunteer.photoUrl == null || volunteer.photoUrl!.isEmpty
+                  child:
+                      volunteer.photoUrl == null || volunteer.photoUrl!.isEmpty
                       ? Text(
-                          volunteer.displayName.isNotEmpty ? volunteer.displayName[0].toUpperCase() : 'V',
+                          volunteer.displayName.isNotEmpty
+                              ? volunteer.displayName[0].toUpperCase()
+                              : 'V',
                           style: const TextStyle(
                             color: Color(0xFF2563EB),
                             fontWeight: FontWeight.bold,
@@ -414,9 +458,13 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          if (volunteer.city.isNotEmpty || volunteer.state.isNotEmpty) ...[
+                          if (volunteer.city.isNotEmpty ||
+                              volunteer.state.isNotEmpty)
                             Text(
                               '📍 ${[volunteer.city, volunteer.state].where((s) => s.isNotEmpty).join(", ")}',
                               style: GoogleFonts.inter(
@@ -425,8 +473,6 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                          ],
                           Text(
                             'Applied: ${volunteer.createdAt.day}/${volunteer.createdAt.month}/${volunteer.createdAt.year}',
                             style: GoogleFonts.inter(
@@ -456,7 +502,9 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
             ),
             const SizedBox(height: 4),
             Text(
-              volunteer.formattedSpecializations.isNotEmpty ? volunteer.formattedSpecializations.join(', ') : 'None',
+              volunteer.formattedSpecializations.isNotEmpty
+                  ? volunteer.formattedSpecializations.join(', ')
+                  : 'None',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -479,21 +527,26 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
               spacing: 6,
               runSpacing: 6,
               children: volunteer.skills
-                  .map((skill) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(20),
+                  .map(
+                    (skill) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        skill,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF475569),
                         ),
-                        child: Text(
-                          skill,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF475569),
-                          ),
-                        ),
-                      ))
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
             const SizedBox(height: 12),
@@ -527,10 +580,14 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      await ref.read(volunteerServiceProvider).rejectVolunteer(volunteer.uid);
+                      await ref
+                          .read(volunteerServiceProvider)
+                          .rejectVolunteer(volunteer.uid);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Volunteer request rejected.')),
+                          const SnackBar(
+                            content: Text('Volunteer request rejected.'),
+                          ),
                         );
                       }
                     },
@@ -540,8 +597,13 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                       foregroundColor: const Color(0xFFEF4444),
                       side: const BorderSide(color: Color(0xFFFCA5A5)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      textStyle: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      textStyle: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -549,10 +611,14 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await ref.read(volunteerServiceProvider).approveVolunteer(volunteer.uid);
+                      await ref
+                          .read(volunteerServiceProvider)
+                          .approveVolunteer(volunteer.uid);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Volunteer approved successfully.')),
+                          const SnackBar(
+                            content: Text('Volunteer approved successfully.'),
+                          ),
                         );
                       }
                     },
@@ -562,8 +628,13 @@ class _ManageVolunteerPageState extends ConsumerState<ManageVolunteerPage>
                       backgroundColor: const Color(0xFF10B981),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      textStyle: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      textStyle: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ),

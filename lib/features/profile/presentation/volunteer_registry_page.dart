@@ -435,15 +435,6 @@ class _LeaderboardHeroCard extends StatelessWidget {
     );
     final missions = volunteer.missionsCompleted;
 
-    final metricText = index == 0
-        ? 'Verified ${volunteer.reportsVerified * 12} mask and water inventory points.'
-        : index == 1
-        ? 'Provided ${volunteer.reportsSubmitted} local air quality intersects.'
-        : 'Cataloged ${volunteer.reportsSubmitted * 4} emergency shelter capacities.';
-    final aiSnippet = index == 0
-        ? 'Data fed directly into the Sentinel strategic model to update airborne cluster density, improving allocation accuracy by 14%.'
-        : 'Cross-referenced with sensor telemetry to isolate secondary waterborne risks.';
-
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -507,8 +498,8 @@ class _LeaderboardHeroCard extends StatelessWidget {
               spacing: 16,
               runSpacing: 16,
               children: [
-                _StatItem(label: 'NOBILITY INDEX', value: '9${9 - index}/100'),
                 _StatItem(label: 'MISSIONS', value: '$missions'),
+                _StatItem(label: 'VERIFIED REPORTS', value: '${volunteer.reportsVerified}'),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -534,55 +525,42 @@ class _LeaderboardHeroCard extends StatelessWidget {
                 ),
               ],
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Divider(color: Color(0xFFF3F4F6), thickness: 1.5),
-            ),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(20),
+            if (volunteer.formattedSpecializations.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Divider(color: Color(0xFFF3F4F6), thickness: 1.5),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    metricText,
-                    style: const TextStyle(
-                      color: Color(0xFF1F2937),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      height: 1.4,
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.psychology_rounded,
+                      color: Color(0xFF3B82F6),
+                      size: 16,
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.psychology_rounded,
-                        color: Color(0xFF3B82F6),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          aiSnippet,
-                          style: const TextStyle(
-                            color: Color(0xFF6B7280),
-                            fontSize: 11,
-                            fontStyle: FontStyle.italic,
-                            height: 1.4,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Specialized in ${volunteer.formattedSpecializations.join(', ')}.',
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          height: 1.4,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ]
           ],
         ),
       ),

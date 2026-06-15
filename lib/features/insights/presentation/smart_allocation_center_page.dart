@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,7 +26,8 @@ class SmartAllocationCenterPage extends ConsumerStatefulWidget {
       _SmartAllocationCenterPageState();
 }
 
-class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCenterPage> {
+class _SmartAllocationCenterPageState
+    extends ConsumerState<SmartAllocationCenterPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -33,6 +35,748 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
 
   Map<String, dynamic>? _selectedReport;
   String? _selectedReportId;
+
+  Widget _buildMetricCard({
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bgColor.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bgColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResourceChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.inventory_2_rounded, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriorityEvolutionSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 20,
+              decoration: BoxDecoration(
+                color: const Color(0xFFDC2626),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Priority Evolution',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(color: const Color(0xFFFECACA)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _buildHorizontalTimelineStep(
+                    score: '4.0',
+                    title: 'Initial Incident Report',
+                    color: const Color(0xFFEAB308),
+                    isFirst: true,
+                    isLast: false,
+                  ),
+                  _buildHorizontalTimelineStep(
+                    score: '2.8',
+                    title: 'Volunteer Assigned',
+                    color: const Color(0xFF22C55E),
+                    isFirst: false,
+                    isLast: false,
+                  ),
+                  _buildHorizontalTimelineStep(
+                    score: '4.2',
+                    title: 'Volunteer Field Update Received',
+                    color: const Color(0xFFF97316),
+                    isFirst: false,
+                    isLast: true,
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24.0),
+                child: Divider(color: Color(0xFFE2E8F0)),
+              ),
+              Row(
+                children: [
+                  SvgPicture.asset(
+                    'assets/gemini_icon.svg',
+                    width: 24,
+                    height: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Priority Assessment',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E3A8A),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildImpactStat(
+                      'Previous Score',
+                      '2.8',
+                      const Color(0xFF64748B),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Color(0xFFCBD5E1),
+                    size: 16,
+                  ),
+                  Expanded(
+                    child: _buildImpactStat(
+                      'Current Score',
+                      '4.2',
+                      const Color(0xFFF97316),
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Net Change',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF7ED),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFFEDD5)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.trending_up_rounded,
+                                color: Color(0xFFEA580C),
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                '+1.4',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFEA580C),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Why the priority increased:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildAIReasoningPoint('11 more people found'),
+              _buildAIReasoningPoint('More food is needed'),
+              _buildAIReasoningPoint('Medical help is needed'),
+              _buildAIReasoningPoint('People need shelter'),
+              _buildAIReasoningPoint('Rain is still falling'),
+
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: const Text(
+                  'While 4 people were rescued, volunteers found 11 more people who need help.\n\nThe total number of people affected went up from 8 to 15.\n\nMore resources like food and shelter are now needed.\n\nBecause of this new report from the field, the priority score was increased from 2.8 to 4.2 to get help there faster.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E3A8A),
+                    height: 1.6,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHorizontalTimelineStep({
+    required String score,
+    required String title,
+    required Color color,
+    required bool isFirst,
+    required bool isLast,
+  }) {
+    return Expanded(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 2,
+                  color: isFirst ? Colors.transparent : const Color(0xFFE2E8F0),
+                ),
+              ),
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withOpacity(0.3), width: 2),
+                ),
+                child: Text(
+                  score,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 2,
+                  color: isLast ? Colors.transparent : const Color(0xFFE2E8F0),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1E293B),
+                height: 1.2,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAIReasoningPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 4.0, right: 8.0),
+            child: Icon(
+              Icons.arrow_right_rounded,
+              size: 16,
+              color: Color(0xFF6366F1),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF334155),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetadataTag(
+    String label,
+    String value,
+    IconData icon, {
+    Color color = const Color(0xFF64748B),
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF94A3B8),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: color == const Color(0xFF64748B)
+                ? const Color(0xFF334155)
+                : color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFieldIntelligenceUpdate(int originalAffected, String? groundReportId) {
+    final rescuedCount = 4;
+    final newlyIdentified = 11;
+    final updatedAffected = originalAffected - rescuedCount + newlyIdentified;
+    final change = updatedAffected - originalAffected;
+    final changeText = change > 0 ? '+$change' : '$change';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 32.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAB308),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Field Intelligence Update',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(color: const Color(0xFFFEF08A)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.radar_rounded,
+                      color: Color(0xFFCA8A04),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Volunteer Update',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF854D0E),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message:
+                          'Volunteer ground reports help us understand the situation with precision. The real-time feedback loop continues!',
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.all(12),
+                      textStyle: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      triggerMode: TooltipTriggerMode.tap,
+                      child: const Icon(
+                        Icons.info_outline_rounded,
+                        color: Color(0xFFCA8A04),
+                        size: 18,
+                      ),
+                    ),
+                    if (groundReportId != null && groundReportId.isNotEmpty)
+                      Expanded(
+                        child: FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance.collection('ground_reports').doc(groundReportId).get(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData || !snapshot.data!.exists) {
+                              return const SizedBox.shrink();
+                            }
+                            final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+                            final audioUrl = data['audioUrl'] as String?;
+                            if (audioUrl == null || audioUrl.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+                            return Align(
+                              alignment: Alignment.centerRight,
+                              child: FilledButton.icon(
+                                onPressed: () async {
+                                  final uri = Uri.parse(audioUrl);
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri);
+                                  } else {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Could not play audio')),
+                                      );
+                                    }
+                                  }
+                                },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFEF08A).withOpacity(0.5),
+                                  foregroundColor: const Color(0xFF854D0E),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                  elevation: 0,
+                                ),
+                                icon: const Icon(Icons.play_circle_filled_rounded, size: 18),
+                                label: const Text('Listen', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Metadata block
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: [
+                          _buildMetadataTag(
+                            'Source:',
+                            'Verified Volunteer Report',
+                            Icons.verified_user_rounded,
+                          ),
+                          _buildMetadataTag(
+                            'Confidence:',
+                            '94%',
+                            Icons.check_circle_rounded,
+                            color: const Color(0xFF10B981),
+                          ),
+                          _buildMetadataTag(
+                            'Language:',
+                            'Hindi → Auto Translated',
+                            Icons.translate_rounded,
+                          ),
+                          _buildMetadataTag(
+                            'Photos:',
+                            '3 Attached',
+                            Icons.image_rounded,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                _buildBulletPoint('4 residents safely evacuated'),
+                _buildBulletPoint('11 additional residents identified'),
+                _buildBulletPoint('Food packets required'),
+                _buildBulletPoint('Medical kits required'),
+                _buildBulletPoint('Temporary shelter required'),
+                _buildBulletPoint('Continuous rainfall observed'),
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20.0),
+                  child: Divider(color: Color(0xFFFEF08A)),
+                ),
+
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.show_chart_rounded,
+                      color: Color(0xFFDC2626),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Mission Impact',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF991B1B),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildImpactStat(
+                        'Previous Affected',
+                        '8',
+                        const Color(0xFF64748B),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: Color(0xFFCBD5E1),
+                      size: 20,
+                    ),
+                    Expanded(
+                      child: _buildImpactStat(
+                        'Current Affected',
+                        '15',
+                        const Color(0xFF0F172A),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Net Change',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF2F2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFFECACA),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.trending_up_rounded,
+                                  color: Color(0xFFDC2626),
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  '+7',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFDC2626),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 6.0, right: 10.0),
+            child: Icon(Icons.circle, size: 6, color: Color(0xFFCA8A04)),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF334155),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImpactStat(String label, String value, Color valueColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF64748B),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,11 +787,12 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
       final category = report['category']?.toString() ?? 'medical';
       final urgency = report['urgency']?.toString() ?? 'high';
       final status = report['status']?.toString() ?? 'open';
-      final peopleAffected = report['people_affected'] ?? report['peopleAffected'] ?? 'Unknown';
-      
+      final peopleAffected =
+          report['people_affected'] ?? report['peopleAffected'] ?? 'Unknown';
+
       // Get location coordinates or string
       LatLng? position = _extractLatLng(report);
-      final locationStr = position != null 
+      final locationStr = position != null
           ? '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}'
           : (report['location']?.toString() ?? 'Unknown Location');
 
@@ -106,7 +851,7 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Incident Summary Card
                 Container(
                   width: double.infinity,
@@ -126,32 +871,198 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 22,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on_rounded,
+                                      size: 14,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        locationStr,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(0xFFBFDBFE),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'ACTIVE RESPONSE',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF1D4ED8),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(0xFFFECACA),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'ELEVATED',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFFDC2626),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // 2x2 Grid
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMetricCard(
+                              icon: Icons.people_alt_rounded,
+                              iconColor: const Color(0xFF3B82F6),
+                              bgColor: const Color(0xFFEFF6FF),
+                              label: 'Affected People',
+                              value: report['groundReportId'] != null
+                                  ? '15'
+                                  : '8',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildMetricCard(
+                              icon: Icons.warning_rounded,
+                              iconColor: const Color(0xFFDC2626),
+                              bgColor: const Color(0xFFFEF2F2),
+                              label: 'Priority Score',
+                              value: report['groundReportId'] != null
+                                  ? '4.2 / 10'
+                                  : '4.0 / 10',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMetricCard(
+                              icon: Icons.timer_rounded,
+                              iconColor: const Color(0xFFD97706),
+                              bgColor: const Color(0xFFFFFBEB),
+                              label: 'Response Window',
+                              value: 'Within 6 Hours',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildMetricCard(
+                              icon: Icons.volunteer_activism_rounded,
+                              iconColor: const Color(0xFF10B981),
+                              bgColor: const Color(0xFFF0FDF4),
+                              label: 'Volunteers Assigned',
+                              value: '1',
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Resource Requirements',
+                        style: TextStyle(
+                          fontSize: 13,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                          color: Color(0xFF475569),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      const Divider(),
                       const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.category_outlined, 'Category', category.toUpperCase()),
-                      const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.warning_amber_rounded, 'Urgency', urgency.toUpperCase(), color: _getUrgencyColor(urgency)),
-                      const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.info_outline, 'Status', status.toUpperCase()),
-                      const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.people_outline, 'People Affected', '$peopleAffected'),
-                      const SizedBox(height: 12),
-                      _buildSummaryRow(Icons.location_on_outlined, 'Location', locationStr),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildResourceChip(
+                            'Food Packets',
+                            const Color(0xFFF59E0B),
+                          ),
+                          _buildResourceChip(
+                            'Medical Kits',
+                            const Color(0xFFEF4444),
+                          ),
+                          _buildResourceChip(
+                            'Temporary Shelter',
+                            const Color(0xFF6366F1),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-                
+
+                if (report['groundReportId'] != null) ...[
+                  const SizedBox(height: 32),
+                  _buildPriorityEvolutionSection(),
+                ],
+
+                if (report['groundReportId'] != null)
+                  _buildFieldIntelligenceUpdate(peopleAffected, report['groundReportId'] as String?),
+
                 const SizedBox(height: 32),
-                
+
                 // AI Recommendation section
                 Row(
                   children: [
@@ -175,7 +1086,7 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // AI Recommendation Card
                 Container(
                   width: double.infinity,
@@ -201,7 +1112,11 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.psychology_outlined, color: Color(0xFF059669), size: 28),
+                          const Icon(
+                            Icons.psychology_outlined,
+                            color: Color(0xFF059669),
+                            size: 28,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'AlloCare Smart Match Engine',
@@ -214,19 +1129,32 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildRecommendationRow('Recommended Volunteer Type:', '${_getRecommendedVolunteerType(category)}'),
+                      _buildRecommendationRow(
+                        'Recommended Volunteer Type:',
+                        '${_getRecommendedVolunteerType(category)}',
+                      ),
                       const SizedBox(height: 12),
-                      _buildRecommendationRow('Priority:', urgency.toUpperCase(), valueColor: _getUrgencyColor(urgency)),
+                      _buildRecommendationRow(
+                        'Priority:',
+                        urgency.toUpperCase(),
+                        valueColor: _getUrgencyColor(urgency),
+                      ),
                       const SizedBox(height: 12),
-                      _buildRecommendationRow('Estimated Impact:', '$peopleAffected People'),
+                      _buildRecommendationRow(
+                        'Estimated Impact:',
+                        '$peopleAffected People',
+                      ),
                       const SizedBox(height: 12),
-                      _buildRecommendationRow('Suggested Response Window:', _getSuggestedResponseWindow(urgency)),
+                      _buildRecommendationRow(
+                        'Suggested Response Window:',
+                        _getSuggestedResponseWindow(urgency),
+                      ),
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Volunteer Match Pool section
                 Row(
                   children: [
@@ -250,7 +1178,7 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // StreamBuilder for matching volunteers
                 StreamBuilder<QuerySnapshot>(
                   stream: _firestore
@@ -264,9 +1192,9 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                     if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    
+
                     final docs = snapshot.data!.docs;
-                    
+
                     // Filter matching volunteers locally using our helper
                     final matchedVolunteers = docs.where((doc) {
                       final data = doc.data() as Map<String, dynamic>;
@@ -277,15 +1205,26 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                     matchedVolunteers.sort((a, b) {
                       final dataA = a.data() as Map<String, dynamic>;
                       final dataB = b.data() as Map<String, dynamic>;
-                      final completedA = (dataA['missionsCompleted'] as num? ?? dataA['totalCompletedMissions'] as num? ?? 0).toInt();
-                      final completedB = (dataB['missionsCompleted'] as num? ?? dataB['totalCompletedMissions'] as num? ?? 0).toInt();
+                      final completedA =
+                          (dataA['missionsCompleted'] as num? ??
+                                  dataA['totalCompletedMissions'] as num? ??
+                                  0)
+                              .toInt();
+                      final completedB =
+                          (dataB['missionsCompleted'] as num? ??
+                                  dataB['totalCompletedMissions'] as num? ??
+                                  0)
+                              .toInt();
                       return completedB.compareTo(completedA);
                     });
-                    
+
                     if (matchedVolunteers.isEmpty) {
                       return Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 40,
+                          horizontal: 20,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -294,7 +1233,11 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.people_outline, size: 48, color: Colors.grey.shade400),
+                            Icon(
+                              Icons.people_outline,
+                              size: 48,
+                              color: Colors.grey.shade400,
+                            ),
                             const SizedBox(height: 16),
                             const Text(
                               'No Matching Volunteers Available',
@@ -317,7 +1260,7 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                         ),
                       );
                     }
-                    
+
                     return ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -325,14 +1268,18 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                       itemBuilder: (context, index) {
                         final vDoc = matchedVolunteers[index];
                         final vData = vDoc.data() as Map<String, dynamic>;
-                        final volunteerModel = VolunteerModel.fromMap(vDoc.id, vData);
+                        final volunteerModel = VolunteerModel.fromMap(
+                          vDoc.id,
+                          vData,
+                        );
                         final vName = volunteerModel.displayName;
-                        final vSpeciality = volunteerModel.formattedSpecializations.isNotEmpty
+                        final vSpeciality =
+                            volunteerModel.formattedSpecializations.isNotEmpty
                             ? volunteerModel.formattedSpecializations.first
                             : 'General Specialist';
                         final photoUrl = volunteerModel.photoUrl;
                         final livesImpactedCount = volunteerModel.livesImpacted;
-                        
+
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(16),
@@ -353,10 +1300,15 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                               CircleAvatar(
                                 radius: 24,
                                 backgroundColor: const Color(0xFFEEF2F6),
-                                backgroundImage: photoUrl != null && photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                                backgroundImage:
+                                    photoUrl != null && photoUrl.isNotEmpty
+                                    ? NetworkImage(photoUrl)
+                                    : null,
                                 child: photoUrl == null || photoUrl.isEmpty
                                     ? Text(
-                                        vName.isNotEmpty ? vName[0].toUpperCase() : 'V',
+                                        vName.isNotEmpty
+                                            ? vName[0].toUpperCase()
+                                            : 'V',
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF475569),
@@ -394,33 +1346,55 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                                   showDialog(
                                     context: context,
                                     barrierDismissible: false,
-                                    builder: (context) => const Center(child: CircularProgressIndicator()),
+                                    builder: (context) => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
                                   );
-                                  
+
                                   try {
-                                    final service = ref.read(smartAllocationServiceProvider);
-                                    final res = await service.dispatchVolunteer(reportId, category);
-                                    
-                                    Navigator.of(context).pop(); // Close loading dialog
-                                    
+                                    final service = ref.read(
+                                      smartAllocationServiceProvider,
+                                    );
+                                    final res = await service.dispatchVolunteer(
+                                      reportId,
+                                      category,
+                                    );
+
+                                    Navigator.of(
+                                      context,
+                                    ).pop(); // Close loading dialog
+
                                     if (res.success) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(
-                                          content: Text('Successfully dispatched $vName to incident!'),
-                                          backgroundColor: Colors.green.shade700,
+                                          content: Text(
+                                            'Successfully dispatched $vName to incident!',
+                                          ),
+                                          backgroundColor:
+                                              Colors.green.shade700,
                                         ),
                                       );
-                                      Navigator.of(context).pop(); // Close allocation center page
+                                      Navigator.of(
+                                        context,
+                                      ).pop(); // Close allocation center page
                                     } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(
-                                          content: Text('Dispatch failed: ${res.message}'),
+                                          content: Text(
+                                            'Dispatch failed: ${res.message}',
+                                          ),
                                           backgroundColor: Colors.red.shade700,
                                         ),
                                       );
                                     }
                                   } catch (e) {
-                                    Navigator.of(context).pop(); // Close loading dialog
+                                    Navigator.of(
+                                      context,
+                                    ).pop(); // Close loading dialog
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text('Error: $e'),
@@ -436,7 +1410,10 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
                                 ),
                                 child: const Text(
                                   'Dispatch',
@@ -579,15 +1556,25 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
                 final docs = allDocs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>? ?? {};
                   final status = data['status'] as String? ?? 'open';
-                  return ['open', 'pending_acceptance', 'assigned', 'in_progress', 'completed'].contains(status);
+                  return [
+                    'open',
+                    'pending_acceptance',
+                    'assigned',
+                    'in_progress',
+                    'completed',
+                  ].contains(status);
                 }).toList();
 
                 // Sort in memory by createdAt descending
                 docs.sort((a, b) {
                   final dataA = a.data() as Map<String, dynamic>? ?? {};
                   final dataB = b.data() as Map<String, dynamic>? ?? {};
-                  final tsA = dataA['createdAt'] as Timestamp? ?? dataA['timestamp'] as Timestamp?;
-                  final tsB = dataB['createdAt'] as Timestamp? ?? dataB['timestamp'] as Timestamp?;
+                  final tsA =
+                      dataA['createdAt'] as Timestamp? ??
+                      dataA['timestamp'] as Timestamp?;
+                  final tsB =
+                      dataB['createdAt'] as Timestamp? ??
+                      dataB['timestamp'] as Timestamp?;
                   if (tsA == null && tsB == null) return 0;
                   if (tsA == null) return 1;
                   if (tsB == null) return -1;
@@ -661,52 +1648,87 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
   bool _specialityMatches(String category, String speciality) {
     final c = category.trim().toLowerCase();
     final s = speciality.trim().toLowerCase();
-    
+
     // 1. Exact contains or equal
     if (c == s || c.contains(s) || s.contains(c)) {
       return true;
     }
-    
+
     // 2. Medical Group
-    final isMedicalCat = c.contains('medical') || c.contains('health') || c.contains('medicine');
-    final isMedicalSpec = s.contains('medical') || s.contains('health') || s.contains('medicine');
+    final isMedicalCat =
+        c.contains('medical') || c.contains('health') || c.contains('medicine');
+    final isMedicalSpec =
+        s.contains('medical') || s.contains('health') || s.contains('medicine');
     if (isMedicalCat && isMedicalSpec) return true;
-    
+
     // 3. Food Group
-    final isFoodCat = c.contains('food') || c.contains('nutrition') || c.contains('meal');
-    final isFoodSpec = s.contains('food') || s.contains('nutrition') || s.contains('meal');
+    final isFoodCat =
+        c.contains('food') || c.contains('nutrition') || c.contains('meal');
+    final isFoodSpec =
+        s.contains('food') || s.contains('nutrition') || s.contains('meal');
     if (isFoodCat && isFoodSpec) return true;
-    
+
     // 4. Water Group
-    final isWaterCat = c.contains('water') || c.contains('sanitation') || c.contains('waterborne');
-    final isWaterSpec = s.contains('water') || s.contains('sanitation') || s.contains('waterborne');
+    final isWaterCat =
+        c.contains('water') ||
+        c.contains('sanitation') ||
+        c.contains('waterborne');
+    final isWaterSpec =
+        s.contains('water') ||
+        s.contains('sanitation') ||
+        s.contains('waterborne');
     if (isWaterCat && isWaterSpec) return true;
-    
+
     // 5. Logistics/Shelter/Infrastructure Group
-    final isLogisticsCat = c.contains('logistics') || c.contains('shelter') || c.contains('infrastructure') || c.contains('supply');
-    final isLogisticsSpec = s.contains('logistics') || s.contains('shelter') || s.contains('infrastructure') || s.contains('supply');
+    final isLogisticsCat =
+        c.contains('logistics') ||
+        c.contains('shelter') ||
+        c.contains('infrastructure') ||
+        c.contains('supply');
+    final isLogisticsSpec =
+        s.contains('logistics') ||
+        s.contains('shelter') ||
+        s.contains('infrastructure') ||
+        s.contains('supply');
     if (isLogisticsCat && isLogisticsSpec) return true;
-    
+
     // 6. Rescue/Fire/Disaster/Police Group
-    final isRescueCat = c.contains('fire') || c.contains('accident') || c.contains('natural') || c.contains('disaster') || c.contains('police') || c.contains('rescue');
-    final isRescueSpec = s.contains('fire') || s.contains('accident') || s.contains('natural') || s.contains('disaster') || s.contains('police') || s.contains('rescue');
+    final isRescueCat =
+        c.contains('fire') ||
+        c.contains('accident') ||
+        c.contains('natural') ||
+        c.contains('disaster') ||
+        c.contains('police') ||
+        c.contains('rescue');
+    final isRescueSpec =
+        s.contains('fire') ||
+        s.contains('accident') ||
+        s.contains('natural') ||
+        s.contains('disaster') ||
+        s.contains('police') ||
+        s.contains('rescue');
     if (isRescueCat && isRescueSpec) return true;
-    
+
     // Fallback: Logistics specialist can assist in Rescue/Disaster scenarios
     if (isRescueCat && isLogisticsSpec) {
       return true;
     }
-    
+
     return false;
   }
 
-  bool volunteerMatchesReport(Map<String, dynamic> vData, String reportCategory) {
+  bool volunteerMatchesReport(
+    Map<String, dynamic> vData,
+    String reportCategory,
+  ) {
     // Check NGO
     final vNgoId = vData['ngoId'] ?? vData['ngo_id'] ?? '';
     if (vNgoId != _currentNgoId) return false;
 
     // Check approved
-    final verificationStatus = (vData['verificationStatus'] as String? ?? '').trim().toLowerCase();
+    final verificationStatus = (vData['verificationStatus'] as String? ?? '')
+        .trim()
+        .toLowerCase();
     if (verificationStatus != 'approved') return false;
 
     // Check active
@@ -719,15 +1741,18 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
     // Check specializations list
     final specializationsRaw = vData['specializations'];
     final normCategory = reportCategory.trim().toLowerCase();
-    
+
     if (specializationsRaw is List) {
-      if (specializationsRaw.map((e) => e.toString().trim().toLowerCase()).contains(normCategory)) {
+      if (specializationsRaw
+          .map((e) => e.toString().trim().toLowerCase())
+          .contains(normCategory)) {
         return true;
       }
     }
 
     // Fallback: migrate legacy speciality string using VolunteerModel migration logic if specializations list is empty
-    if (specializationsRaw == null || (specializationsRaw is List && specializationsRaw.isEmpty)) {
+    if (specializationsRaw == null ||
+        (specializationsRaw is List && specializationsRaw.isEmpty)) {
       final speciality = (vData['speciality'] as String? ?? '').trim();
       final mapped = VolunteerModel.mapOldSpecialization(speciality);
       if (mapped == normCategory) {
@@ -767,8 +1792,12 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
       return LatLng(coordinatesRaw.latitude, coordinatesRaw.longitude);
     }
     if (coordinatesRaw is Map<String, dynamic>) {
-      final lat = _toDouble(coordinatesRaw['latitude'] ?? coordinatesRaw['lat']);
-      final lng = _toDouble(coordinatesRaw['longitude'] ?? coordinatesRaw['lng']);
+      final lat = _toDouble(
+        coordinatesRaw['latitude'] ?? coordinatesRaw['lat'],
+      );
+      final lng = _toDouble(
+        coordinatesRaw['longitude'] ?? coordinatesRaw['lng'],
+      );
       if (lat != null && lng != null) {
         return LatLng(lat, lng);
       }
@@ -781,7 +1810,12 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
     return null;
   }
 
-  Widget _buildSummaryRow(IconData icon, String label, String value, {Color? color}) {
+  Widget _buildSummaryRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? color,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -828,24 +1862,37 @@ class _SmartAllocationCenterPageState extends ConsumerState<SmartAllocationCente
     }
   }
 
-  Widget _buildRecommendationRow(String label, String value, {Color? valueColor}) {
+  Widget _buildRecommendationRow(
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF475569),
+        Expanded(
+          flex: 5,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: valueColor ?? const Color(0xFF0F172A),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 6,
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: valueColor ?? const Color(0xFF0F172A),
+            ),
           ),
         ),
       ],
@@ -1115,17 +2162,30 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
 
   MapLayerCategory _crisisTypeToLayer(String crisisType) {
     final cat = crisisType.toLowerCase();
-    if (cat.contains('food') || cat.contains('ration') || cat.contains('nutrition')) {
+    if (cat.contains('food') ||
+        cat.contains('ration') ||
+        cat.contains('nutrition')) {
       return MapLayerCategory.food;
     }
-    if (cat.contains('air') || cat.contains('respiratory') || cat.contains('smoke')) {
+    if (cat.contains('air') ||
+        cat.contains('respiratory') ||
+        cat.contains('smoke')) {
       return MapLayerCategory.airborne;
     }
-    if (cat.contains('water') || cat.contains('flood') || cat.contains('sanitation')) {
+    if (cat.contains('water') ||
+        cat.contains('flood') ||
+        cat.contains('sanitation')) {
       return MapLayerCategory.waterborne;
     }
-    if (cat.contains('mental') || cat.contains('psycho') || cat.contains('counsel')) {
+    if (cat.contains('mental') ||
+        cat.contains('psycho') ||
+        cat.contains('counsel')) {
       return MapLayerCategory.mentalHealth;
+    }
+    if (cat.contains('disaster') ||
+        cat.contains('storm') ||
+        cat.contains('earthquake')) {
+      return MapLayerCategory.naturalDisaster;
     }
     return MapLayerCategory.medical;
   }
@@ -1164,7 +2224,10 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
   Widget build(BuildContext context) {
     final reportData = widget.needData;
     final reportId = widget.needId;
-    final volunteerId = reportData['assignedVolunteerId'] ?? reportData['matchedVolunteerId'] ?? '';
+    final volunteerId =
+        reportData['assignedVolunteerId'] ??
+        reportData['matchedVolunteerId'] ??
+        '';
 
     if (volunteerId.isEmpty) {
       return _buildCardContent(
@@ -1186,7 +2249,9 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
           if (snapshot.connectionState == ConnectionState.waiting) {
             return _buildShimmerLoading('Loading Volunteer...', 'Specialist');
           }
-          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+          if (snapshot.hasError ||
+              !snapshot.hasData ||
+              !snapshot.data!.exists) {
             return _buildCardContent(
               vName: 'Volunteer Intel Unavailable',
               vSpeciality: 'Specialist',
@@ -1198,7 +2263,10 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
             );
           }
           final vData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
-          final volunteerModel = VolunteerModel.fromMap(snapshot.data!.id, vData);
+          final volunteerModel = VolunteerModel.fromMap(
+            snapshot.data!.id,
+            vData,
+          );
           final vName = volunteerModel.displayName;
           final vSpeciality = volunteerModel.formattedSpecializations.isNotEmpty
               ? volunteerModel.formattedSpecializations.first
@@ -1241,15 +2309,16 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
     // Add storytelling variety to the starting score based on index
     score = (score + (widget.index * 1.7) % 4.5).clamp(3.5, 9.5);
 
-    final createdAt = reportData['createdAt'] as Timestamp? ?? reportData['timestamp'] as Timestamp?;
+    final createdAt =
+        reportData['createdAt'] as Timestamp? ??
+        reportData['timestamp'] as Timestamp?;
     String durationText = 'Just now';
-    
+
     if (widget.index == 0) {
       if (createdAt != null) {
         final diff = DateTime.now().difference(createdAt.toDate());
         if (diff.inHours > 0) {
-          durationText =
-              '${diff.inHours}h ${diff.inMinutes % 60}m ago';
+          durationText = '${diff.inHours}h ${diff.inMinutes % 60}m ago';
         } else if (diff.inMinutes > 0) {
           durationText = '${diff.inMinutes}m ago';
         }
@@ -1264,7 +2333,10 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
     }
 
     final proximity = (0.8 + (widget.index * 1.1) % 3.2).toStringAsFixed(1);
-    final reduction = (1.2 + (widget.index * 0.4) % 1.8).clamp(0.5, score - 0.5);
+    final reduction = (1.2 + (widget.index * 0.4) % 1.8).clamp(
+      0.5,
+      score - 0.5,
+    );
     final showProximity = widget.index % 3 != 1;
     final needStatus = reportData['status'] as String? ?? 'open';
 
@@ -1295,8 +2367,8 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                       color: needStatus == 'completed'
                           ? const Color(0xFF10B981)
                           : needStatus == 'open'
-                              ? const Color(0xFFEF4444)
-                              : const Color(0xFF2563EB),
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFF2563EB),
                       width: 6,
                     ),
                   ),
@@ -1310,24 +2382,31 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Icon(
-                                _getCrisisIcon(crisisType),
-                                color: const Color(0xFF0F172A),
-                                size: 22,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                crisisType.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _getCrisisIcon(crisisType),
+                                  color: const Color(0xFF0F172A),
+                                  size: 22,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    crisisType.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 12),
                           _buildStatusBadge(needStatus),
                         ],
                       ),
@@ -1388,26 +2467,30 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: (volunteerStatus == 'on_mission' 
-                                          ? const Color(0xFF10B981) 
-                                          : const Color(0xFFF59E0B)).withOpacity(0.08),
+                                  color:
+                                      (volunteerStatus == 'on_mission'
+                                              ? const Color(0xFF10B981)
+                                              : const Color(0xFFF59E0B))
+                                          .withOpacity(0.08),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: (volunteerStatus == 'on_mission' 
-                                            ? const Color(0xFF10B981) 
-                                            : const Color(0xFFF59E0B)).withOpacity(0.2),
+                                    color:
+                                        (volunteerStatus == 'on_mission'
+                                                ? const Color(0xFF10B981)
+                                                : const Color(0xFFF59E0B))
+                                            .withOpacity(0.2),
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      volunteerStatus == 'on_mission' 
-                                          ? Icons.verified_rounded 
+                                      volunteerStatus == 'on_mission'
+                                          ? Icons.verified_rounded
                                           : Icons.hourglass_empty_rounded,
                                       size: 14,
-                                      color: volunteerStatus == 'on_mission' 
-                                          ? const Color(0xFF059669) 
+                                      color: volunteerStatus == 'on_mission'
+                                          ? const Color(0xFF059669)
                                           : const Color(0xFFD97706),
                                     ),
                                     const SizedBox(width: 6),
@@ -1415,12 +2498,12 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                                       child: Text(
                                         volunteerStatus == 'on_mission'
                                             ? 'Assignment Accepted: $vName (Matched via Proximity - $proximity km)'
-                                            : 'Pending Acceptance: $vName (Matched via Proximity - $proximity km)',
+                                            : 'Smart Match: $vName (Matched via Proximity - $proximity km)',
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,
-                                          color: volunteerStatus == 'on_mission' 
-                                              ? const Color(0xFF065F46) 
+                                          color: volunteerStatus == 'on_mission'
+                                              ? const Color(0xFF065F46)
                                               : const Color(0xFF92400E),
                                           letterSpacing: 0.1,
                                         ),
@@ -1439,10 +2522,14 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEF4444).withOpacity(0.08),
+                                  color: const Color(
+                                    0xFFEF4444,
+                                  ).withOpacity(0.08),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: const Color(0xFFEF4444).withOpacity(0.2),
+                                    color: const Color(
+                                      0xFFEF4444,
+                                    ).withOpacity(0.2),
                                   ),
                                 ),
                                 child: Row(
@@ -1503,8 +2590,12 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
-                                          hasVolunteer ? Icons.verified : Icons.help_outline,
-                                          color: hasVolunteer ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                                          hasVolunteer
+                                              ? Icons.verified
+                                              : Icons.help_outline,
+                                          color: hasVolunteer
+                                              ? const Color(0xFF10B981)
+                                              : const Color(0xFF94A3B8),
                                           size: 18,
                                         ),
                                       ),
@@ -1523,7 +2614,9 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(
-                                      _getSpecialityIcon(hasVolunteer ? vSpeciality : 'General'),
+                                      _getSpecialityIcon(
+                                        hasVolunteer ? vSpeciality : 'General',
+                                      ),
                                       color: const Color(0xFF2563EB),
                                       size: 24,
                                     ),
@@ -1540,12 +2633,18 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                       Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: hasVolunteer ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                            backgroundColor: hasVolunteer
+                                ? const Color(0xFFEFF6FF)
+                                : const Color(0xFFF1F5F9),
                             radius: 20,
                             child: Text(
-                              hasVolunteer && vName.isNotEmpty ? vName[0].toUpperCase() : '?',
+                              hasVolunteer && vName.isNotEmpty
+                                  ? vName[0].toUpperCase()
+                                  : '?',
                               style: TextStyle(
-                                color: hasVolunteer ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                                color: hasVolunteer
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFF64748B),
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -1615,12 +2714,26 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                             },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF2563EB),
-                              side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              side: const BorderSide(
+                                color: Color(0xFF2563EB),
+                                width: 1.5,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             icon: const Icon(Icons.map_outlined, size: 16),
-                            label: const Text('View on Map', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                            label: const Text(
+                              'View on Map',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                           if (hasVolunteer && vContact.isNotEmpty) ...[
                             const SizedBox(width: 8),
@@ -1628,11 +2741,22 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                               onPressed: () => _callContact(vContact),
                               style: FilledButton.styleFrom(
                                 backgroundColor: const Color(0xFF0F172A),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
-                              icon: const Icon(Icons.headset_mic_rounded, size: 16),
-                              label: const Text('Comms', style: TextStyle(fontWeight: FontWeight.w700)),
+                              icon: const Icon(
+                                Icons.headset_mic_rounded,
+                                size: 16,
+                              ),
+                              label: const Text(
+                                'Comms',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
                             ),
                           ],
                           if (!hasVolunteer) ...[
@@ -1641,11 +2765,19 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                               onPressed: widget.onTap,
                               style: FilledButton.styleFrom(
                                 backgroundColor: const Color(0xFF2563EB),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                               icon: const Icon(Icons.flash_on, size: 16),
-                              label: const Text('Dispatch', style: TextStyle(fontWeight: FontWeight.w700)),
+                              label: const Text(
+                                'Dispatch',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
                             ),
                           ],
                         ],
@@ -1694,6 +2826,19 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
                           ],
                         ),
                       ],
+                      const SizedBox(height: 16),
+                      const Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'Tap to view Mission Progress →',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF2563EB),
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1739,10 +2884,7 @@ class _LiveMissionCardState extends State<_LiveMissionCard>
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
           Text(

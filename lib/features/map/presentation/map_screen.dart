@@ -36,6 +36,7 @@ enum MapLayerCategory {
   airborne,
   waterborne,
   mentalHealth,
+  naturalDisaster,
 }
 
 class MapScreen extends ConsumerWidget {
@@ -754,6 +755,8 @@ class _MapPageState extends ConsumerState<MapPage> {
         return _LayerCategory.waterborne;
       case MapLayerCategory.mentalHealth:
         return _LayerCategory.mentalHealth;
+      case MapLayerCategory.naturalDisaster:
+        return _LayerCategory.naturalDisaster;
     }
   }
 
@@ -1047,8 +1050,8 @@ class _MapPageState extends ConsumerState<MapPage> {
       }
     }
 
-    if (category == _LayerCategory.waterborne) {
-      // Waterborne palette: bright cyan with deep navy for high-risk zones.
+    if (category == _LayerCategory.waterborne || category == _LayerCategory.naturalDisaster) {
+      // Waterborne and Natural Disaster palette: bright cyan with deep navy for high-risk zones.
       switch (urgencyLevel) {
         case 'critical':
         case 'high':
@@ -1431,11 +1434,13 @@ class _MapPageState extends ConsumerState<MapPage> {
         _selectedCategory == _LayerCategory.food ||
         _selectedCategory == _LayerCategory.airborne ||
         _selectedCategory == _LayerCategory.waterborne ||
-        _selectedCategory == _LayerCategory.mentalHealth;
+        _selectedCategory == _LayerCategory.mentalHealth ||
+        _selectedCategory == _LayerCategory.naturalDisaster;
     final shouldRenderHeatInteractions =
         _selectedCategory == _LayerCategory.airborne ||
         _selectedCategory == _LayerCategory.waterborne ||
-        _selectedCategory == _LayerCategory.mentalHealth;
+        _selectedCategory == _LayerCategory.mentalHealth ||
+        _selectedCategory == _LayerCategory.naturalDisaster;
     final selectedCategoryKey = _selectedCategory.firestoreCategoryKey;
 
     final heatPointsByUrgency = <String, List<WeightedLatLng>>{
@@ -2083,6 +2088,7 @@ enum _LayerCategory {
   airborne,
   waterborne,
   mentalHealth,
+  naturalDisaster,
 }
 
 extension _LayerCategoryPresentation on _LayerCategory {
@@ -2100,6 +2106,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
         return 'Waterborne';
       case _LayerCategory.mentalHealth:
         return 'Mental Health';
+      case _LayerCategory.naturalDisaster:
+        return 'Natural Disaster';
     }
   }
 
@@ -2117,6 +2125,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
         return const Color(0xFF0288D1);
       case _LayerCategory.mentalHealth:
         return const Color(0xFF0D9488);
+      case _LayerCategory.naturalDisaster:
+        return const Color(0xFF0288D1);
     }
   }
 
@@ -2134,6 +2144,8 @@ extension _LayerCategoryPresentation on _LayerCategory {
         return 'waterborne';
       case _LayerCategory.mentalHealth:
         return 'mentalhealth';
+      case _LayerCategory.naturalDisaster:
+        return 'natural_disaster';
     }
   }
 }

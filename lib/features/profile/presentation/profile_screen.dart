@@ -549,7 +549,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 // Content Row
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
                       // Subtly tinted icon container (no border)
@@ -730,12 +733,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             size: 20,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            '$pendingRequests Volunteer${pendingRequests > 1 ? "s" : ""} Awaiting Approval',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFFEA580C),
+                          Expanded(
+                            child: Text(
+                              '$pendingRequests Volunteer${pendingRequests > 1 ? "s" : ""} Awaiting Approval',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFFEA580C),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -1494,7 +1500,9 @@ class _GeminiBriefCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSaved ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0),
+              color: isSaved
+                  ? const Color(0xFFFECACA)
+                  : const Color(0xFFE2E8F0),
               width: isSaved ? 1.5 : 1.0,
             ),
             boxShadow: isSaved
@@ -1503,14 +1511,14 @@ class _GeminiBriefCard extends StatelessWidget {
                       color: const Color(0xFFDC2626).withValues(alpha: 0.08),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
-                    )
+                    ),
                   ]
                 : [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.015),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
-                    )
+                    ),
                   ],
           ),
           child: Column(
@@ -1528,8 +1536,12 @@ class _GeminiBriefCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
-                      isSaved ? Icons.auto_awesome_rounded : Icons.auto_awesome_outlined,
-                      color: isSaved ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                      isSaved
+                          ? Icons.auto_awesome_rounded
+                          : Icons.auto_awesome_outlined,
+                      color: isSaved
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFF64748B),
                       size: 18,
                     ),
                   ),
@@ -1544,11 +1556,15 @@ class _GeminiBriefCard extends StatelessWidget {
                           runSpacing: 4,
                           children: [
                             Text(
-                              isSaved ? 'Saved AI Action Plan' : 'Gemini Intelligence',
+                              isSaved
+                                  ? 'Saved AI Action Plan'
+                                  : 'Gemini Intelligence',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: isSaved ? const Color(0xFF7F1D1D) : const Color(0xFF1E293B),
+                                color: isSaved
+                                    ? const Color(0xFF7F1D1D)
+                                    : const Color(0xFF1E293B),
                               ),
                             ),
                             if (isSaved)
@@ -1559,7 +1575,10 @@ class _GeminiBriefCard extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFDC2626), Color(0xFFB91C1C)],
+                                    colors: [
+                                      Color(0xFFDC2626),
+                                      Color(0xFFB91C1C),
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
@@ -1581,7 +1600,9 @@ class _GeminiBriefCard extends StatelessWidget {
                               : 'Active Analysis Engine',
                           style: GoogleFonts.inter(
                             fontSize: 11,
-                            color: isSaved ? const Color(0xFF991B1B) : const Color(0xFF64748B),
+                            color: isSaved
+                                ? const Color(0xFF991B1B)
+                                : const Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -1610,7 +1631,11 @@ class _GeminiBriefCard extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.insights_rounded, color: Color(0xFFDC2626), size: 16),
+                      const Icon(
+                        Icons.insights_rounded,
+                        color: Color(0xFFDC2626),
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1644,7 +1669,12 @@ class _GeminiBriefCard extends StatelessWidget {
                   ),
                 ),
               ],
-              Divider(height: 24, color: isSaved ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0)),
+              Divider(
+                height: 24,
+                color: isSaved
+                    ? const Color(0xFFFECACA)
+                    : const Color(0xFFE2E8F0),
+              ),
               Row(
                 children: [
                   Text(
@@ -1652,7 +1682,9 @@ class _GeminiBriefCard extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isSaved ? const Color(0xFF991B1B) : const Color(0xFF64748B),
+                      color: isSaved
+                          ? const Color(0xFF991B1B)
+                          : const Color(0xFF64748B),
                     ),
                   ),
                   const Spacer(),
@@ -1660,9 +1692,13 @@ class _GeminiBriefCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        isSaved ? 'View Full Action Plan' : 'Enter Strategic Hub',
+                        isSaved
+                            ? 'View Full Action Plan'
+                            : 'Enter Strategic Hub',
                         style: GoogleFonts.poppins(
-                          color: isSaved ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
+                          color: isSaved
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFF2563EB),
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -1670,7 +1706,9 @@ class _GeminiBriefCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Icon(
                         Icons.arrow_forward_rounded,
-                        color: isSaved ? const Color(0xFFDC2626) : const Color(0xFF2563EB),
+                        color: isSaved
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF2563EB),
                         size: 14,
                       ),
                     ],

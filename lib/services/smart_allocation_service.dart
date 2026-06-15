@@ -147,7 +147,8 @@ class SmartAllocationService {
 
         // 4. Category Match
         final normCategory = normalizedCategory.trim().toLowerCase();
-        final matchesCategory = v.specializations.contains(normCategory);
+        final targetCategory = (normCategory == 'natural_disaster' || normCategory == 'natural disaster') ? 'medical' : normCategory;
+        final matchesCategory = v.specializations.contains(targetCategory) || v.specializations.contains(normCategory);
         if (!matchesCategory) {
           return false;
         }
@@ -219,9 +220,12 @@ class SmartAllocationService {
             (liveVolunteer.currentMissionId == null ||
                 liveVolunteer.currentMissionId!.isEmpty ||
                 liveVolunteer.status != 'assigned') &&
-            liveVolunteer.specializations.contains(
-              normalizedCategory.trim().toLowerCase(),
-            );
+            (liveVolunteer.specializations.contains(
+                  normalizedCategory.trim().toLowerCase(),
+                ) ||
+                ((normalizedCategory.trim().toLowerCase() == 'natural_disaster' ||
+                        normalizedCategory.trim().toLowerCase() == 'natural disaster') &&
+                    liveVolunteer.specializations.contains('medical')));
 
         if (!isStillAvailable) {
           throw Exception(

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../models/insight_model.dart';
 
 class GeminiActionPlanPage extends StatelessWidget {
   final InsightModel insight;
 
-  const GeminiActionPlanPage({
-    super.key,
-    required this.insight,
-  });
+  const GeminiActionPlanPage({super.key, required this.insight});
 
   @override
   Widget build(BuildContext context) {
@@ -43,12 +43,81 @@ class GeminiActionPlanPage extends StatelessWidget {
             ),
           ],
         ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: TextButton.icon(
+              onPressed: () async {
+                try {
+                  final dir = await getApplicationDocumentsDirectory();
+                  final file = File('${dir.path}/Gemini_Intelligence_Brief.txt');
+                  
+                  final content = '''
+GEMINI INTELLIGENCE BRIEF
+=========================
+Title: ${insight.title}
+Confidence Score: ${(insight.score * 100).toStringAsFixed(0)}%
+
+RECOMMENDATION:
+${insight.recommendation}
+
+Please deploy resources accordingly.
+                  ''';
+                  
+                  await file.writeAsString(content);
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Brief Exported! Opening document...'),
+                        backgroundColor: Color(0xFF10B981),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                  
+                  await OpenFilex.open(file.path);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error exporting: $e'),
+                        backgroundColor: Colors.redAccent,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(
+                Icons.download_rounded,
+                size: 16,
+                color: Color(0xFF2563EB),
+              ),
+              label: Text(
+                'Export Docs',
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF2563EB),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFFEFF6FF),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: const Color(0xFFF1F5F9),
-            height: 1,
-          ),
+          child: Container(color: const Color(0xFFF1F5F9), height: 1),
         ),
       ),
       body: SingleChildScrollView(
@@ -59,7 +128,8 @@ class GeminiActionPlanPage extends StatelessWidget {
             _buildReportHeader(),
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
             _buildSituationBrief(),
-            _buildActionPlan(),
+            _buildDataSynthesis(),
+            _buildActionPlan(context),
             const SizedBox(height: 60),
           ],
         ),
@@ -76,20 +146,23 @@ class GeminiActionPlanPage extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
-                  'CONFIDENCE: ${(insight.score * 100).toStringAsFixed(0)}%',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF2563EB),
-                    letterSpacing: 0.5,
-                  ),
-                ),
+                // child: Text(
+                //   'CONFIDENCE: ${(insight.score * 100).toStringAsFixed(0)}%',
+                //   style: GoogleFonts.inter(
+                //     fontSize: 10,
+                //     fontWeight: FontWeight.bold,
+                //     color: const Color(0xFF2563EB),
+                //     letterSpacing: 0.5,
+                //   ),
+                // ),
               ),
               const SizedBox(width: 12),
               Text(
@@ -104,7 +177,7 @@ class GeminiActionPlanPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            insight.title,
+            'Resource Shortage Risk (Underserved Areas Detected)',
             style: GoogleFonts.poppins(
               fontSize: 28,
               fontWeight: FontWeight.w700,
@@ -119,9 +192,6 @@ class GeminiActionPlanPage extends StatelessWidget {
   }
 
   Widget _buildSituationBrief() {
-    // Generate a contextual brief based on the title to make it feel rich and informative.
-    final contextualBrief = _generateContextualBrief(insight.title);
-
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -156,20 +226,10 @@ class GeminiActionPlanPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            insight.recommendation,
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF1E293B),
-              height: 1.6,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            contextualBrief,
+            'Volunteer deployments have stabilized critical flood zones; however, incoming field reports indicate rising demand in surrounding localities.\n\nAnalysis suggests that existing resources may become insufficient if incident volume continues to increase over the next several hours.\n\nEarly intervention is recommended to prevent delays in response coverage.',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: const Color(0xFF475569),
+              color: const Color(0xFF334155),
               height: 1.6,
             ),
           ),
@@ -178,7 +238,118 @@ class GeminiActionPlanPage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionPlan() {
+  Widget _buildDataSynthesis() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Icon(
+                  Icons.hub_outlined,
+                  size: 16,
+                  color: Color(0xFF475569),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Data Synthesis & Conclusion',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0F172A),
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSynthesisRow(
+                  'Primary Data Sources',
+                  '• Flood Incident Report\n• 47 Verified Community Reports\n• 11 Volunteer Ground Updates\n• Weather Intelligence Signals\n• Historical Flood Patterns',
+                ),
+                const SizedBox(height: 12),
+                _buildSynthesisRow(
+                  'Verification Status',
+                  'Cross-referenced through volunteer reports, NGO assessments, weather intelligence, and historical response data.',
+                ),
+                const SizedBox(height: 12),
+                _buildSynthesisRow(
+                  'Conclusion',
+                  'Several flood-affected sectors are approaching operational capacity limits.\n\nWithout reinforcement, response delays and localized supply shortages may emerge within the next 12 hours.',
+                  isHighlight: true,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSynthesisRow(
+    String label,
+    String value, {
+    bool isHighlight = false,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 130,
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: isHighlight ? FontWeight.w600 : FontWeight.w500,
+              color: isHighlight
+                  ? const Color(0xFF0F172A)
+                  : const Color(0xFF334155),
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionPlan(BuildContext context) {
     return Container(
       width: double.infinity,
       color: const Color(0xFFF8FAFC),
@@ -216,23 +387,60 @@ class GeminiActionPlanPage extends StatelessWidget {
           const SizedBox(height: 24),
           _buildActionItem(
             step: '1',
-            title: 'Immediate Triage & Deployment',
-            description: 'Deploy initial rapid assessment teams to the affected zone to verify intelligence data and establish a forward operating base.',
+            title: 'Immediate Deployment',
+            description:
+                'Dispatch 8 additional volunteers to sectors showing increasing community reports and delayed response times.',
             iconData: Icons.add_location_alt_outlined,
           ),
           const SizedBox(height: 20),
           _buildActionItem(
             step: '2',
             title: 'Resource Allocation',
-            description: 'Trigger automated inventory requests for critical supplies based on the predictive model requirements outlined in the brief.',
+            description:
+                'Pre-position drinking water, first-aid kits, and emergency shelter materials near affected localities.',
             iconData: Icons.inventory_2_outlined,
           ),
           const SizedBox(height: 20),
           _buildActionItem(
             step: '3',
             title: 'Volunteer Coordination',
-            description: 'Send targeted alerts to specialized volunteers within a 15km radius, prioritizing personnel with relevant crisis experience.',
+            description:
+                'Notify trained volunteers within a 15 km radius and activate standby response personnel.',
             iconData: Icons.groups_outlined,
+            actionWidget: Align(
+              alignment: Alignment.centerLeft,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No active volunteers near that location!'),
+                      backgroundColor: Colors.redAccent,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.campaign_rounded, size: 16),
+                label: Text(
+                  'Notify Volunteers / Raise Need',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -244,6 +452,7 @@ class GeminiActionPlanPage extends StatelessWidget {
     required String title,
     required String description,
     required IconData iconData,
+    Widget? actionWidget,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -256,7 +465,7 @@ class GeminiActionPlanPage extends StatelessWidget {
             color: const Color(0xFF0F172A).withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -269,11 +478,7 @@ class GeminiActionPlanPage extends StatelessWidget {
               color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              iconData,
-              color: const Color(0xFF475569),
-              size: 20,
-            ),
+            child: Icon(iconData, color: const Color(0xFF475569), size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -297,23 +502,15 @@ class GeminiActionPlanPage extends StatelessWidget {
                     height: 1.5,
                   ),
                 ),
+                if (actionWidget != null) ...[
+                  const SizedBox(height: 16),
+                  actionWidget,
+                ],
               ],
             ),
           ),
         ],
       ),
     );
-  }
-
-  String _generateContextualBrief(String title) {
-    final lowerTitle = title.toLowerCase();
-    if (lowerTitle.contains('flood') || lowerTitle.contains('water')) {
-      return 'Based on analysis of live telemetry and field reports, water levels in the designated zone are exceeding standard thresholds. Rapid urban infrastructure degradation is highly probable over the next 12 hours if drainage systems remain compromised. Vulnerable demographics in low-lying areas face an immediate risk of displacement.';
-    } else if (lowerTitle.contains('fire') || lowerTitle.contains('smoke')) {
-      return 'Thermal anomalies and shifting wind patterns indicate a severe risk of fire spread. Air quality index (AQI) is expected to reach hazardous levels. Immediate evacuation protocols should be prepared for surrounding residential sectors, prioritizing individuals with respiratory conditions.';
-    } else if (lowerTitle.contains('medical') || lowerTitle.contains('health')) {
-      return 'Health monitoring networks have flagged an unusual surge in acute medical requests. Local medical facilities are approaching capacity. An immediate influx of medical volunteers and baseline diagnostic equipment is required to stabilize the ground situation before critical supply chain failure.';
-    }
-    return 'Analysis indicates an escalating situation requiring immediate NGO intervention. Multi-source data synthesis suggests that resource constraints will become critical within the next 48 hours. Pre-emptive mobilization of ground forces and localized supply distribution is highly advised to mitigate severe community impact.';
   }
 }

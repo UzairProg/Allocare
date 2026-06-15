@@ -862,11 +862,11 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
   Widget _buildAssignedStep(String odId, String missionId) {
     return _activeCard(
       badge: 'ASSIGNED',
-      title: 'Begin Your Deployment',
+      title: 'Start Your Mission',
       child: Column(
         children: [
           Text(
-            'Review the mission details above and begin your deployment when ready.',
+            'Review the mission details above and start your mission when ready.',
             style: GoogleFonts.inter(
               fontSize: 13,
               color: const Color(0xFF475569),
@@ -874,8 +874,8 @@ class _VolunteerTasksScreenState extends ConsumerState<VolunteerTasksScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _primaryButton('BEGIN DEPLOYMENT', () async {
-            print('[MISSION UI] BEGIN DEPLOYMENT pressed');
+          _primaryButton('START MISSION', () async {
+            print('[MISSION UI] START MISSION pressed');
             setState(() => _isLoading = true);
             await ref
                 .read(smartAllocationServiceProvider)

@@ -10,10 +10,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../services/auth_service.dart';
 import '../../../services/gemini_service.dart';
 import '../../../services/smart_allocation_service.dart';
+import 'ai_intel_report_screen.dart';
 
 class AIScanPage extends ConsumerStatefulWidget {
   const AIScanPage({super.key});
@@ -33,8 +35,6 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
   String? _selectedFileMimeType;
   String? _selectedRawInput;
   bool _isAnalyzing = false;
-  bool _isSaving = false;
-  Map<String, String>? _previewFields;
   Map<String, dynamic>? _rawDecodedData;
 
   @override
@@ -97,7 +97,6 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
       _selectedFileBytes = file.size;
       _selectedFileData = fileBytes;
       _selectedFileMimeType = _mimeTypeForExtension(file.extension);
-      _previewFields = null;
       _rawDecodedData = null;
       _selectedRawInput = 'Initializing analysis...';
     });
@@ -264,141 +263,7 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
     }
   }
 
-  Future<void> _saveReport() async {
-    if (_previewFields == null || _selectedFileName == null) return;
-    final user = ref.read(authServiceProvider).currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to save reports.')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      final raw = _rawDecodedData ?? {};
-
-      int peopleAffected = 0;
-      try {
-        peopleAffected = int.parse(
-          raw['peopleAffected']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
-              '0',
-        );
-      } catch (_) {}
-
-      int urgencyScore = 0;
-      try {
-        urgencyScore = int.parse(
-          raw['urgency_score']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
-              '0',
-        );
-      } catch (_) {}
-
-      double lat = 0.0;
-      try {
-        lat = double.parse(raw['latitude']?.toString() ?? '0');
-      } catch (_) {}
-
-      double lng = 0.0;
-      try {
-        lng = double.parse(raw['longitude']?.toString() ?? '0');
-      } catch (_) {}
-
-      String rawCategory = (raw['category']?.toString() ?? 'other')
-          .toLowerCase();
-      String category = 'other';
-      if (rawCategory.contains('medical'))
-        category = 'medical';
-      else if (rawCategory.contains('fire'))
-        category = 'fire';
-      else if (rawCategory.contains('police') || rawCategory.contains('crime'))
-        category = 'police';
-      else if (rawCategory.contains('accident'))
-        category = 'accident';
-      else if (rawCategory.contains('infrastructure'))
-        category = 'infrastructure';
-      else if (rawCategory.contains('natural'))
-        category = 'natural_disaster';
-
-      String subcat = raw['subcategory']?.toString() ?? 'Other';
-      if (subcat.isEmpty) subcat = 'Other';
-
-      String formattedLocation =
-          raw['location']?.toString() ?? 'Unknown location';
-      if (lat != 0.0 || lng != 0.0) {
-        formattedLocation =
-            'Live location · ${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}';
-      }
-
-      final reportRef = await FirebaseFirestore.instance
-          .collection('reports')
-          .add({
-            'category': category,
-            'createdAt': FieldValue.serverTimestamp(),
-            'crisis_type': subcat,
-            'description': raw['description']?.toString() ?? '',
-            'ai_summary': raw['summary']?.toString() ?? '',
-            'image_url': '',
-            'latitude': lat,
-            'location': formattedLocation,
-            'locationMode': 'ai_scan',
-            'longitude': lng,
-            'peopleAffected': peopleAffected,
-            'reportedBy': user.uid,
-            'status': 'open',
-            'subcategory': subcat,
-            'supportingDocsMetadata': [
-              {
-                'fileName': _selectedFileName ?? 'unknown',
-                'fileSizeBytes': _selectedFileBytes ?? 0,
-                'fileType': _selectedFileMimeType ?? 'unknown',
-                'uploadedAt': DateTime.now().toIso8601String(),
-              },
-            ],
-            'title': raw['title']?.toString() ?? 'AI Intel Scan Report',
-            'updatedAt': FieldValue.serverTimestamp(),
-            'urgency': raw['urgency']?.toString().toLowerCase() ?? 'low',
-            'urgency_score': urgencyScore,
-          });
-
-      final allocationService = ref.read(smartAllocationServiceProvider);
-      final allocationResult = await allocationService.dispatchVolunteer(
-        reportRef.id,
-        category,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              allocationResult.success && allocationResult.volunteerName != null
-                  ? 'Report saved. Help dispatched: ${allocationResult.volunteerName}'
-                  : 'Report saved to Firebase successfully!',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save report: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
-  }
+  // _saveReport was removed as it's now handled by AIIntelReportScreen.
 
   Future<void> _runGeminiExtraction() async {
     if (_selectedFileName == null ||
@@ -442,9 +307,44 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
         return;
       }
 
-      setState(() {
-        _previewFields = _toPreviewFields(rawResult);
-      });
+      Map<String, dynamic> decodedResult = {};
+      try {
+        decodedResult = jsonDecode(rawResult) as Map<String, dynamic>;
+      } catch (e) {
+        throw FormatException('Failed to parse Gemini output: $rawResult');
+      }
+
+      final locationStr = decodedResult['location']?.toString() ?? 'Unknown location';
+      
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AIIntelReportScreen(
+              appLocation: locationStr,
+              aiAnalysisResult: {
+                'aiData': decodedResult,
+                'fileMetadata': {
+                  'fileName': _selectedFileName ?? 'unknown',
+                  'fileSizeBytes': _selectedFileBytes ?? 0,
+                  'fileType': _selectedFileMimeType ?? 'unknown',
+                  'uploadedAt': DateTime.now().toIso8601String(),
+                },
+              },
+            ),
+          ),
+        ).then((_) {
+          if (mounted) {
+            setState(() {
+              _selectedFileName = null;
+              _selectedRawInput = null;
+              _selectedFileData = null;
+              _selectedFileMimeType = null;
+              _rawDecodedData = null;
+            });
+          }
+        });
+      }
     } catch (error) {
       if (!mounted) {
         return;
@@ -526,14 +426,7 @@ class _AIScanPageState extends ConsumerState<AIScanPage>
                 onPickFile: _pickSourceFile,
                 onRunParse: _runGeminiExtraction,
               ),
-              if (_previewFields != null) ...[
-                const SizedBox(height: 32),
-                _StructuredPreviewCard(
-                  fields: _previewFields!,
-                  isSaving: _isSaving,
-                  onSave: _saveReport,
-                ),
-              ],
+              // Removed _StructuredPreviewCard
               const SizedBox(height: 40),
             ],
           ),
@@ -881,180 +774,7 @@ class _ActionPanel extends StatelessWidget {
   }
 }
 
-class _StructuredPreviewCard extends StatelessWidget {
-  const _StructuredPreviewCard({
-    required this.fields,
-    required this.isSaving,
-    required this.onSave,
-  });
-
-  final Map<String, String> fields;
-  final bool isSaving;
-  final VoidCallback onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeOutCubic,
-      tween: Tween(begin: 0.0, end: 1.0),
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.shadow.withOpacity(0.08),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-                border: Border.all(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
-                  width: 1,
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      color: theme.colorScheme.primary.withOpacity(0.05),
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: ShaderMask(
-                              shaderCallback: (bounds) => const LinearGradient(
-                                colors: [Color(0xFF4285F4), Color(0xFF9B72CB)],
-                              ).createShader(bounds),
-                              child: const Icon(
-                                Icons.auto_awesome_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Color(0xFF4285F4), Color(0xFF9B72CB)],
-                            ).createShader(bounds),
-                            child: Text(
-                              'Field Report',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          for (var i = 0; i < fields.entries.length; i++) ...[
-                            if (i > 0)
-                              Divider(
-                                height: 24,
-                                color: theme.colorScheme.outlineVariant
-                                    .withOpacity(0.5),
-                              ),
-                            _buildFieldRow(
-                              theme,
-                              fields.entries.elementAt(i).key,
-                              fields.entries.elementAt(i).value,
-                            ),
-                          ],
-                          const SizedBox(height: 32),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              onPressed: isSaving ? null : onSave,
-                              icon: isSaving
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.cloud_upload_rounded),
-                              label: Text(
-                                isSaving ? 'Saving...' : 'Save to Firebase',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFieldRow(ThemeData theme, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          flex: 3,
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
+// Removed _StructuredPreviewCard
 
 class _ScanningOverlay extends StatefulWidget {
   const _ScanningOverlay();
