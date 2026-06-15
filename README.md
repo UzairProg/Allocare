@@ -62,52 +62,18 @@ This inspired us to build Allocare—an intelligent humanitarian coordination pl
 </p>
 
 
-## 🧠 Core System Layers
 
-### 1. Data & Visibility Layer
-
-- Collects data from multiple sources (manual input, uploads)
-- Converts unstructured data into structured format
-- Displays needs on a unified map
-
----
-
-### 2. Priority & Allocation Layer
-- Classifies needs based on urgency and impact
-- Enables intelligent assignment of volunteers
-- Tracks status: pending → assigned → completed
-
----
-
-### 3. Insight Layer (Key Differentiator)
-- Identifies recurring patterns from historical data
-- Highlights critical trends (e.g., malnutrition zones)
-- Recommends targeted NGO interventions
-
----
-
-### 4. Execution Layer
-Assigns tasks to volunteers
-Enables accept/reject actions
-Tracks real-world execution
-Updates system in real-time
 
 ## 🔑 Core Features 
-| FEATURE                     | SOLUTION                                                      |
-| ------------------------------- | -------------------------------------------------------------------------- |
-| **Fragmented Data Structuring** | Converts handwritten notes, audio, forms, and reports into structured data |
-| **Photo-Report Verification**   | Checks whether uploaded photos match the report details                    |
-| **Duplicate Report Detection**  | Finds repeated or fake reports before allocation                           |
-| **Airborne Risk Prediction**    | Predicts possible airborne disease risk zones                              |
-| **Waterborne Risk Prediction**  | Predicts possible waterborne disease risk zones                            |
-| **Priority Zone Ranking**       | Ranks areas based on urgency, affected people, and past support            |
-| **Over-Allocation Prevention**  | Reduces priority of areas that already received recent help                |
-| **Neglected Area Detection**    | Highlights areas that have received little or no support                   |
-| **Smart Resource Allocation**   | Sends food, medical, or mental health support where it is needed most      |
-| **Volunteer Skill Matching**    | Assigns volunteers based on skill, location, availability, and reliability |
-| **Live Map Visualization**      | Shows risk zones, needs, and resource gaps on a map                        |
-| **Real-Time NGO Dashboard**     | Shows live reports, alerts, resources, and volunteer status                |
-| **Unified Care Planning**       | Combines food, healthcare, and mental support in one relief plan           |
+
+| Feature | Description |
+|---|---|
+| **Smart Volunteer Matching** | Assigns volunteers based on skill, location, availability, and reliability |
+| **Voice Report Intelligence** | Converts voice audio and fragmented notes into structured data |
+| **Priority Reassessment** | Ranks areas based on urgency, affected people, and past support |
+| **Resource Allocation Engine** | Sends food, medical, or mental health support where it is needed most |
+| **Predictive Intelligence** | Predicts possible airborne/waterborne disease risk zones |
+| **Evidence Verification** | Checks whether uploaded photos match the report details |
 
 ---
 
@@ -206,70 +172,61 @@ Updates system in real-time
       <p>Gemini delivers synthesized tactical insights directly to NGO commanders.</p>
     </td>
     <td align="center" width="25%" valign="top">
-      <img src="assets/screens/Screens/16_generated.jpg" width="180"/>
-      <br/><br/>
-      <b>Brief Generated</b>
-      <p>Instantly generate tactical briefs for stakeholders and teams.</p>
-    </td>
-    <td align="center" width="25%" valign="top">
       <img src="assets/screens/Screens/17_brief.jpeg" width="180"/>
       <br/><br/>
       <b>Strategic Brief</b>
-      <p>Comprehensive overview of the ongoing relief effort.</p>
+      <p>Generates a full detailed brief with export to google docs option.</p>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="25%" valign="top">
       <img src="assets/screens/Screens/18_action_plan.jpg" width="180"/>
       <br/><br/>
       <b>Action Plan</b>
-      <p>Step-by-step coordinated relief plan combining all support types.</p>
+      <p>Step-by-step coordinated plan with notfiying real-time ground volunteers to execute the plan.</p>
     </td>
-    <td align="center" width="25%" valign="top"></td>
-    <td align="center" width="25%" valign="top"></td>
-    <td align="center" width="25%" valign="top"></td>
   </tr>
 </table>
+
+## 🤝 NGO Validation
+
+ALLOCARE was validated with local NGOs and community organizations.
+
+- NGOs onboarded onto the platform
+- Operational workflows reviewed with stakeholders
+- Volunteer coordination requirements incorporated into design
+- Real-world feedback integrated into allocation and reporting systems
+
+This validation helped shape the platform's reporting, prioritization, and resource coordination workflows.
+
+### NGO Command Center
+
+<p align="center">
+  <img src="assets/screens/ngo/1.jpeg" width="48%">
+  <img src="assets/screens/ngo/2.jpeg" width="48%">
+</p>
+
+<p align="center">
+  <img src="assets/screens/ngo/3.jpeg" width="48%">
+  <img src="assets/screens/ngo/5.jpeg" width="48%">
+</p>
+
+<p align="center">
+  <img src="assets/screens/ngo/4.jpeg" width="48%">
+</p>
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Component | Technology | Core Purpose |
-|-----------|------------|--------------|
-| Logic & Synthesis | Gemini 2.5 Flash | Converts fragmented data into structured insights |
-| Verification Engine | Gemma 2 | Validates reports using images + text |
-| AI Hub | Vertex AI | Manages AI models and performance |
-| Real-time Engine | Firestore | Stores live reports and priority queue |
-| Media Management | Cloudinary | Optimizes images/videos for low bandwidth |
-| Automation | Cloud Functions | Triggers allocation based on AI insights |
-| UI Framework | Flutter | Multi-platform app (Android, iOS, Web) |
-| Identity & Trust | Firebase Auth | Secure volunteer authentication |
-| Geospatial Intel | Google Maps SDK | Visualizes zones and locations |
-
----
-
-## 🧩 Architecture
-
-- Feature-based modular structure
-- Clean separation of UI, models, and logic
-- Scalable and maintainable codebase
-
----
-
-## 👥 User Roles
-
-### NGO
-- submit and manage needs  
-- view insights and trends  
-- coordinate resources  
-
-### Volunteer
-- view assigned tasks  
-- execute on-ground actions  
-
-### Admin (system-level)
-- verify NGOs (no UI, controlled via backend)
+| Component | Technology |
+|-----------|------------|
+| Crisis Intelligence | Gemini 2.5 Flash |
+| Evidence Verification | Gemma 2 |
+| AI Orchestration | Vertex AI |
+| Real-Time Engine | Firestore |
+| Automation | Cloud Functions |
+| Identity & Trust | Firebase Auth |
+| Geospatial Intelligence | Google Maps SDK & Weather API |
+| UI Framework | Flutter |
 
 ---
 
@@ -398,17 +355,17 @@ allocare_app/
 
 ## 🤖 AI Integration
 
-Allocare uses **Gemini 2.5 Flash** as its core intelligence layer via the `GeminiService`:
+Allocare uses a multi-model architecture for its intelligence layer:
 
 | Capability | Detail |
 |-----------|--------|
-| **Structured Report Parsing** | Converts raw field text into validated JSON with location, urgency, category, and contact data |
-| **Binary File Analysis** | OCR-capable parsing of scanned PDFs and images to extract incident details |
-| **Multi-model Fallback** | Automatically retries with `gemma-3-27b-it → gemini-1.5-flash → gemini-1.5-pro` if primary model fails |
+| **Structured Report Parsing** | Converts raw field text into validated JSON using **Gemini 2.5 Flash** |
+| **Binary File Verification** | Validates reports using images and text via **Gemma 2** |
+| **AI Orchestration** | Manages AI models and performance via **Vertex AI** |
 | **Risk Prediction** | Synthesizes historical reports into airborne/waterborne risk briefings |
 | **Volunteer Matching** | Skill-based, location-aware responder assignment |
 
-Gemini is accessed securely via `--dart-define` at build time — **no API key is ever stored in source code**.
+Models are accessed securely via `--dart-define` at build time — **no API key is ever stored in source code**.
 
 ---
 
@@ -448,6 +405,34 @@ flutter test
 ```
 
 > Unit tests cover `GeminiService` JSON parsing, model serialization, and allocation logic. Integration tests are planned for the next milestone.
+
+---
+
+## 📊 User Survey & Feedback
+
+Here are the live responses and analytics from our user surveys.
+
+<div align="center">
+  <br>
+  <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSJscRJYKf-grTTOJEcrqt_TKZDyOtS-40yo6Iqrxy2cKu1KFC08QHisiufwWmArWyXi51gpPmM3q_m/pubhtml" target="_blank">
+    <h3>📊 Click here to view the Full Live User Survey & Feedback Data</h3>
+  </a>
+  <br>
+</div>
+
+<p align="center">
+  <img src="assets/screens/stats/1.png" width="48%">
+  <img src="assets/screens/stats/2.png" width="48%">
+</p>
+
+<p align="center">
+  <img src="assets/screens/stats/5.png" width="48%">
+  <img src="assets/screens/stats/6.png" width="48%">
+</p>
+
+<p align="center">
+  <img src="assets/screens/stats/8.png" width="48%">
+</p>
 
 ---
 
