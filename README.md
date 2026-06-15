@@ -113,44 +113,123 @@ Updates system in real-time
 
 ## 📱 Screen Showcase
 
-<p align="center">
-  <img src="assets/screens/Screens/IMG_7913 2.jpg" width="120" title="Sign In / Role Selection"/>
-  <img src="assets/screens/Screens/IMG_7936.PNG" width="120" title="Home / Operations Dashboard"/>
-  <img src="assets/screens/Screens/IMG_7840 2.PNG" width="120" title="Need Category Selection"/>
-  <img src="assets/screens/Screens/IMG_7898 2.jpg" width="120" title="Urgency Selection"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-221839.png" width="120" title="Impact Details"/>
-  <img src="assets/screens/Screens/IMG_7902 2.PNG" width="120" title="Impact Details"/>
-  <img src="assets/screens/Screens/IMG_7919 2.jpg" width="120" title="Impact Details"/>
-
-
-</p>
-<p align="center">
-  <img src="assets/screens/Screens/Screenshot_20260426-221930.png" width="120" title="Active Force"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-222001.png" width="120" title="Volunteer Assigned"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-222036.png" width="120" title="Smart Allocation Center"/>
-  <img src="assets/screens/Screens/IMG_7899.jpg" width="120" title="Multi-Mission Tracking"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-222104.png" width="120" title="Leaderboard"/>
-  <img src="assets/screens/Screens/Screenshot_20260426-222120.png" width="120" title="Profile / Resource Management"/>
-</p>
-
-| Screen | Description |
-|--------|-------------|
-| **Sign In / Role Selection** | Secure portal for NGOs and volunteers. AI personalizes permissions and task flows per role. |
-| **Home / Operations Dashboard** | Real-time command center with AI-driven resource shifts and priority alerts. |
-| **Need Category Selection** | Classify help requirements for rapid AI grouping and routing. |
-| **Urgency Selection** | Capture situational severity so response teams prioritize critical cases first. |
-| **Impact Details** | Collect affected-people data to help AI estimate scale and coordinate response. |
-| **Supporting Evidence** | Upload media and documents to validate reports and improve AI accuracy. |
-| **Crisis Map** | Visualize geolocation signals, hotspots, and responder positions in real time. |
-| **Crisis Heatmap Filter** | Gemini 2.5 Flash converts fragmented reports into color-coded risk heat zones. |
-| **Allocare Intelligence** | Synthesizes field reports into insights and instantly assigns best-fit responders. |
-| **Active Force** | Monitor volunteers by skill, distance, and specialization for real-time matching. |
-| **Mission Dispatch** | Assign specialists with full mission details and optimized navigation data. |
-| **Volunteer Assigned** | Confirm deployment with live location and responder profile visibility. |
-| **Smart Allocation Center** | Track live missions and responder status to optimize resource coordination. |
-| **Multi-Mission Tracking** | Manage parallel crises, balance workloads, and reassign support as priorities shift. |
-| **Leaderboard** | Rank volunteers by verified contributions, gamifying humanitarian impact. |
-| **Profile / Resource Management** | Hub for verification, impact metrics, and inventory to assess workforce capacity. |
+<table align="center">
+  <tr>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/1_NGO.jpg" width="180"/>
+      <br/><br/>
+      <b>NGO Dashboard</b>
+      <p>Secure portal and real-time command center for NGOs to manage operations.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/2_SCAN.png" width="180"/>
+      <br/><br/>
+      <b>AI Need Scan</b>
+      <p>Instantly scan and generates intelligence reports using gemini.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/3_MAP.PNG" width="180"/>
+      <br/><br/>
+      <b>Crisis Map</b>
+      <p>Visualize geolocation signals, hotspots, and resources in real time.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/4_MAP.png" width="180"/>
+      <br/><br/>
+      <b>Tactical Heatmap</b>
+      <p>Color-coded risk heat zones and live responder positions on the map.</p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/5_SMART_MATCH.jpg" width="180"/>
+      <br/><br/>
+      <b>Smart Match</b>
+      <p>Real-time details and feedbacks from the volunteers on the field.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/7_VOL.jpg" width="180"/>
+      <br/><br/>
+      <b>Volunteer Profile</b>
+      <p>Hub for volunteer verification, impact metrics, and skills management.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/8_VOL_MATCH.jpg" width="180"/>
+      <br/><br/>
+      <b>Volunteer Assigned</b>
+      <p>Confirm deployment with live tracking and responder profile visibility.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/9_begin_mission.jpeg" width="180"/>
+      <br/><br/>
+      <b>Begin Mission</b>
+      <p>Volunteers can see the detils and step-wise instructions to complete the mission.</p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/10_report.jpg" width="180"/>
+      <br/><br/>
+      <b>Ground Report</b>
+      <p>Submit real-time field reports with supporting media and evidence.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/11_record.jpg" width="180"/>
+      <br/><br/>
+      <b>Voice Intelligence</b>
+      <p>Record voice observations in native language to be transcribed, translated, and analyzed by gemini.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/12_report_generated.PNG" width="180"/>
+      <br/><br/>
+      <b>Report Generated</b>
+      <p>Gemini automatically generates structured insights from raw field data.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/13_prio_reassesment.jpg" width="180"/>
+      <br/><br/>
+      <b>Priority Reassessment</b>
+      <p>Dynamically shift resource priorities based on live feedbacks from volunteers on ground.</p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/14_predict.PNG" width="180"/>
+      <br/><br/>
+      <b>Predictive Modeling</b>
+      <p>Gemini anticipates crisis escalation and maps potential resource shortages.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/15_intel_Card.jpg" width="180"/>
+      <br/><br/>
+      <b>Intelligence Card</b>
+      <p>Gemini delivers synthesized tactical insights directly to NGO commanders.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/16_generated.jpg" width="180"/>
+      <br/><br/>
+      <b>Brief Generated</b>
+      <p>Instantly generate tactical briefs for stakeholders and teams.</p>
+    </td>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/17_brief.jpeg" width="180"/>
+      <br/><br/>
+      <b>Strategic Brief</b>
+      <p>Comprehensive overview of the ongoing relief effort.</p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%" valign="top">
+      <img src="assets/screens/Screens/18_action_plan.jpg" width="180"/>
+      <br/><br/>
+      <b>Action Plan</b>
+      <p>Step-by-step coordinated relief plan combining all support types.</p>
+    </td>
+    <td align="center" width="25%" valign="top"></td>
+    <td align="center" width="25%" valign="top"></td>
+    <td align="center" width="25%" valign="top"></td>
+  </tr>
+</table>
 
 ---
 
