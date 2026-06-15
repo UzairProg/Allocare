@@ -194,34 +194,6 @@ This inspired us to build Allocare—an intelligent humanitarian coordination pl
   </tr>
 </table>
 
-## 🤝 NGO Validation
-
-ALLOCARE was validated with local NGOs and community organizations.
-
-- NGOs onboarded onto the platform
-- Operational workflows reviewed with stakeholders
-- Volunteer coordination requirements incorporated into design
-- Real-world feedback integrated into allocation and reporting systems
-
-This validation helped shape the platform's reporting, prioritization, and resource coordination workflows.
-
-### NGO Command Center
-
-<p align="center">
-  <img src="assets/screens/ngo/1.jpeg" width="48%">
-  <img src="assets/screens/ngo/2.jpeg" width="48%">
-</p>
-
-<p align="center">
-  <img src="assets/screens/ngo/3.jpeg" width="48%">
-  <img src="assets/screens/ngo/5.jpeg" width="48%">
-</p>
-
-<p align="center">
-  <img src="assets/screens/ngo/4.jpeg" width="48%">
-</p>
-
----
 
 ## 🛠️ Tech Stack
 
@@ -277,6 +249,63 @@ Allocare is designed to move beyond static dashboards and become a **real-time d
 | Airborne / Waterborne Risk Prediction | ✅ Complete |
 | Mental Health & Well-being Support | ✅ Complete |
 | Admin Verification Flow | ✅ Complete |
+
+---
+
+## 📊 User Survey & Feedback
+
+Here are the live responses and analytics from our user surveys.
+
+<div align="center">
+  <br>
+  <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSJscRJYKf-grTTOJEcrqt_TKZDyOtS-40yo6Iqrxy2cKu1KFC08QHisiufwWmArWyXi51gpPmM3q_m/pubhtml" target="_blank">
+    <h3>📊 Click here to view the Full Live User Survey & Feedback Data</h3>
+  </a>
+  <br>
+</div>
+
+<p align="center">
+  <img src="assets/screens/stats/1.png" width="48%">
+  <img src="assets/screens/stats/2.png" width="48%">
+</p>
+
+<p align="center">
+  <img src="assets/screens/stats/5.png" width="48%">
+  <img src="assets/screens/stats/6.png" width="48%">
+</p>
+
+<p align="center">
+  <img src="assets/screens/stats/8.png" width="48%">
+</p>
+
+---
+
+## 🤝 NGO Validation
+
+ALLOCARE was validated with local NGOs and community organizations.
+
+- NGOs onboarded onto the platform
+- Operational workflows reviewed with stakeholders
+- Volunteer coordination requirements incorporated into design
+- Real-world feedback integrated into allocation and reporting systems
+
+This validation helped shape the platform's reporting, prioritization, and resource coordination workflows.
+
+### NGO Command Center
+
+<p align="center">
+  <img src="assets/screens/ngo/1.jpeg" width="48%">
+  <img src="assets/screens/ngo/2.jpeg" width="48%">
+</p>
+
+<p align="center">
+  <img src="assets/screens/ngo/3.jpeg" width="48%">
+  <img src="assets/screens/ngo/5.jpeg" width="48%">
+</p>
+
+<p align="center">
+  <img src="assets/screens/ngo/4.jpeg" width="48%">
+</p>
 
 ---
 
@@ -414,35 +443,7 @@ flutter test
 
 > Unit tests cover `GeminiService` JSON parsing, model serialization, and allocation logic. Integration tests are planned for the next milestone.
 
----
 
-## 📊 User Survey & Feedback
-
-Here are the live responses and analytics from our user surveys.
-
-<div align="center">
-  <br>
-  <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSJscRJYKf-grTTOJEcrqt_TKZDyOtS-40yo6Iqrxy2cKu1KFC08QHisiufwWmArWyXi51gpPmM3q_m/pubhtml" target="_blank">
-    <h3>📊 Click here to view the Full Live User Survey & Feedback Data</h3>
-  </a>
-  <br>
-</div>
-
-<p align="center">
-  <img src="assets/screens/stats/1.png" width="48%">
-  <img src="assets/screens/stats/2.png" width="48%">
-</p>
-
-<p align="center">
-  <img src="assets/screens/stats/5.png" width="48%">
-  <img src="assets/screens/stats/6.png" width="48%">
-</p>
-
-<p align="center">
-  <img src="assets/screens/stats/8.png" width="48%">
-</p>
-
----
 
 ## 📚 References
 
