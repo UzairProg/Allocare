@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Inter&weight=800&size=42&duration=2500&pause=800&color=1A73E8&center=true&vCenter=true&width=850&lines=ALLOCARE;Transforming+Fragmented+Data+into+Actionable+Intelligence;AI-Powered+Crisis+Response" />
+  <img src="https://readme-typing-svg.demolab.com?font=Inter&weight=800&size=42&duration=2500&pause=800&color=1A73E8&center=true&vCenter=true&width=850&lines=ALLOCARE;Fragmented+Data+into+Actionable+Intelligence;AI-Powered+Crisis+Response" />
 </h1>
 
 ---
