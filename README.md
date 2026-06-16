@@ -1,5 +1,10 @@
-#  ALLOCARE
+<h1 align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Inter&weight=800&size=44&duration=2600&pause=900&color=00A6A6&center=true&vCenter=true&width=850&lines=ALLOCARE;From+Fragmented+Data+to+Actionable+Intelligence;AI-Powered+Humanitarian+Response" alt="ALLOCARE animated title" />
+</h1>
 
+<p align="center">
+  <b>Transforming community data into intelligence, action, and impact.</b>
+</p>
 ALLOCARE unifies scattered community data into actionable intelligence, smart volunteer matching, enabling early risk detection of crises, targeted awareness, and equitable resource allocation for faster humanitarian response.
 
 <p align="center">
