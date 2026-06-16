@@ -258,9 +258,11 @@ Here are the live responses and analytics from our user surveys.
 
 <div align="center">
   <br>
-  <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSJscRJYKf-grTTOJEcrqt_TKZDyOtS-40yo6Iqrxy2cKu1KFC08QHisiufwWmArWyXi51gpPmM3q_m/pubhtml" target="_blank">
-    <h3>📊 Click here to view the Full Live User Survey & Feedback Data</h3>
-  </a>
+  <h3>
+    <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSJscRJYKf-grTTOJEcrqt_TKZDyOtS-40yo6Iqrxy2cKu1KFC08QHisiufwWmArWyXi51gpPmM3q_m/pubhtml" target="_blank">
+      📊 Click here to view the Full Live User Survey & Feedback Data
+    </a>
+  </h3>
   <br>
 </div>
 
