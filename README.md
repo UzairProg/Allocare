@@ -1,12 +1,5 @@
-#  ALLOCARE
-
-ALLOCARE unifies scattered community data into actionable intelligence, smart volunteer matching, enabling early risk detection of crises, targeted awareness, and equitable resource allocation for faster humanitarian response.
-
 <p align="center">
-  <img src="assets/ALLOCARE.png" alt="Allocare Logo" width="120"/>
-</p>
-<p align="center">
-  <b>Right Help. Right Place. Right Time.</b>
+  <img src="https://readme-typing-svg.demolab.com?font=Inter&weight=700&size=42&duration=2800&pause=900&color=4285F4&center=true&vCenter=true&width=1000&height=80&lines=ALLOCARE;Fragmented+to+Structured+Intelligence;Right+Help.+Right+Place.+Right+Time." />
 </p>
 
 ---
